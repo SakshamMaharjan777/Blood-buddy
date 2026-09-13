@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find Donors — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/requester-search.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Find Donors active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="requester-search.html" class="active">Find Donors</a>
+        <a href="requester-tracking.html">My Requests</a>
+        <a href="landing.html#roles">Hospitals</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="search-page">
+    <div class="search-wrap">
+
+      <!-- HERO BANNER (from export: 1036px, radius 14, red gradient) -->
+      <section class="search-hero">
+        <div class="search-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Find Donors</span>
+          </div>
+          <h1 class="hero-title">Search <em>blood donors</em><br>across Nepal</h1>
+          <p class="hero-sub">Filter by blood group and location to find verified, available donors near you.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot"></span>
+          <span><strong>12 urgent requests</strong> active right now</span>
+        </div>
+      </section>
+
+      <!-- FILTER CARD (from export: radius 12, ring 0.18, padding 24/28) -->
+      <section class="filter-card">
+        <div class="filter-row">
+          <div class="filter-field">
+            <label class="filter-label" for="f-blood">Blood group needed</label>
+            <select class="filter-select" id="f-blood">
+              <option value="">Select blood group</option>
+              <option selected>B+</option><option>A+</option><option>A-</option><option>B-</option>
+              <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="filter-label" for="f-district">District / City</label>
+            <select class="filter-select" id="f-district">
+              <option value="">Select location</option>
+              <option selected>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option>
+              <option>Pokhara</option><option>Chitwan</option><option>Butwal</option><option>Biratnagar</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label class="filter-label" for="f-avail">Availability</label>
+            <select class="filter-select" id="f-avail">
+              <option value="all">All donors</option>
+              <option value="available" selected>Available only</option>
+            </select>
+          </div>
+          <button class="filter-btn" id="search-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search donors
+          </button>
+        </div>
+        <div class="filter-chips">
+          <span class="chips-label">Filters:</span>
+          <span class="chip chip-red" id="chip-blood"><span class="chip-drop"></span><b>B+</b> <button class="chip-x" data-clear="f-blood">×</button></span>
+          <span class="chip chip-blue" id="chip-district">📍 <b>Kathmandu</b> <button class="chip-x" data-clear="f-district">×</button></span>
+          <span class="chip chip-green" id="chip-avail"><span class="chip-dot"></span><b>Available only</b> <button class="chip-x" data-clear="f-avail">×</button></span>
+        </div>
+      </section>
+
+      <!-- RESULTS HEADER -->
+      <div class="results-bar">
+        <div class="results-count"><b id="results-num">8</b> <span id="results-text">donors found for B+ in Kathmandu</span></div>
+        <div class="results-sort">
+          <span>Sort by</span>
+          <select id="sort-by">
+            <option>Most recent donor</option>
+            <option>Availability</option>
+            <option>Name (A–Z)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- DONOR GRID (rendered by JS) -->
+      <section class="donor-grid" id="donor-grid"></section>
+
+      <!-- URGENT REQUEST BANNER (from screenshot) -->
+      <section class="urgent-banner">
+        <div class="urgent-left">
+          <div class="urgent-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <div>
+            <div class="urgent-title">Can't find a donor? Submit an urgent blood request.</div>
+            <div class="urgent-sub">We'll notify all compatible, available donors in your area automatically.</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="urgent-btn">Submit blood request</button>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- REQUEST MODAL (from export: 460px, radius 12, shadow 48px) -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Request <em id="m-donor-name">Arun Shrestha</em></div>
+          <div class="modal-sub">An email notification will be sent to this donor.</div>
+        </div>
+        <button class="modal-x" id="modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-donor">
+        <div class="md-avatar" id="m-donor-initials">AS</div>
+        <div class="md-info">
+          <div class="md-name" id="m-donor-full">Arun Shrestha</div>
+          <div class="md-meta" id="m-donor-meta">B+ · Baneshwor, Kathmandu</div>
+        </div>
+        <div class="md-badge" id="m-donor-blood">B+</div>
+      </div>
+
+      <div class="modal-divider"></div>
+
+      <div class="modal-field">
+        <label class="filter-label" for="m-urgency">Urgency level</label>
+        <select class="modal-select" id="m-urgency">
+          <option>Urgent — needed within 24 hours</option>
+          <option>High — needed within 3 days</option>
+          <option>Normal — needed within a week</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label class="filter-label" for="m-hospital">Hospital / Location</label>
+        <select class="modal-select" id="m-hospital">
+          <option>Tribhuvan University Teaching Hospital, Maharajgunj</option>
+          <option>Bir Hospital, Kathmandu</option>
+          <option>Patan Hospital, Lalitpur</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label class="filter-label" for="m-notes">Additional notes <span class="opt">(optional)</span></label>
+        <textarea class="modal-textarea" id="m-notes" placeholder="e.g. patient name, ward, contact number…"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modal-cancel">Cancel</button>
+        <button class="modal-send" id="modal-send">Send request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as landing) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Donor data (matches your Figma screenshot) ---- */
+    const DONORS = [
+      { name:'Arun Shrestha',  blood:'B+', area:'Baneshwor, Kathmandu',  avail:true,  compat:true,  last:'4 months ago' },
+      { name:'Sunita Maharjan',blood:'B+', area:'Thamel, Kathmandu',     avail:true,  compat:false, last:'6 months ago' },
+      { name:'Bikash Tamang',  blood:'B-', area:'Koteshwor, Kathmandu',  avail:false, compat:false, last:'2 months ago' },
+      { name:'Priya Karki',    blood:'B+', area:'Baluwatar, Kathmandu',  avail:true,  compat:true,  last:'5 months ago' },
+      { name:'Rajan Thapa',    blood:'B+', area:'Chabahil, Kathmandu',   avail:true,  compat:false, last:'8 months ago' },
+      { name:'Deepa Rana',     blood:'B+', area:'Lazimpat, Kathmandu',   avail:true,  compat:false, last:'1 year ago' },
+      { name:'Kiran Gurung',   blood:'B-', area:'Gongabu, Kathmandu',    avail:false, compat:false, last:'3 months ago' },
+      { name:'Mina Shrestha',  blood:'B+', area:'Maharajgunj, Kathmandu',avail:true,  compat:false, last:'7 months ago' }
+    ];
+
+    const grid = document.getElementById('donor-grid');
+    const initials = n => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+
+    function renderDonors(list) {
+      grid.innerHTML = list.map((d, i) => `
+        <article class="donor-card ${d.compat ? 'is-compat' : ''}">
+          <div class="dc-head">
+            <div class="dc-avatar">${initials(d.name)}</div>
+            <div class="dc-who">
+              <div class="dc-name">${d.name}</div>
+              <div class="dc-area">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${d.area}
+              </div>
+            </div>
+            <span class="dc-badge">${d.blood}</span>
+          </div>
+          <div class="dc-chips">
+            ${d.avail
+              ? '<span class="tag tag-green"><span class="dot"></span>Available</span>'
+              : '<span class="tag tag-gray"><span class="dot"></span>Unavailable</span>'}
+            ${d.compat ? '<span class="tag tag-red">◌ Compatible</span>' : ''}
+          </div>
+          <div class="dc-divider"></div>
+          <div class="dc-foot">
+            <div><span class="dc-lastlbl">Last donated</span><span class="dc-lastval">${d.last}</span></div>
+            ${d.avail
+              ? `<button class="dc-request" data-i="${i}">✉ Request</button>`
+              : `<button class="dc-profile">📊 View profile</button>`}
+          </div>
+        </article>`).join('');
+      document.getElementById('results-num').textContent = list.length;
+    }
+
+    renderDonors(DONORS);
+
+    /* ---- Search filter (demo) ---- */
+    document.getElementById('search-btn').addEventListener('click', () => {
+      const bg = document.getElementById('f-blood').value;
+      const dist = document.getElementById('f-district').value;
+      const onlyAvail = document.getElementById('f-avail').value === 'available';
+      let list = DONORS;
+      if (onlyAvail) list = list.filter(d => d.avail);
+      renderDonors(list);
+      document.getElementById('results-text').textContent =
+        `donors found for ${bg || 'any group'} in ${dist || 'all districts'}`;
+    });
+
+    /* ---- Chips mirror the selects ---- */
+    const syncChips = () => {
+      document.querySelector('#chip-blood b').textContent = document.getElementById('f-blood').value || 'Any group';
+      document.querySelector('#chip-district b').textContent = document.getElementById('f-district').value || 'All districts';
+      document.querySelector('#chip-avail b').textContent =
+        document.getElementById('f-avail').value === 'available' ? 'Available only' : 'All donors';
+    };
+    ['f-blood','f-district','f-avail'].forEach(id =>
+      document.getElementById(id).addEventListener('change', syncChips));
+
+    /* ---- Request modal (from your export) ---- */
+    const overlay = document.getElementById('modal-overlay');
+    function openModal(i) {
+      const d = DONORS[i];
+      document.getElementById('m-donor-name').textContent = d.name;
+      document.getElementById('m-donor-full').textContent = d.name;
+      document.getElementById('m-donor-initials').textContent = initials(d.name);
+      document.getElementById('m-donor-meta').textContent = `${d.blood} · ${d.area}`;
+      document.getElementById('m-donor-blood').textContent = d.blood;
+      overlay.classList.add('open');
+    }
+    const closeModal = () => overlay.classList.remove('open');
+
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('.dc-request');
+      if (btn) openModal(+btn.dataset.i);
+    });
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    document.getElementById('modal-send').addEventListener('click', function () {
+      this.textContent = 'Request sent ✓';
+      this.disabled = true;
+      setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 1200);
+    });
+
+    /* ---- Urgent request CTA → request form ---- */
+    document.getElementById('urgent-btn').addEventListener('click', () => {
+      window.location.href = 'requester-request.html';
+    });
+  </script>
+</body>
+</html>

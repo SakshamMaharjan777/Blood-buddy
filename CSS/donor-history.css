@@ -1,0 +1,216 @@
+/* =============================================
+   BLOODBUDY — donor-history.css
+   Full donation history page (reuses dashboard
+   tokens: #F7F6F4 bg, white cards, radius 12/14)
+   ============================================= */
+
+:root {
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+}
+
+.history-page { background: #F7F6F4; min-height: calc(100vh - 60px); }
+.history-wrap {
+  max-width: 1100px; margin: 0 auto;
+  padding: 36px 32px 80px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+
+/* --- HERO (compact sibling of the dashboard hero) --- */
+.dh-hero {
+  position: relative; height: 220px;
+  border-radius: 14px; overflow: hidden;
+  background: #7A1520;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 40px;
+}
+.dh-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(192,32,42,0.80) 0%, rgba(163,45,45,0.48) 45%, rgba(0,0,0,0.18) 100%),
+    url('../images/faezeh-eslami-Btja3lr5ldk-unsplash.jpg') center/cover no-repeat;
+  transform: scale(1);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.dh-hero:hover::before { transform: scale(1.06); }
+.dh-hero-inner { position: relative; z-index: 1; }
+
+.hero-crumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.70); margin-bottom: 12px; }
+.hero-crumb a { color: rgba(255,255,255,0.70); }
+.dh-title { font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 42px; color: #fff; }
+.dh-title em { color: #FFC8C8; }
+.dh-sub { max-width: 520px; font-size: 14px; line-height: 23.8px; color: rgba(255,255,255,0.82); margin-top: 7px; }
+
+/* --- SUMMARY STRIP (4 mini stats) --- */
+.dh-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.dh-sum-box {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 16px 20px;
+}
+.dh-sum-num { font-family: var(--font-display); font-size: 26px; line-height: 30px; color: #1A1A1A; }
+.dh-sum-label { font-size: 12px; line-height: 20.4px; color: #6B6B6B; margin-top: 2px; }
+
+/* --- FILTER ROW --- */
+.dh-filter {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 16px 22px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.dh-filter-label { font-size: 12px; font-weight: 500; color: #6B6B6B; }
+.dh-select {
+  padding: 8px 30px 8px 12px;
+  background: #F7F6F4;
+  border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  font-family: var(--font-body); font-size: 13px; color: #1A1A1A;
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.dh-select:focus { outline: none; box-shadow: inset 0 0 0 1px #C0202A; }
+.dh-reset {
+  margin-left: auto;
+  padding: 8px 14px; background: #fff; border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  color: #6B6B6B; font-family: var(--font-body); font-size: 12px; cursor: pointer;
+  transition: background 0.15s;
+}
+.dh-reset:hover { background: #F7F6F4; }
+.dh-count { font-size: 13px; color: #6B6B6B; }
+.dh-count b { color: #1A1A1A; font-weight: 500; }
+
+/* --- RECORDS CARD (same table design as the dashboard) --- */
+.dh-card {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  overflow: hidden;
+}
+.dh-tablewrap { overflow-x: auto; }
+.dh-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.dh-table th {
+  text-align: left;
+  padding: 16px 22px 12px;
+  font-size: 11px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.44px;
+  color: #9B9B9B;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+}
+.dh-table td {
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+  font-size: 13px; color: #1A1A1A;
+  white-space: nowrap;
+}
+.dh-table tr:last-child td { border-bottom: none; }
+.dh-table tbody tr { transition: background 0.15s; }
+.dh-table tbody tr:hover { background: #F7F6F4; }
+/* Anchor targets (linked from dashboard stat cards): keep clear of the sticky navbar */
+.dh-table tbody tr[id] { scroll-margin-top: 84px; }
+.dh-table tbody tr:target { background: #FCEBEB; }
+.td-date { font-size: 12px; color: #6B6B6B; }
+.td-strong { color: #1A1A1A; }
+.td-notes { font-size: 12px; color: #9B9B9B; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+
+.blood-badge {
+  display: inline-block; padding: 4px 0; width: 34px; text-align: center;
+  background: #FCEBEB; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px #F7C1C1;
+  font-size: 11px; font-weight: 500; color: #A32D2D;
+}
+.status-chip {
+  display: inline-block; padding: 3px 10px;
+  background: #EAF3DE; border-radius: 20px;
+  box-shadow: inset 0 0 0 1px #C0DD97;
+  font-size: 11px; font-weight: 500; color: #3B6D11;
+}
+.status-chip.verified {
+  background: #E6F1FB;
+  box-shadow: inset 0 0 0 1px #BDD5F0;
+  color: #185FA5;
+}
+
+/* --- EMPTY STATE (hidden unless filters match nothing) --- */
+.dh-empty {
+  display: none;
+  padding: 48px 24px;
+  text-align: center;
+}
+.dh-empty.show { display: block; }
+.dh-empty-icon {
+  width: 44px; height: 44px; margin: 0 auto 14px;
+  border-radius: 22px; background: #F7F6F4;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  display: flex; align-items: center; justify-content: center;
+}
+.dh-empty-title { font-size: 14px; font-weight: 500; color: #1A1A1A; }
+.dh-empty-sub { font-size: 12px; color: #9B9B9B; margin-top: 4px; }
+.dh-empty-btn {
+  margin-top: 16px; padding: 8px 16px;
+  background: #C0202A; border: none; border-radius: 8px;
+  color: #fff; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.dh-empty-btn:hover { opacity: 0.9; }
+
+/* --- ELIGIBILITY NOTE --- */
+.dh-note {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 20px;
+  background: #FBF0DC;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #F0DDBA;
+}
+.dh-note svg { flex-shrink: 0; }
+.dh-note-text { font-size: 13px; line-height: 22.1px; color: #854F0B; }
+.dh-note-text b { font-weight: 500; }
+
+/* --- YEAR CHART (pure CSS bars) --- */
+.dh-chart-card {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.dh-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dh-chart-title { font-size: 14px; font-weight: 500; line-height: 23.8px; color: #1A1A1A; }
+.dh-chart-sub { font-size: 12px; color: #9B9B9B; margin-top: 2px; }
+.dh-chart-total { font-size: 12px; color: #9B9B9B; }
+.dh-chart-total b { color: #C0202A; font-weight: 500; }
+.dh-chart { display: flex; align-items: stretch; gap: 28px; height: 160px; padding: 0 8px; }
+.dh-bar-col { flex: 1; max-width: 140px; display: flex; flex-direction: column; gap: 6px; }
+.dh-bar-num { font-size: 12px; font-weight: 500; color: #fff; padding-top: 5px; }
+.dh-bar-track { flex: 1; display: flex; align-items: flex-end; justify-content: center; }
+.dh-bar {
+  width: 100%; max-width: 56px;
+  height: var(--h, 0%);
+  background: linear-gradient(180deg, #C0202A 0%, #A32D2D 100%);
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+  display: flex; justify-content: center; align-items: flex-start;
+  animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: var(--d, 0ms);
+  transition: filter 0.15s;
+}
+.dh-bar:hover { filter: brightness(1.12); }
+.dh-bar-year { font-size: 12px; color: #6B6B6B; text-align: center; }
+@keyframes bar-grow { from { height: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .dh-bar { animation: none; }
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 1024px) { .dh-summary { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) {
+  .dh-hero { height: auto; min-height: 180px; }
+  .dh-title { font-size: 26px; line-height: 34px; }
+}
+@media (max-width: 560px) {
+  .dh-summary { grid-template-columns: 1fr; }
+  .dh-chart { gap: 16px; height: 130px; padding: 0 2px; }
+  .dh-bar-col { max-width: none; }
+}

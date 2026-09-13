@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: monospace; font-size: 12px; }
+  #frame-wrap { position: absolute; left: -10000px; top: 0; }
+</style>
+<title>RESPTEST-DONE</title></head>
+<body>
+<div id="frame-wrap"></div>
+<pre id="out">=== width 1280 ===
+overflow=false bodyScrollW=1265
+navLinks=flex hamburger=none menuOpens=true actionsOpen=true
+grids={"stats":3,"steps":3,"roles":3,"compat":4,"searchRow":3}
+heroTitleW=640 fits=true
+=== width 900 ===
+overflow=false bodyScrollW=885
+navLinks=flex hamburger=none menuOpens=true actionsOpen=true
+grids={"stats":3,"steps":2,"roles":2,"compat":2,"searchRow":3}
+heroTitleW=640 fits=true
+=== width 768 ===
+overflow=false bodyScrollW=753
+navLinks=none hamburger=flex menuOpens=true actionsOpen=true
+grids={"stats":3,"steps":1,"roles":1,"compat":2,"searchRow":1}
+heroTitleW=713 fits=true
+=== width 480 ===
+overflow=false bodyScrollW=465
+navLinks=none hamburger=flex menuOpens=true actionsOpen=true
+grids={"stats":1,"steps":1,"roles":1,"compat":2,"searchRow":1}
+heroTitleW=433 fits=true
+=== width 430 ===
+overflow=false bodyScrollW=415
+navLinks=none hamburger=flex menuOpens=true actionsOpen=true
+grids={"stats":1,"steps":1,"roles":1,"compat":2,"searchRow":1}
+heroTitleW=383 fits=true
+=== width 360 ===
+overflow=false bodyScrollW=345
+navLinks=none hamburger=flex menuOpens=true actionsOpen=true
+grids={"stats":1,"steps":1,"roles":1,"compat":1,"searchRow":1}
+heroTitleW=313 fits=true</pre>
+<script>
+(async function () {
+  const widths = [1280, 900, 768, 480, 430, 360];
+  const results = [];
+
+  function loadFrame(w) {
+    return new Promise((resolve) => {
+      const f = document.createElement('iframe');
+      f.width = w;
+      f.height = 900;
+      f.src = '/CODE/HTML/landing.html';
+      f.onload = () => resolve(f);
+      document.getElementById('frame-wrap').appendChild(f);
+    });
+  }
+
+  const getSel = (doc, s) => doc.querySelector(s);
+
+  for (const w of widths) {
+    const f = await loadFrame(w);
+    await new Promise(r => setTimeout(r, 400)); // let fonts + JS settle
+    const doc = f.contentDocument;
+    const win = f.contentWindow;
+
+    const m = { w, errors: [] };
+    try {
+      // 1. horizontal overflow check
+      m.bodyScrollW = doc.body.scrollWidth;
+      m.overflow = doc.body.scrollWidth > w;
+
+      // 2. active media query state
+      m.navLinksDisplay = win.getComputedStyle(getSel(doc, '#nav-links')).display;
+      m.hamburgerDisplay = win.getComputedStyle(getSel(doc, '#hamburger')).display;
+
+      // 3. grid column counts
+      const grids = {
+        stats: '.stats-grid', steps: '.steps-grid', roles: '.roles-grid',
+        compat: '.compat-grid', searchRow: '.search-row'
+      };
+      m.grids = {};
+      for (const [k, sel] of Object.entries(grids)) {
+        const el = getSel(doc, sel);
+        if (!el) { m.grids[k] = 'missing'; continue; }
+        m.grids[k] = win.getComputedStyle(el).gridTemplateColumns.split(' ').length;
+      }
+
+      // 4. hamburger toggle works
+      const ham = getSel(doc, '#hamburger');
+      ham.click();
+      await new Promise(r => setTimeout(r, 120));
+      m.menuOpens = win.getComputedStyle(getSel(doc, '#nav-links')).display === 'flex';
+      m.actionsOpen = win.getComputedStyle(getSel(doc, '#nav-actions')).display === 'flex';
+      ham.click();
+      await new Promise(r => setTimeout(r, 60));
+
+      // 5. hero title fits inside frame
+      const ht = getSel(doc, '.hero-title');
+      m.heroTitleW = Math.round(ht.getBoundingClientRect().width);
+      m.heroTitleFits = m.heroTitleW <= w;
+
+      // 6. compat cards still 2-up at 480 (design intent) and readable
+      m.compatCols480Intent = (w === 480) ? m.grids.compat : undefined;
+    } catch (e) {
+      m.errors.push(String(e));
+    }
+    results.push(m);
+    f.remove();
+  }
+
+  window.__RESULTS__ = results;
+  // human-readable dump
+  const lines = [];
+  for (const r of results) {
+    lines.push(`=== width ${r.w} ===`);
+    lines.push(`overflow=${r.overflow} bodyScrollW=${r.bodyScrollW}`);
+    lines.push(`navLinks=${r.navLinksDisplay} hamburger=${r.hamburgerDisplay} menuOpens=${r.menuOpens} actionsOpen=${r.actionsOpen}`);
+    lines.push(`grids=${JSON.stringify(r.grids)}`);
+    lines.push(`heroTitleW=${r.heroTitleW} fits=${r.heroTitleFits}`);
+    if (r.errors.length) lines.push(`ERRORS: ${r.errors.join(' | ')}`);
+  }
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'RESPTEST-DONE';
+})();
+</script>
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+
+
+</body></html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donor Dashboard — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/donor-dashboard.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (matches other pages) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="requester-search.html" class="active">Find Donors</a>
+        <a href="landing.html#roles">Hospitals</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="dash-page">
+    <div class="dash-wrap">
+
+      <!-- HERO (export: 300px, radius 14, photo + gradient .80/.48/.18) -->
+      <section class="dash-hero">
+        <div class="dash-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Donor Dashboard</span>
+          </div>
+          <h1 class="dash-title"><span id="greeting">Good morning</span>, <em>Saksham</em></h1>
+          <p class="dash-sub">You're registered as a blood donor in Kathmandu. Your next eligible donation date is 14 Aug 2025.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot green"></span>
+          <span>Available to Donate</span>
+        </div>
+      </section>
+
+      <!-- URGENT REQUEST ALERT (export: #FCEBEB, ring #F7C1C1, radius 12) -->
+      <section class="dash-urgent" id="urgent-banner">
+        <div class="du-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+        </div>
+        <div class="du-text">
+          <div class="du-title">Urgent Request — B+ needed at Bir Hospital, Kathmandu</div>
+          <div class="du-desc">A requester within 5 km needs B+ blood. You're a match. Posted 18 minutes ago.</div>
+        </div>
+        <div class="du-actions">
+          <button class="du-respond" id="respond-btn">Respond Now</button>
+          <button class="du-dismiss" id="dismiss-btn">Dismiss</button>
+        </div>
+      </section>
+
+      <!-- STAT CARDS (export: 4 × white, radius 12, 154px) -->
+      <section class="dash-stats">
+
+        <a class="stat-box" href="donor-history.html" aria-label="View donation history">
+          <div class="sb-top">
+            <div class="sb-icon red">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+            </div>
+            <span class="sb-chip green">↑ 1 this yr</span>
+          </div>
+          <div class="sb-num">5</div>
+          <div class="sb-label">Total Donations</div>
+        </a>
+
+        <a class="stat-box" href="donor-history.html" aria-label="See lives potentially saved">
+          <div class="sb-top">
+            <div class="sb-icon teal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <span class="sb-chip green">↑ 15</span>
+          </div>
+          <div class="sb-num">15</div>
+          <div class="sb-label">Lives Potentially Saved</div>
+        </a>
+
+        <a class="stat-box" href="donor-history.html#record-2025-03-14" aria-label="View last donation details">
+          <div class="sb-top">
+            <div class="sb-icon blue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <span class="sb-chip gray">84 days ago</span>
+          </div>
+          <div class="sb-num">14 Mar</div>
+          <div class="sb-label">Last Donation</div>
+        </a>
+
+        <a class="stat-box" href="requester-search.html" aria-label="See active requests nearby">
+          <div class="sb-top">
+            <div class="sb-icon amber">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <span class="sb-chip gray">2 new</span>
+          </div>
+          <div class="sb-num">3</div>
+          <div class="sb-label">Active Requests Nearby</div>
+        </a>
+
+      </section>
+
+      <!-- DONATION HISTORY (export: white card, uppercase col headers, badges) -->
+      <section class="history-card">
+        <div class="hc-head">
+          <div>
+            <div class="hc-title">Donation History</div>
+            <div class="hc-sub">Your recorded blood donations</div>
+          </div>
+          <a class="hc-viewall" href="donor-history.html">
+            View all
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+        <div class="hc-tablewrap">
+          <table class="hc-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Blood Group</th>
+                <th>Units</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-date">14 Mar 2025</td>
+                <td class="td-strong">Bir Hospital, Kathmandu</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+              </tr>
+              <tr>
+                <td class="td-date">02 Nov 2024</td>
+                <td class="td-strong">Nepal Red Cross, Lalitpur</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+              </tr>
+              <tr>
+                <td class="td-date">18 Jun 2024</td>
+                <td class="td-strong">Central Blood Bank, Kathmandu</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as landing/requester-search) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // Time-aware greeting (your export says "Good morning")
+    const h = new Date().getHours();
+    document.getElementById('greeting').textContent =
+      h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+
+    // Urgent alert actions
+    document.getElementById('dismiss-btn').addEventListener('click', () => {
+      document.getElementById('urgent-banner').style.display = 'none';
+    });
+    document.getElementById('respond-btn').addEventListener('click', function () {
+      this.textContent = 'Noted ✓ Check your email';
+      this.disabled = true;
+      setTimeout(() => { this.textContent = 'Respond Now'; this.disabled = false; }, 1800);
+    });
+  </script>
+</body>
+</html>

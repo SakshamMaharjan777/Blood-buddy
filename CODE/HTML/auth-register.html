@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/auth.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (public) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html#how-it-works">How it works</a>
+        <a href="landing.html#roles">Find donors</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="auth-split">
+
+    <!-- LEFT: red brand panel -->
+    <aside class="auth-panel">
+      <div>
+        <div class="auth-brand">
+          <span class="logo-dot auth-dot"></span>
+          <span class="auth-brand-name">Blood<span class="auth-brand-accent">Buddy</span></span>
+        </div>
+        <h1 class="auth-headline">Join Nepal's<br><em>blood donor</em><br>network today.</h1>
+        <p class="auth-sub">Every registered member strengthens the chain between those who give and those who need. It takes 2 minutes.</p>
+
+        <!-- STEP 1: role list (matches Figma) -->
+        <div class="panel-roles" id="panel-roles">
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC8C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Donor</div>
+              <div class="panel-role-desc">Register availability, get matched with urgent requests</div>
+            </div>
+          </div>
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BDD5F0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Requester</div>
+              <div class="panel-role-desc">Search donors by blood group and location instantly</div>
+            </div>
+          </div>
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FDAC6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Hospital Staff</div>
+              <div class="panel-role-desc">Manage blood bank inventory and incoming requests</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2+: registering as (matches Figma step 2) -->
+        <div class="auth-registering" id="registering-box" hidden>
+          <div class="auth-registering-label">Registering as</div>
+          <div class="auth-registering-card">
+            <div class="auth-registering-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC8C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+            </div>
+            <div>
+              <div class="auth-registering-name" id="reg-role-name">Blood Donor</div>
+              <div class="auth-registering-desc" id="reg-role-desc">Availability toggle, district matching, alerts</div>
+            </div>
+          </div>
+          <div class="whats-next">
+            <div class="whats-next-label">What happens next</div>
+            <div class="whats-next-list" id="whats-next-items"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-stats">
+        <div>
+          <div class="auth-stat-num">1,240+</div>
+          <div class="auth-stat-label">Donors registered</div>
+        </div>
+        <div>
+          <div class="auth-stat-num">380+</div>
+          <div class="auth-stat-label">Requests fulfilled</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: 3-step form -->
+    <section class="auth-content">
+      <form class="auth-card" id="reg-form" novalidate>
+
+        <!-- STEPPER -->
+        <div class="stepper" id="stepper">
+          <div class="stepper-dot">1</div>
+          <div class="stepper-line"></div>
+          <div class="stepper-dot">2</div>
+          <div class="stepper-line"></div>
+          <div class="stepper-dot">3</div>
+        </div>
+        <div class="stepper-labels">
+          <span class="lbl">Choose role</span>
+          <span class="lbl">Your details</span>
+          <span class="lbl">Done</span>
+        </div>
+
+        <div class="alert" id="reg-alert" hidden><span id="reg-alert-text"></span></div>
+
+        <!-- STEP 1: ROLE (matches Figma) -->
+        <div class="step-pane" id="step-1" hidden>
+          <div class="step-kicker">Step 1 of 3</div>
+          <h2 class="auth-title">Who are <em>you?</em></h2>
+          <p class="auth-card-sub">Select the role that best describes why you're joining BloodBuddy. Already have an account? <a class="link" href="auth-login.html">Log in</a></p>
+
+          <div class="role-options">
+            <label class="role-option">
+              <input type="radio" name="role" value="donor" checked />
+              <div class="role-option-icon red">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+              </div>
+              <div class="role-option-text">
+                <div class="role-option-name">Blood Donor</div>
+                <div class="role-option-desc">I want to donate blood and help people in need across Nepal.</div>
+              </div>
+              <span class="role-tag">Most common</span>
+              <span class="role-check"></span>
+            </label>
+
+            <label class="role-option">
+              <input type="radio" name="role" value="requester" />
+              <div class="role-option-icon blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </div>
+              <div class="role-option-text">
+                <div class="role-option-name">Blood Requester</div>
+                <div class="role-option-desc">I need to find donors for myself or someone I care for.</div>
+              </div>
+              <span class="role-check"></span>
+            </label>
+
+            <label class="role-option">
+              <input type="radio" name="role" value="hospital" />
+              <div class="role-option-icon green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="role-option-text">
+                <div class="role-option-name">Hospital Staff</div>
+                <div class="role-option-desc">I manage blood inventory and requests on behalf of a hospital.</div>
+              </div>
+              <span class="role-check"></span>
+            </label>
+          </div>
+
+          <button type="button" class="btn-primary btn-block" id="to-step-2">Continue →</button>
+        </div>
+
+        <!-- STEP 2: DETAILS -->
+        <div class="step-pane" id="step-2" hidden>
+          <div class="step-kicker">Step 2 of 3</div>
+          <h2 class="auth-title"><span id="step2-role-title">Donor</span> <em id="step2-role-accent">profile</em></h2>
+          <p class="auth-card-sub" id="step2-sub">Tell us about yourself so requesters can find you.</p>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label" for="reg-fname">First name</label>
+              <input class="field-input" id="reg-fname" placeholder="Aarav" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="reg-lname">Last name</label>
+              <input class="field-input" id="reg-lname" placeholder="Sharma" />
+            </div>
+            <div class="field-group full">
+              <label class="field-label" for="reg-email">Email address</label>
+              <input class="field-input" type="email" id="reg-email" placeholder="you@example.com" />
+            </div>
+            <div class="field-group full">
+              <label class="field-label" for="reg-phone">Phone number</label>
+              <input class="field-input" type="tel" id="reg-phone" placeholder="9801234567" />
+              <div class="field-hint">Used only for urgent alerts — never shared publicly.</div>
+            </div>
+            <div class="field-group full fields-hospital-only">
+              <label class="field-label" for="reg-hname">Hospital name</label>
+              <input class="field-input" id="reg-hname" placeholder="Central Hospital, Kathmandu" />
+            </div>
+            <div class="field-group fields-hospital-only">
+              <label class="field-label" for="reg-staffid">Staff ID</label>
+              <input class="field-input" id="reg-staffid" placeholder="HS-2024-018" />
+              <div class="field-hint">Provided by your hospital administrator.</div>
+            </div>
+            <div class="field-group fields-donor-only fields-requester-only">
+              <label class="field-label" for="reg-blood" id="reg-blood-label">Blood group</label>
+              <select class="field-input" id="reg-blood">
+                <option value="">Select</option>
+                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="reg-district">District / City</label>
+              <select class="field-input" id="reg-district">
+                <option value="">Select</option>
+                <option>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option>
+                <option>Pokhara</option><option>Chitwan</option><option>Butwal</option><option>Biratnagar</option>
+              </select>
+            </div>
+            <div class="field-group full fields-donor-only">
+              <label class="toggle-row">
+                <span>
+                  <span class="toggle-title">Available to donate</span>
+                  <span class="field-hint">You can change this any time from your dashboard.</span>
+                </span>
+                <span class="toggle"><input type="checkbox" id="reg-available" checked /><span class="toggle-slider"></span></span>
+              </label>
+            </div>
+            <div class="field-group full">
+              <label class="field-label" for="reg-pass">Password</label>
+              <div class="password-wrap">
+                <input class="field-input" type="password" id="reg-pass" placeholder="Min. 6 characters" />
+                <button type="button" class="eye-btn" id="toggle-reg-pass" aria-label="Show password">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="field-group full">
+              <label class="auth-check terms-check">
+                <input type="checkbox" id="reg-terms" />
+                <span>I agree to the <a class="link" href="#">Terms of Service</a> and <a class="link" href="#">Privacy Policy</a>. I understand my account may be reviewed for verification.</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" id="back-to-1">← Back</button>
+            <button type="button" class="btn-primary" id="to-step-3">Create account ✓</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: SUCCESS -->
+        <div class="step-pane" id="step-3" hidden>
+          <div class="success-icon">✓</div>
+          <h2 class="auth-title center">You're registered!</h2>
+          <p class="auth-card-sub center" id="success-sub">Welcome!</p>
+
+          <div class="summary-card">
+            <div class="summary-title">YOUR PROFILE SUMMARY</div>
+            <div class="summary-grid" id="summary-grid"></div>
+          </div>
+
+          <a class="btn-primary btn-block" href="donor-dashboard.html" id="dash-link" onclick="event.preventDefault(); this.textContent='Dashboard coming soon…'">Go to donor dashboard →</a>
+        </div>
+
+      </form>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow (same as landing) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // --- Hamburger menu toggle (same as landing) ---
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // --- Register wizard ---
+    const roleNames = {
+      donor:     { name: 'Blood Donor',     desc: 'Availability toggle, district matching, alerts' },
+      requester: { name: 'Blood Requester', desc: 'Search donors, submit urgent requests, tracking' },
+      hospital:  { name: 'Hospital Staff',  desc: 'Manage blood bank inventory and incoming requests' }
+    };
+    // Per-role step-2 content: heading words, sub-text, "what happens next" and dashboard link
+    const roleMeta = {
+      donor: {
+        title: ['Donor', 'profile'],
+        sub: 'Tell us about yourself so requesters can find you.',
+        dash: 'Go to donor dashboard →',
+        next: [
+          'Your profile goes live in your district',
+          'Requesters matching your blood group can contact you',
+          'Toggle your availability any time from your dashboard'
+        ]
+      },
+      requester: {
+        title: ['Your', 'details'],
+        sub: 'Tell us the blood group you need and where, so we can surface nearby donors fast.',
+        dash: 'Go to requester dashboard →',
+        next: [
+          'Search verified donors by blood group and district',
+          'Submit urgent blood requests in one click',
+          'Get an email confirmation the moment a donor matches'
+        ]
+      },
+      hospital: {
+        title: ['Hospital', 'verification'],
+        sub: 'Staff credentials only — no blood group or availability needed.',
+        dash: 'Go to hospital dashboard →',
+        next: [
+          'Our team verifies your staff ID with the hospital',
+          'Manage your blood bank inventory in real time',
+          'Review and fulfil incoming blood requests'
+        ]
+      }
+    };
+
+    const panes = { 1: document.getElementById('step-1'), 2: document.getElementById('step-2'), 3: document.getElementById('step-3') };
+    const alertBox = document.getElementById('reg-alert');
+    const alertText = document.getElementById('reg-alert-text');
+    const panelRoles = document.getElementById('panel-roles');
+    const registeringBox = document.getElementById('registering-box');
+
+    function showAlert(type, msg) {
+      alertBox.className = 'alert alert-' + type;
+      alertText.textContent = msg;
+      alertBox.hidden = false;
+      setTimeout(() => { alertBox.hidden = true; }, 4000);
+    }
+
+    function showStep(n) {
+      Object.values(panes).forEach(p => p.hidden = true);
+      panes[n].hidden = false;
+
+      // Left panel swaps content by step (matches Figma)
+      panelRoles.hidden = (n !== 1);
+      registeringBox.hidden = (n === 1);
+
+      document.querySelectorAll('#stepper .stepper-dot').forEach((d, i) => {
+        d.classList.toggle('done', i < n - 1);
+        d.classList.toggle('active', i === n - 1);
+      });
+      document.querySelectorAll('#stepper .stepper-line').forEach((l, i) => {
+        l.classList.toggle('done', i < n - 1);
+      });
+      document.querySelectorAll('.stepper-labels .lbl').forEach((l, i) => {
+        l.classList.toggle('done', i < n - 1);
+        l.classList.toggle('active', i === n - 1);
+      });
+    }
+
+    function applyRole(role) {
+      const meta = roleMeta[role];
+      const input = document.querySelector(`input[name="role"][value="${role}"]`);
+      if (!input || !meta) return;
+      input.checked = true;
+      document.getElementById('reg-role-name').textContent = roleNames[role].name;
+      document.getElementById('reg-role-desc').textContent = roleNames[role].desc;
+      document.getElementById('step2-role-title').textContent = meta.title[0];
+      document.getElementById('step2-role-accent').textContent = meta.title[1];
+      document.getElementById('step2-sub').textContent = meta.sub;
+      document.getElementById('reg-blood-label').textContent = role === 'requester' ? 'Blood group needed' : 'Blood group';
+      document.getElementById('dash-link').textContent = meta.dash;
+      // Show/hide role-specific fields (blood group, availability toggle, hospital credentials)
+      document.getElementById('step-2').dataset.role = role;
+      document.getElementById('whats-next-items').innerHTML = meta.next.map((t, i) =>
+        '<div class="whats-next-item"><span class="whats-next-num">' + (i + 1) + '</span> ' + t + '</div>'
+      ).join('');
+    }
+
+    // Preselect role from URL (?role=donor | requester | hospital) — used by landing CTAs
+    applyRole(new URLSearchParams(location.search).get('role') || 'donor');
+
+    document.getElementById('to-step-2').addEventListener('click', () => {
+      const role = document.querySelector('input[name="role"]:checked').value;
+      document.getElementById('reg-role-name').textContent = roleNames[role].name;
+      document.getElementById('reg-role-desc').textContent = roleNames[role].desc;
+      showStep(2);
+    });
+
+    document.querySelectorAll('input[name="role"]').forEach(r => {
+      r.addEventListener('change', () => applyRole(r.value));
+    });
+
+    document.getElementById('back-to-1').addEventListener('click', () => showStep(1));
+
+    document.getElementById('to-step-3').addEventListener('click', () => {
+      const role = document.querySelector('input[name="role"]:checked').value;
+      const fname = document.getElementById('reg-fname').value.trim();
+      const lname = document.getElementById('reg-lname').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      const district = document.getElementById('reg-district').value;
+      const pass = document.getElementById('reg-pass').value;
+      const terms = document.getElementById('reg-terms').checked;
+      const blood = document.getElementById('reg-blood').value;
+      const hname = document.getElementById('reg-hname').value.trim();
+      const staffId = document.getElementById('reg-staffid').value.trim();
+
+      if (!fname || !lname) return showAlert('error', 'Please enter your first and last name.');
+      if (!/^\S+@\S+\.\S+$/.test(email)) return showAlert('error', 'Please enter a valid email address.');
+      if (!/^\d{10}$/.test(phone)) return showAlert('error', 'Please enter a valid 10-digit phone number.');
+      if (role === 'hospital') {
+        if (!hname) return showAlert('error', 'Please enter your hospital name.');
+        if (!staffId) return showAlert('error', 'Please enter your staff ID.');
+      }
+      if ((role === 'donor' || role === 'requester') && !blood) {
+        return showAlert('error', role === 'requester' ? 'Please select the blood group needed.' : 'Please select your blood group.');
+      }
+      if (!district) return showAlert('error', 'Please select your district.');
+      if (pass.length < 6) return showAlert('error', 'Password must be at least 6 characters.');
+      if (!terms) return showAlert('error', 'Please agree to the Terms of Service to continue.');
+
+      // Role-aware profile summary
+      const fullName = fname + ' ' + lname;
+      const rows = {
+        donor:     [['Name', fullName], ['Blood group', blood], ['District', district], ['Availability', document.getElementById('reg-available').checked ? '● Available' : '○ Unavailable', 'green']],
+        requester: [['Name', fullName], ['Blood group needed', blood], ['District', district], ['Email', email], ['Phone', phone]],
+        hospital:  [['Contact', fullName], ['Hospital', hname], ['District', district], ['Staff ID', staffId]]
+      }[role];
+      document.getElementById('summary-grid').innerHTML = rows.map(r =>
+        '<div><span class="summary-label">' + r[0] + '</span><span class="summary-value' + (r[2] ? ' ' + r[2] : '') + '">' + r[1] + '</span></div>'
+      ).join('');
+
+      const successMsgs = {
+        donor: 'Welcome, ' + fname + "! You're now visible to people searching for " + blood + ' blood donors in ' + district + '.',
+        requester: 'Welcome, ' + fname + '! You can now search verified ' + blood + ' donors and submit urgent blood requests in ' + district + '.',
+        hospital: 'Welcome! The ' + hname + ' staff account for ' + fullName + ' is registered — pending verification.'
+      };
+      document.getElementById('success-sub').textContent = successMsgs[role];
+
+      showStep(3);
+    });
+
+    document.getElementById('toggle-reg-pass').addEventListener('click', () => {
+      const p = document.getElementById('reg-pass');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    });
+
+    showStep(1);
+  </script>
+</body>
+</html>

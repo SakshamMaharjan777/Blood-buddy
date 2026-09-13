@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Requests — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/requester-tracking.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — My Requests active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="requester-search.html">Find Donors</a>
+        <a href="requester-tracking.html" class="active">My Requests</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="trk-page">
+    <div class="trk-wrap">
+
+      <!-- HERO (same treatment as other pages) -->
+      <section class="trk-hero">
+        <div class="trk-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>My Requests</span>
+          </div>
+          <h1 class="hero-title">My <em>blood requests</em></h1>
+          <p class="hero-sub">Track every request you've submitted and see donor responses in real time.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot green"></span>
+          <span><strong id="open-count">2 requests</strong> awaiting donors</span>
+        </div>
+        <button class="hero-cta" id="new-request-btn">+ New request</button>
+      </section>
+
+      <!-- FILTER TABS -->
+      <div class="trk-tabs" id="trk-tabs">
+        <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
+        <button class="trk-tab" data-filter="Pending">Pending <span class="tab-count" id="cnt-pending">0</span></button>
+        <button class="trk-tab" data-filter="Matched">Matched <span class="tab-count" id="cnt-matched">0</span></button>
+        <button class="trk-tab" data-filter="Completed">Completed <span class="tab-count" id="cnt-completed">0</span></button>
+      </div>
+
+      <!-- REQUESTS LIST (rendered by JS) -->
+      <section class="req-list" id="req-list"></section>
+
+      <!-- EMPTY STATE -->
+      <section class="trk-empty" id="trk-empty" hidden>
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="empty-title">No blood requests yet</div>
+        <div class="empty-sub">When you submit a request, you'll be able to track its status and donor responses here.</div>
+        <a class="empty-btn" href="requester-request.html">Submit your first request</a>
+      </section>
+
+      <!-- DETAIL MODAL -->
+      <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" role="dialog" aria-modal="true">
+          <div class="modal-head">
+            <div>
+              <div class="modal-title">Request <em id="m-id">BB-DEMO</em></div>
+              <div class="modal-sub" id="m-created">Submitted —</div>
+            </div>
+            <button class="modal-x" id="modal-close" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="modal-summary">
+            <span class="tag tag-red" id="m-blood">B+</span>
+            <span class="tag tag-gray" id="m-units">1 unit</span>
+            <span class="tag tag-urgency" id="m-urgency">Urgent</span>
+            <span class="tag tag-green" id="m-status">Pending</span>
+          </div>
+
+          <div class="modal-detail-grid">
+            <div class="detail-item">
+              <div class="detail-label">Hospital</div>
+              <div class="detail-value" id="m-hospital">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">District</div>
+              <div class="detail-value" id="m-district">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Needed by</div>
+              <div class="detail-value" id="m-neededby">—</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Open to compatible groups</div>
+              <div class="detail-value" id="m-compat">Yes</div>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <div class="detail-label">Notes</div>
+            <div class="detail-value" id="m-notes">—</div>
+          </div>
+
+          <div class="modal-divider"></div>
+
+          <div class="timeline">
+            <div class="timeline-title">Request timeline</div>
+            <div class="tl-item done">
+              <span class="tl-dot"></span>
+              <div class="tl-body">
+                <div class="tl-when" id="tl-submitted">—</div>
+                <div class="tl-what">Request submitted — donor notifications queued</div>
+              </div>
+            </div>
+            <div class="tl-item" id="tl-matched">
+              <span class="tl-dot"></span>
+              <div class="tl-body">
+                <div class="tl-when" id="tl-matched-when">—</div>
+                <div class="tl-what" id="tl-matched-what">Waiting for a donor to accept</div>
+              </div>
+            </div>
+            <div class="tl-item" id="tl-completed">
+              <span class="tl-dot"></span>
+              <div class="tl-body">
+                <div class="tl-when">—</div>
+                <div class="tl-what">Donation completed &amp; verified</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="modal-cancel" id="modal-cancel">Close</button>
+            <button class="modal-send" id="modal-cancelreq">Cancel request</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Demo data (merged with anything submitted on the form page) ---- */
+    const SEED = [
+      { id:'BB-8F3K2M', blood:'O+', units:'2', urgency:'Urgent', hospital:'Bir Hospital, Kathmandu', district:'Kathmandu', neededBy:'2026-09-15', compatOk:true, status:'Matched', created:'2026-09-12T09:24:00', donor:'Arun Shrestha (B+ → O+ compatible)', donorAt:'2026-09-12T11:02:00',
+        timeline:[{when:'2026-09-12 09:24', what:'Request submitted — 14 compatible donors notified'},{when:'2026-09-12 11:02', what:'Arun Shrestha accepted the request'}] },
+      { id:'BB-2QX9P1', blood:'B+', units:'1', urgency:'Normal', hospital:'Patan Hospital, Lalitpur', district:'Lalitpur', neededBy:'2026-09-20', compatOk:false, status:'Pending', created:'2026-09-13T08:10:00',
+        timeline:[{when:'2026-09-13 08:10', what:'Request submitted — 22 compatible donors notified'}] },
+      { id:'BB-7HD4LN', blood:'AB-', units:'1', urgency:'Normal', hospital:'Tribhuvan University Teaching Hospital, Maharajgunj', district:'Kathmandu', neededBy:'2026-08-30', compatOk:true, status:'Completed', created:'2026-08-28T14:45:00', donor:'Priya Karki (AB- exact match)', donorAt:'2026-08-28T15:30:00',
+        timeline:[{when:'2026-08-28 14:45', what:'Request submitted — 6 compatible donors notified'},{when:'2026-08-28 15:30', what:'Priya Karki accepted the request'},{when:'2026-08-30 10:15', what:'Donation completed & verified'}] }
+    ];
+
+    const all = SEED.concat(JSON.parse(localStorage.getItem('bb_requests') || '[]'));
+    const list = document.getElementById('req-list');
+    const emptyBox = document.getElementById('trk-empty');
+    let currentFilter = 'all';
+    let currentId = null;
+
+    const initials = n => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    const fmtTime = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    const timeAgo = iso => {
+      const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    };
+
+    const STATUS_META = {
+      Pending:   { cls:'st-pending',   label:'Pending' },
+      Matched:   { cls:'st-matched',   label:'Matched' },
+      Completed: { cls:'st-completed', label:'Completed' }
+    };
+
+    function render() {
+      const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
+
+      ['all','Pending','Matched','Completed'].forEach(f => {
+        document.getElementById('cnt-' + f.toLowerCase()).textContent =
+          f === 'all' ? all.length : all.filter(r => r.status === f).length;
+      });
+      document.getElementById('open-count').textContent =
+        `${all.filter(r => r.status !== 'Completed').length} requests`;
+
+      if (!items.length) {
+        list.innerHTML = '';
+        emptyBox.hidden = all.length ? false : true;
+        emptyBox.querySelector('.empty-title').textContent =
+          currentFilter === 'all' ? 'No blood requests yet' : `No ${currentFilter.toLowerCase()} requests`;
+        emptyBox.querySelector('.empty-sub').textContent = currentFilter === 'all'
+          ? "When you submit a request, you'll be able to track its status and donor responses here."
+          : 'Requests will appear here as their status changes.';
+        emptyBox.querySelector('.empty-btn').style.display = currentFilter === 'all' ? '' : 'none';
+        return;
+      }
+      emptyBox.hidden = true;
+
+      list.innerHTML = items.map(r => {
+        const meta = STATUS_META[r.status] || STATUS_META.Pending;
+        return `
+        <article class="req-card" data-id="${r.id}">
+          <div class="rc-head">
+            <span class="rc-badge">${r.blood}</span>
+            <div class="rc-title">
+              <div class="rc-name">${r.hospital.split(',')[0]} <span class="rc-id">· ${r.id}</span></div>
+              <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.district} · ${r.urgency} · submitted ${timeAgo(r.created)}</div>
+            </div>
+            <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
+          </div>
+          ${r.donor ? `
+          <div class="rc-donor">
+            <div class="rc-donor-avatar">${initials(r.donor.split(' (')[0])}</div>
+            <div>
+              <div class="rc-donor-name">${r.donor}</div>
+              <div class="rc-donor-sub">Accepted ${fmtDate(r.donorAt)}</div>
+            </div>
+          </div>` : `
+          <div class="rc-waiting">
+            <span class="rc-waiting-pulse"></span>
+            Waiting for donor response — ${r.compatOk ? 'compatible groups' : 'exact group'} donors notified by email
+          </div>`}
+          <div class="rc-foot">
+            <div class="rc-needby">Needed by <b>${r.neededBy ? fmtDate(r.neededBy) : '—'}</b></div>
+            <button class="rc-view" data-id="${r.id}">View details</button>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    /* ---- Tabs ---- */
+    document.getElementById('trk-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.trk-tab');
+      if (!tab) return;
+      document.querySelectorAll('.trk-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
+
+    /* ---- New request CTA ---- */
+    document.getElementById('new-request-btn').addEventListener('click', () => {
+      window.location.href = 'requester-request.html';
+    });
+
+    /* ---- Detail modal ---- */
+    const overlay = document.getElementById('modal-overlay');
+    function openModal(id) {
+      const r = all.find(x => x.id === id);
+      if (!r) return;
+      currentId = id;
+      document.getElementById('m-id').textContent = r.id;
+      document.getElementById('m-created').textContent = 'Submitted ' + fmtTime(r.created);
+      document.getElementById('m-blood').textContent = r.blood;
+      document.getElementById('m-units').textContent = r.units + ' unit' + (r.units > 1 ? 's' : '');
+      document.getElementById('m-urgency').textContent = r.urgency;
+      document.getElementById('m-status').textContent = r.status;
+      document.getElementById('m-hospital').textContent = r.hospital;
+      document.getElementById('m-district').textContent = r.district;
+      document.getElementById('m-neededby').textContent = r.neededBy ? fmtDate(r.neededBy) : '—';
+      document.getElementById('m-compat').textContent = r.compatOk ? 'Yes' : 'No — exact group only';
+      document.getElementById('m-notes').textContent = r.notes || '—';
+
+      // timeline states
+      const matched = document.getElementById('tl-matched');
+      const completed = document.getElementById('tl-completed');
+      const mWhen = document.getElementById('tl-matched-when');
+      const mWhat = document.getElementById('tl-matched-what');
+      matched.classList.remove('done');
+      completed.classList.remove('done');
+      mWhen.textContent = '—';
+      mWhat.textContent = 'Waiting for a donor to accept';
+      if (r.donorAt) {
+        matched.classList.add('done');
+        mWhen.textContent = fmtTime(r.donorAt);
+        mWhat.textContent = r.donor + ' accepted';
+      }
+      if (r.status === 'Completed') {
+        completed.classList.add('done');
+        completed.querySelector('.tl-when').textContent = r.timeline[r.timeline.length - 1].when;
+      }
+
+      document.getElementById('modal-cancelreq').style.display =
+        r.status === 'Completed' ? 'none' : '';
+      overlay.classList.add('open');
+    }
+    const closeModal = () => overlay.classList.remove('open');
+
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.rc-view');
+      if (btn) openModal(btn.dataset.id);
+    });
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    /* ---- Cancel request (demo) ---- */
+    document.getElementById('modal-cancelreq').addEventListener('click', function () {
+      const r = all.find(x => x.id === currentId);
+      if (!r) return;
+      r.status = 'Cancelled'; // demo: reuse the terminal state
+      render();
+      closeModal();
+    });
+  </script>
+</body>
+</html>

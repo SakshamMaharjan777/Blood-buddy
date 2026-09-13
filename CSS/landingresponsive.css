@@ -1,0 +1,195 @@
+/* =============================================
+   RAKTASETU — responsive.css
+   Breakpoints: tablet (768px), mobile (480px)
+   ============================================= */
+
+/* =============================================
+   TABLET — max-width: 900px
+   ============================================= */
+@media (max-width: 900px) {
+
+  :root {
+    --section-pad: 56px 0;
+  }
+
+  .hero-title { font-size: 38px; }
+
+  .steps-grid   { grid-template-columns: 1fr 1fr; }
+  .roles-grid   { grid-template-columns: 1fr 1fr; }
+  .compat-grid  { grid-template-columns: 1fr 1fr; }
+
+  .cta-box { padding: 40px 28px; }
+  .cta-title { font-size: 24px; }
+
+  .footer-copy { display: none; }
+}
+
+/* =============================================
+   TABLET NARROW — max-width: 768px
+   ============================================= */
+@media (max-width: 768px) {
+
+  .container { padding: 0 20px; }
+
+  /* Navbar: show hamburger, hide links/actions by default */
+  .hamburger { display: flex; }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 20px;
+    gap: 16px;
+    z-index: 99;
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { font-size: 14px; }
+
+  .nav-actions {
+    display: none;
+    position: absolute;
+    top: auto;
+    left: 0;
+    width: 100%;
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    flex-direction: row;
+    padding: 12px 20px 16px;
+    gap: 10px;
+    z-index: 98;
+  }
+  .nav-actions.open { display: flex; }
+  /* offset nav-actions below nav-links when both open */
+  .nav-links.open ~ .nav-actions.open {
+    top: calc(60px + 4 * 32px + 32px);
+  }
+
+  .btn-outline-nav,
+  .btn-filled-nav { flex: 1; text-align: center; }
+
+  /* Make navbar relative so dropdowns position correctly */
+  .navbar { position: sticky; }
+  .nav-inner { position: relative; }
+
+  /* Hero */
+  .hero { padding: 56px 0 48px; }
+  .hero-frame { padding: 44px 28px 36px; }
+  .hero-title { font-size: 32px; max-width: 100%; }
+  .hero-sub   { font-size: 14px; }
+  .hero-figure { margin-top: 32px; }
+
+  /* Stats */
+  .stats-grid { grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .stat-num   { font-size: 22px; }
+
+  /* Search */
+  .search-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .btn-search {
+    width: 100%;
+    justify-content: center;
+    height: auto;
+    padding: 11px;
+  }
+
+  /* Steps */
+  .steps-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Roles */
+  .roles-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Compat */
+  .compat-grid { grid-template-columns: 1fr 1fr; }
+
+  /* CTA */
+  .cta-section { padding: 0 0 48px; }
+  .cta-box     { padding: 32px 20px; }
+  .cta-title   { font-size: 22px; }
+  .cta-btns    { flex-direction: column; align-items: center; }
+  .cta-btn-white,
+  .cta-btn-outline { width: 100%; max-width: 280px; }
+
+  /* Footer */
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .footer-copy { display: block; }
+}
+
+/* =============================================
+   MOBILE — max-width: 480px
+   ============================================= */
+@media (max-width: 480px) {
+
+  :root { --section-pad: 44px 0; }
+
+  .container { padding: 0 16px; }
+
+  /* Hero */
+  .hero { padding: 44px 0 36px; }
+  .hero-frame { padding: 40px 18px 28px; border-radius: 2px; }
+  .hero-badge { font-size: 11px; padding: 5px 10px; max-width: calc(100% - 24px); }
+  .hero-title { font-size: 26px; line-height: 1.25; }
+  .hero-sub   { font-size: 13px; }
+  .hero-figure { margin-top: 24px; border-width: 1px; }
+  .hero-btns  { flex-direction: column; align-items: center; }
+  .btn-primary,
+  .btn-ghost  { width: 100%; max-width: 280px; justify-content: center; }
+
+  /* Stats */
+  .stats-section { padding: 0 0 40px; }
+  .stats-grid    { grid-template-columns: 1fr; gap: 8px; }
+  .stat-card     { display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px 16px; }
+  .stat-num      { font-size: 22px; margin-bottom: 0; }
+
+  /* Search */
+  .search-section { padding: 0 0 40px; }
+  .search-card    { padding: 18px; }
+
+  /* Section text */
+  .section-title { font-size: 22px; }
+  .section-sub   { font-size: 13px; }
+
+  /* Steps */
+  .step-card  { padding: 18px; }
+  .step-title { font-size: 13px; }
+  .step-desc  { font-size: 12px; }
+
+  /* Roles */
+  .role-card  { padding: 18px; }
+  .role-name  { font-size: 13px; }
+  .role-list li { font-size: 12px; }
+
+  /* Compat */
+  .compat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .compat-bg   { font-size: 18px; }
+  .compat-desc { font-size: 11px; }
+
+  /* CTA */
+  .cta-box   { padding: 28px 16px; border-radius: 10px; }
+  .cta-title { font-size: 20px; }
+  .cta-sub   { font-size: 13px; }
+
+  /* Footer */
+  .footer-links { gap: 12px; }
+}
+
+/* =============================================
+   VERY SMALL — max-width: 360px
+   ============================================= */
+@media (max-width: 360px) {
+  .hero-title  { font-size: 22px; }
+  .stats-grid  { grid-template-columns: 1fr; }
+  .compat-grid { grid-template-columns: 1fr; }
+}

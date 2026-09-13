@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit Blood Request — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/requester-search.css" />
+  <link rel="stylesheet" href="../../CSS/requester-request.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Find Donors active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="requester-search.html">Find Donors</a>
+        <a href="requester-tracking.html" class="active">My Requests</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="req-page">
+    <div class="req-wrap">
+
+      <!-- HERO (matches requester-search hero style) -->
+      <section class="req-hero">
+        <div class="req-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="requester-tracking.html">My Requests</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Submit Request</span>
+          </div>
+          <h1 class="hero-title">Submit a <em>blood request</em></h1>
+          <p class="hero-sub">Tell us what you need — we'll notify every compatible, available donor in the area by email.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot"></span>
+          <span>Avg. first response <strong>under 2 hrs</strong></span>
+        </div>
+      </section>
+
+      <!-- FORM CARD (export: radius 12, ring 0.18, padding 24/28) -->
+      <section class="form-card">
+        <form id="request-form" novalidate>
+          <div class="form-grid">
+
+            <div class="form-field">
+              <label class="filter-label" for="r-blood">Blood group needed <b class="req-star">*</b></label>
+              <select class="filter-select" id="r-blood" required>
+                <option value="">Select blood group</option>
+                <option>B+</option><option>A+</option><option>A-</option><option>B-</option>
+                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="r-units">Units needed</label>
+              <select class="filter-select" id="r-units">
+                <option>1</option><option>2</option><option>3</option><option>4+</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="r-urgency">Urgency level</label>
+              <select class="filter-select" id="r-urgency">
+                <option selected>Urgent — needed within 24 hours</option>
+                <option>High — needed within 3 days</option>
+                <option>Normal — needed within a week</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="r-by">Needed by</label>
+              <input class="filter-select" type="date" id="r-by" />
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="r-hospital">Hospital / Location</label>
+              <select class="filter-select" id="r-hospital">
+                <option selected>Tribhuvan University Teaching Hospital, Maharajgunj</option>
+                <option>Bir Hospital, Kathmandu</option>
+                <option>Patan Hospital, Lalitpur</option>
+                <option>Manmohan Memorial Community Hospital, Kathmandu</option>
+                <option>Nepal Medical College Teaching Hospital, Jorpati</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="r-district">District / City</label>
+              <select class="filter-select" id="r-district">
+                <option selected>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option>
+                <option>Pokhara</option><option>Chitwan</option><option>Butwal</option><option>Biratnagar</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="r-notes">Additional notes <span class="opt">(optional)</span></label>
+              <textarea class="modal-textarea" id="r-notes" placeholder="e.g. patient name, ward, contact number…"></textarea>
+            </div>
+          </div>
+
+          <!-- COMPATIBILITY HINT (from proposal Appendix A) -->
+          <div class="compat-hint" id="compat-hint" hidden>
+            <div class="compat-hint-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Donors who can give to <b id="compat-group">B+</b> patients:
+            </div>
+            <div class="compat-chips" id="compat-chips"></div>
+            <div class="compat-note">Selecting "open to compatible groups" widens your donor pool — the system still prioritises exact matches first.</div>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Open to compatible groups</div>
+              <div class="toggle-sub">Also notify donors with compatible blood groups (O- is universal donor)</div>
+            </div>
+            <button type="button" class="toggle on" id="compat-toggle" role="switch" aria-checked="true"><span class="toggle-knob"></span></button>
+          </div>
+
+          <div class="form-actions">
+            <a class="modal-cancel" href="requester-search.html">Cancel</a>
+            <button class="modal-send" id="r-submit" type="submit">Submit request</button>
+          </div>
+        </form>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Compatibility map (proposal Appendix A) ---- */
+    const COMPAT = {
+      'A+': ['A+', 'A-', 'O+', 'O-'],
+      'A-': ['A-', 'O-'],
+      'B+': ['B+', 'B-', 'O+', 'O-'],
+      'B-': ['B-', 'O-'],
+      'AB+': ['AB+', 'AB-', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-'],
+      'AB-': ['AB-', 'A-', 'B-', 'O-'],
+      'O+': ['O+', 'O-'],
+      'O-': ['O-']
+    };
+
+    const bloodSel = document.getElementById('r-blood');
+    const hint = document.getElementById('compat-hint');
+    const chips = document.getElementById('compat-chips');
+    const groupLabel = document.getElementById('compat-group');
+
+    bloodSel.addEventListener('change', () => {
+      const g = bloodSel.value;
+      groupLabel.textContent = g || '—';
+      hint.hidden = !g;
+      chips.innerHTML = (COMPAT[g] || []).map(c =>
+        `<span class="chip chip-red ${c === g ? 'is-exact' : ''}"><span class="chip-drop"></span><b>${c}</b>${c === g ? ' (exact)' : ''}</span>`
+      ).join('');
+    });
+
+    /* ---- Compatible-groups toggle ---- */
+    const toggle = document.getElementById('compat-toggle');
+    toggle.addEventListener('click', () => {
+      const on = toggle.classList.toggle('on');
+      toggle.setAttribute('aria-checked', on);
+    });
+
+    /* ---- Submit (demo: save to localStorage, go to tracking) ---- */
+    document.getElementById('request-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const submit = document.getElementById('r-submit');
+      if (!bloodSel.value) {
+        bloodSel.focus();
+        bloodSel.style.boxShadow = 'inset 0 0 0 1px #C0202A';
+        return;
+      }
+      submit.textContent = 'Submitting…';
+      submit.disabled = true;
+
+      const id = 'BB-' + Date.now().toString(36).toUpperCase();
+      const req = {
+        id,
+        blood: bloodSel.value,
+        units: document.getElementById('r-units').value,
+        urgency: document.getElementById('r-urgency').value.split(' — ')[0],
+        neededBy: document.getElementById('r-by').value,
+        hospital: document.getElementById('r-hospital').value,
+        district: document.getElementById('r-district').value,
+        notes: document.getElementById('r-notes').value,
+        compatOk: toggle.classList.contains('on'),
+        status: 'Pending',
+        created: new Date().toISOString()
+      };
+      const all = JSON.parse(localStorage.getItem('bb_requests') || '[]');
+      all.unshift(req);
+      localStorage.setItem('bb_requests', JSON.stringify(all));
+
+      submit.textContent = 'Request submitted ✓';
+      setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 900);
+    });
+  </script>
+</body>
+</html>

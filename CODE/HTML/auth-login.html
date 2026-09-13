@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/auth.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (public) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html#how-it-works">How it works</a>
+        <a href="landing.html#roles">Find donors</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="auth-split">
+
+    <!-- LEFT: red brand panel -->
+    <aside class="auth-panel">
+      <div>
+        <div class="auth-brand">
+          <span class="logo-dot auth-dot"></span>
+          <span class="auth-brand-name">Blood<span class="auth-brand-accent">Buddy</span></span>
+        </div>
+        <h1 class="auth-headline">Welcome back.<br><em>Let's keep</em><br>saving lives.</h1>
+        <p class="auth-sub">Log in to manage your availability, track blood requests, and keep the lifeline flowing across Nepal.</p>
+
+        <div class="panel-roles">
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC8C8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Donor</div>
+              <div class="panel-role-desc">Toggle availability, get matched with urgent requests</div>
+            </div>
+          </div>
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#BDD5F0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Requester</div>
+              <div class="panel-role-desc">Track your blood requests and confirm matches</div>
+            </div>
+          </div>
+          <div class="panel-role-card">
+            <div class="panel-role-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FDAC6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div>
+              <div class="panel-role-name">Hospital Staff</div>
+              <div class="panel-role-desc">Manage blood bank inventory and incoming requests</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-stats">
+        <div>
+          <div class="auth-stat-num">1,240+</div>
+          <div class="auth-stat-label">Donors registered</div>
+        </div>
+        <div>
+          <div class="auth-stat-num">380+</div>
+          <div class="auth-stat-label">Requests fulfilled</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: login form -->
+    <section class="auth-content">
+      <form class="auth-card" id="login-form" novalidate>
+
+        <div class="step-kicker">Welcome back</div>
+        <h2 class="auth-title">Log in to <em>BloodBuddy</em></h2>
+        <p class="auth-card-sub">New here? <a class="link" href="auth-register.html">Create an account</a> — it takes 2 minutes.</p>
+
+        <div class="alert" id="login-alert" hidden><span id="login-alert-text"></span></div>
+
+        <div class="form-stack">
+          <div class="field-group">
+            <label class="field-label" for="login-email">Email address</label>
+            <input class="field-input" type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="login-pass">Password</label>
+            <div class="password-wrap">
+              <input class="field-input" type="password" id="login-pass" placeholder="Your password" autocomplete="current-password" />
+              <button type="button" class="eye-btn" id="toggle-login-pass" aria-label="Show password">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-row">
+          <label class="auth-check">
+            <input type="checkbox" id="login-remember" />
+            <span>Remember me</span>
+          </label>
+          <a class="link" href="#" id="forgot-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary btn-block" id="login-submit">Log in →</button>
+
+        <p class="auth-alt">Donor, requester, or hospital — one account for everything.</p>
+      </form>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow (same as landing) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // --- Hamburger menu toggle (same as landing) ---
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // --- Login form (front-end demo) ---
+    const alertBox = document.getElementById('login-alert');
+    const alertText = document.getElementById('login-alert-text');
+
+    function showAlert(type, msg) {
+      alertBox.className = 'alert alert-' + type;
+      alertText.textContent = msg;
+      alertBox.hidden = false;
+    }
+
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const pass = document.getElementById('login-pass').value;
+
+      if (!/^\S+@\S+\.\S+$/.test(email)) return showAlert('error', 'Please enter a valid email address.');
+      if (pass.length < 6) return showAlert('error', 'Password must be at least 6 characters.');
+
+      showAlert('success', 'Logged in as ' + email + ' (demo) — taking you to your dashboard…');
+      setTimeout(() => { window.location.href = 'donor-dashboard.html'; }, 900);
+    });
+
+    document.getElementById('toggle-login-pass').addEventListener('click', () => {
+      const p = document.getElementById('login-pass');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    });
+
+    document.getElementById('forgot-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      showAlert('info', 'Password reset is coming soon. For now, please register a new account if you\u2019re locked out.');
+    });
+  </script>
+</body>
+</html>

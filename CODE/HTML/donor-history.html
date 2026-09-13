@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donation History — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/donor-history.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (matches other pages) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="requester-search.html" class="active">Find Donors</a>
+        <a href="landing.html#roles">Hospitals</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="history-page">
+    <div class="history-wrap">
+
+      <!-- HERO (compact, same photo treatment as the dashboard) -->
+      <section class="dh-hero">
+        <div class="dh-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="donor-dashboard.html">Donor Dashboard</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Donation History</span>
+          </div>
+          <h1 class="dh-title">Donation <em>history</em></h1>
+          <p class="dh-sub">Every donation you've made across Nepal — five records since 2023. Thank you for showing up.</p>
+        </div>
+      </section>
+
+      <!-- SUMMARY STRIP -->
+      <section class="dh-summary">
+        <div class="dh-sum-box">
+          <div class="dh-sum-num">5</div>
+          <div class="dh-sum-label">Total donations</div>
+        </div>
+        <div class="dh-sum-box">
+          <div class="dh-sum-num">5</div>
+          <div class="dh-sum-label">Units contributed</div>
+        </div>
+        <div class="dh-sum-box">
+          <div class="dh-sum-num">14 Mar 2025</div>
+          <div class="dh-sum-label">Last donation</div>
+        </div>
+        <div class="dh-sum-box">
+          <div class="dh-sum-num">14 Aug 2025</div>
+          <div class="dh-sum-label">Next eligible date</div>
+        </div>
+      </section>
+
+      <!-- DONATIONS PER YEAR (pure-CSS bar chart, bars built by JS from the table rows) -->
+      <section class="dh-chart-card">
+        <div class="dh-chart-head">
+          <div>
+            <div class="dh-chart-title">Donations per year</div>
+            <div class="dh-chart-sub">Your yearly contribution at a glance</div>
+          </div>
+          <span class="dh-chart-total"><b id="chart-total">0</b> total since 2023</span>
+        </div>
+        <div class="dh-chart" id="year-chart" aria-hidden="true"></div>
+      </section>
+
+      <!-- FILTERS -->
+      <section class="dh-filter">
+        <span class="dh-filter-label">Filter by</span>
+        <select class="dh-select" id="f-year" aria-label="Filter by year">
+          <option value="">All years</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <select class="dh-select" id="f-loc" aria-label="Filter by location">
+          <option value="">All locations</option>
+          <option value="Bir Hospital">Bir Hospital</option>
+          <option value="Nepal Red Cross">Nepal Red Cross</option>
+          <option value="Central Blood Bank">Central Blood Bank</option>
+          <option value="Patan Hospital">Patan Hospital</option>
+        </select>
+        <span class="dh-count"><b id="record-count">5</b> <span id="record-text">records</span></span>
+        <button class="dh-reset" id="reset-btn">Reset filters</button>
+      </section>
+
+      <!-- RECORDS TABLE -->
+      <section class="dh-card">
+        <div class="dh-tablewrap" id="tablewrap">
+          <table class="dh-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Blood Group</th>
+                <th>Units</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr id="record-2025-03-14" data-year="2025" data-loc="Bir Hospital">
+                <td class="td-date">14 Mar 2025</td>
+                <td class="td-strong">Bir Hospital, Kathmandu</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+                <td class="td-notes">Whole blood · 450 ml</td>
+              </tr>
+              <tr data-year="2024" data-loc="Nepal Red Cross">
+                <td class="td-date">02 Nov 2024</td>
+                <td class="td-strong">Nepal Red Cross, Lalitpur</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+                <td class="td-notes">Mobile donation drive</td>
+              </tr>
+              <tr data-year="2024" data-loc="Central Blood Bank">
+                <td class="td-date">18 Jun 2024</td>
+                <td class="td-strong">Central Blood Bank, Kathmandu</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+                <td class="td-notes">Walk-in donation</td>
+              </tr>
+              <tr data-year="2024" data-loc="Patan Hospital">
+                <td class="td-date">11 Feb 2024</td>
+                <td class="td-strong">Patan Hospital, Lalitpur</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip verified">Verified</span></td>
+                <td class="td-notes">Workplace blood drive</td>
+              </tr>
+              <tr data-year="2023" data-loc="Bir Hospital">
+                <td class="td-date">27 Sep 2023</td>
+                <td class="td-strong">Bir Hospital, Kathmandu</td>
+                <td><span class="blood-badge">B+</span></td>
+                <td class="td-strong">1 unit</td>
+                <td><span class="status-chip">Fulfilled</span></td>
+                <td class="td-notes">Emergency appeal response</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- EMPTY STATE (shown when filters match nothing) -->
+        <div class="dh-empty" id="empty-state">
+          <div class="dh-empty-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+          </div>
+          <div class="dh-empty-title">No donations match those filters</div>
+          <div class="dh-empty-sub">Try a different year or location, or reset the filters.</div>
+          <button class="dh-empty-btn" id="empty-reset">Reset filters</button>
+        </div>
+      </section>
+
+      <!-- ELIGIBILITY NOTE -->
+      <section class="dh-note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="dh-note-text"><b>You can donate again from 14 Aug 2025.</b> Nepal's standard interval between whole-blood donations is 90 days — we'll notify you when you're eligible.</div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as landing/requester-search) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // --- History filters (demo data lives in the table rows) ---
+    const rows = Array.from(document.querySelectorAll('#history-body tr'));
+    const fYear = document.getElementById('f-year');
+    const fLoc = document.getElementById('f-loc');
+    const countEl = document.getElementById('record-count');
+    const textEl = document.getElementById('record-text');
+    const emptyState = document.getElementById('empty-state');
+    const tablewrap = document.getElementById('tablewrap');
+
+    function applyFilters() {
+      const year = fYear.value;
+      const loc = fLoc.value;
+      let visible = 0;
+      rows.forEach(row => {
+        const match = (!year || row.dataset.year === year) && (!loc || row.dataset.loc === loc);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+      countEl.textContent = visible;
+      textEl.textContent = visible === 1 ? 'record' : 'records';
+      emptyState.classList.toggle('show', visible === 0);
+      tablewrap.style.display = visible === 0 ? 'none' : '';
+    }
+
+    function resetFilters() {
+      fYear.value = '';
+      fLoc.value = '';
+      applyFilters();
+    }
+
+    fYear.addEventListener('change', applyFilters);
+    fLoc.addEventListener('change', applyFilters);
+    document.getElementById('reset-btn').addEventListener('click', resetFilters);
+    document.getElementById('empty-reset').addEventListener('click', resetFilters);
+
+    // --- Year chart (bars derived from the table rows, so they always agree) ---
+    const chartEl = document.getElementById('year-chart');
+    const chartTotal = document.getElementById('chart-total');
+    const counts = {};
+    rows.forEach(r => { const y = r.dataset.year; counts[y] = (counts[y] || 0) + 1; });
+    const years = Object.keys(counts).sort();
+    const max = Math.max(...Object.values(counts));
+
+    chartEl.innerHTML = years.map((y, i) => `
+      <div class="dh-bar-col">
+        <div class="dh-bar-track"><div class="dh-bar" style="--h:${Math.round(counts[y] / max * 100)}%; --d:${i * 110}ms"><span class="dh-bar-num">${counts[y]}</span></div></div>
+        <span class="dh-bar-year">${y}</span>
+      </div>`).join('');
+    chartTotal.textContent = rows.length;
+  </script>
+</body>
+</html>

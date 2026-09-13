@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hospital Blood Bank — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/hospital.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Hospital Portal active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="hospital-dashboard.html" class="active">Hospital Portal</a>
+        <a href="hospital-requests.html">Requests</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="hosp-page">
+    <div class="hosp-wrap">
+
+      <!-- HERO -->
+      <section class="hosp-hero">
+        <div class="hosp-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Hospital Portal</span>
+          </div>
+          <h1 class="hero-title">Blood bank <em>inventory</em></h1>
+          <p class="hero-sub">Live stock levels for your hospital's blood bank. Update units as collections and usage happen.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot green"></span>
+          <span>Blood bank <strong>open</strong> · updated just now</span>
+        </div>
+      </section>
+
+      <!-- LOW STOCK ALERTS (rendered by JS) -->
+      <section class="hosp-alerts" id="hosp-alerts"></section>
+
+      <!-- INVENTORY GRID (rendered by JS) -->
+      <div class="hosp-section-head">
+        <h2 class="hosp-section-title">Stock by blood group</h2>
+        <button class="hosp-secondary-btn" id="restock-all-btn">Restock suggestions</button>
+      </div>
+      <section class="inv-grid" id="inv-grid"></section>
+
+    </div>
+  </main>
+
+  <!-- ADJUST STOCK MODAL -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Update <em id="m-bg">O+</em> stock</div>
+          <div class="modal-sub">Record units collected or issued at the blood bank.</div>
+        </div>
+        <button class="modal-x" id="modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="m-current">
+        <div class="m-current-row"><span>Current stock</span><b id="m-current">— units</b></div>
+        <div class="m-current-row"><span>Status</span><b id="m-status">—</b></div>
+      </div>
+
+      <div class="modal-field">
+        <label class="filter-label" for="m-action">Action</label>
+        <select class="filter-select" id="m-action">
+          <option value="add">Add stock (collection drive / donation)</option>
+          <option value="remove">Remove stock (issued to patient)</option>
+          <option value="set">Set exact count (stock-take)</option>
+        </select>
+      </div>
+
+      <div class="modal-field">
+        <label class="filter-label" for="m-units">Units</label>
+        <input class="filter-select" type="number" id="m-units" min="1" max="99" value="1" />
+      </div>
+
+      <div class="m-result" id="m-result">
+        <span>Result:</span> <b id="m-result-val">—</b>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modal-cancel">Cancel</button>
+        <button class="modal-send" id="m-save">Save update</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Inventory data (demo — later: GET /api/hospitals/{id}/inventory) ---- */
+    const GROUPS = ['O+','O-','A+','A-','B+','B-','AB+','AB-'];
+    const THRESHOLDS = { critical: 4, low: 10 };
+
+    const INVENTORY = {
+      'O+': 24, 'O-': 3, 'A+': 18, 'A-': 6,
+      'B+': 12, 'B-': 2, 'AB+': 8, 'AB-': 5
+    };
+
+    const grid = document.getElementById('inv-grid');
+    const alertsBox = document.getElementById('hosp-alerts');
+
+    const statusOf = n =>
+      n <= THRESHOLDS.critical ? 'critical' : n <= THRESHOLDS.low ? 'low' : 'healthy';
+
+    function render() {
+      // inventory cards
+      grid.innerHTML = GROUPS.map(g => {
+        const n = INVENTORY[g];
+        const st = statusOf(n);
+        return `
+        <article class="inv-card ${st}">
+          <div class="inv-top">
+            <span class="inv-bg">${g}</span>
+            <span class="inv-status">${st}</span>
+          </div>
+          <div class="inv-num">${n}<span class="inv-unit">units</span></div>
+          <div class="inv-bar"><span class="inv-fill" style="width:${Math.min(100, (n / 30) * 100)}%"></span></div>
+          <button class="inv-adjust" data-bg="${g}">Adjust stock</button>
+        </article>`;
+      }).join('');
+
+      // low stock alerts
+      const lows = GROUPS
+        .map(g => ({ g, n: INVENTORY[g], st: statusOf(INVENTORY[g]) }))
+        .filter(x => x.st !== 'healthy')
+        .sort((a, b) => a.n - b.n);
+
+      alertsBox.innerHTML = lows.length ? lows.map(x => `
+        <div class="hosp-alert ${x.st}">
+          <div class="ha-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="ha-text">
+            <b>${x.g}</b> is ${x.st === 'critical' ? 'critically low' : 'running low'} — ${x.n} unit${x.n === 1 ? '' : 's'} left.
+            ${x.st === 'critical' ? 'A collection drive is recommended.' : 'Monitor closely.'}
+          </div>
+          <button class="ha-action" data-bg="${x.g}">Adjust</button>
+        </div>`).join('') : '';
+    }
+
+    render();
+
+    /* ---- Adjust-stock modal ---- */
+    const overlay = document.getElementById('modal-overlay');
+    let currentBg = null;
+
+    function openModal(bg) {
+      currentBg = bg;
+      const n = INVENTORY[bg];
+      document.getElementById('m-bg').textContent = bg;
+      document.getElementById('m-current').textContent = n + ' units';
+      const st = statusOf(n);
+      const stEl = document.getElementById('m-status');
+      stEl.textContent = st;
+      stEl.className = 'inv-status ' + st;
+      document.getElementById('m-units').value = 1;
+      updateResult();
+      overlay.classList.add('open');
+    }
+
+    function updateResult() {
+      if (!currentBg) return;
+      const action = document.getElementById('m-action').value;
+      const units = parseInt(document.getElementById('m-units').value, 10) || 0;
+      const cur = INVENTORY[currentBg];
+      let next = cur;
+      if (action === 'add') next = cur + units;
+      if (action === 'remove') next = Math.max(0, cur - units);
+      if (action === 'set') next = units;
+      document.getElementById('m-result-val').textContent =
+        `${cur} → ${next} units (${statusOf(next)})`;
+    }
+
+    document.getElementById('m-action').addEventListener('change', updateResult);
+    document.getElementById('m-units').addEventListener('input', updateResult);
+
+    grid.addEventListener('click', e => {
+      const btn = e.target.closest('.inv-adjust');
+      if (btn) openModal(btn.dataset.bg);
+    });
+    alertsBox.addEventListener('click', e => {
+      const btn = e.target.closest('.ha-action');
+      if (btn) openModal(btn.dataset.bg);
+    });
+
+    document.getElementById('m-save').addEventListener('click', function () {
+      if (!currentBg) return;
+      const action = document.getElementById('m-action').value;
+      const units = parseInt(document.getElementById('m-units').value, 10) || 0;
+      const cur = INVENTORY[currentBg];
+      let next = cur;
+      if (action === 'add') next = cur + units;
+      if (action === 'remove') next = Math.max(0, cur - units);
+      if (action === 'set') next = units;
+      INVENTORY[currentBg] = next;
+
+      this.textContent = 'Saved ✓';
+      this.disabled = true;
+      render();
+      setTimeout(() => {
+        overlay.classList.remove('open');
+        this.textContent = 'Save update';
+        this.disabled = false;
+      }, 700);
+    });
+
+    const closeModal = () => overlay.classList.remove('open');
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    /* ---- Restock suggestions (demo) ---- */
+    document.getElementById('restock-all-btn').addEventListener('click', function () {
+      const lows = GROUPS.filter(g => statusOf(INVENTORY[g]) !== 'healthy');
+      this.textContent = lows.length
+        ? `${lows.length} group${lows.length > 1 ? 's' : ''} need restocking: ${lows.join(', ')}`
+        : 'All groups healthy ✓';
+      setTimeout(() => { this.textContent = 'Restock suggestions'; }, 2500);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hospital Requests — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/hospital.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Requests active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="hospital-dashboard.html">Hospital Portal</a>
+        <a href="hospital-requests.html" class="active">Requests</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="hosp-page">
+    <div class="hosp-wrap">
+
+      <!-- HERO (alt-hero = hero-donation.jpg, rotates the image per page) -->
+      <section class="hosp-hero alt-hero">
+        <div class="hosp-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="hospital-dashboard.html">Hospital Portal</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Requests</span>
+          </div>
+          <h1 class="hero-title">Incoming <em>blood requests</em></h1>
+          <p class="hero-sub">Requests forwarded by BloodBuddy requesters and the platform. Fulfil them from your inventory.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot green"></span>
+          <span><strong id="queue-count">2</strong> in queue</span>
+        </div>
+      </section>
+
+      <div class="hosp-section-head">
+        <h2 class="hosp-section-title">Request queue</h2>
+        <span class="queue-updated" id="queue-updated">Updated just now</span>
+      </div>
+
+      <!-- FILTER TABS -->
+      <div class="trk-tabs" id="trk-tabs">
+        <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
+        <button class="trk-tab" data-filter="Pending">Pending <span class="tab-count" id="cnt-pending">0</span></button>
+        <button class="trk-tab" data-filter="Accepted">Accepted <span class="tab-count" id="cnt-accepted">0</span></button>
+        <button class="trk-tab" data-filter="Fulfilled">Fulfilled <span class="tab-count" id="cnt-fulfilled">0</span></button>
+        <button class="trk-tab" data-filter="Rejected">Rejected <span class="tab-count" id="cnt-rejected">0</span></button>
+      </div>
+
+      <!-- REQUEST QUEUE LIST (rendered by JS) -->
+      <section class="queue-list" id="queue-list"></section>
+
+      <!-- EMPTY STATE -->
+      <section class="trk-empty" id="trk-empty" hidden>
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="empty-title">No requests in the queue</div>
+        <div class="empty-sub">Requests forwarded from BloodBuddy requesters appear here.</div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Queue data (demo — later: GET /api/hospitals/{id}/requests) ---- */
+    const SEED = [
+      { id:'REQ-501', blood:'O-', units:'2', urgency:'Urgent', requester:'Sita Gurung', hospital:'Bir Hospital, Kathmandu', created:'2026-09-13T07:45:00', neededBy:'2026-09-14', status:'Pending', notes:'Surgery ward, contact 98XXXXXXXX' },
+      { id:'REQ-498', blood:'B+', units:'1', urgency:'Normal', requester:'Ramesh Shrestha', hospital:'Bir Hospital, Kathmandu', created:'2026-09-12T15:20:00', neededBy:'2026-09-19', status:'Accepted', notes:'Maternity ward' },
+      { id:'REQ-492', blood:'AB+', units:'3', urgency:'High', requester:'Anita Rai', hospital:'Bir Hospital, Kathmandu', created:'2026-09-11T10:05:00', neededBy:'2026-09-16', status:'Fulfilled', notes:'' },
+      { id:'REQ-487', blood:'A+', units:'1', urgency:'Normal', requester:'Kiran Adhikari', hospital:'Bir Hospital, Kathmandu', created:'2026-09-10T09:30:00', neededBy:'2026-09-17', status:'Rejected', notes:'Outside service area' }
+    ];
+    const all = SEED.slice();
+
+    const list = document.getElementById('queue-list');
+    const emptyBox = document.getElementById('trk-empty');
+    let currentFilter = 'all';
+
+    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    const timeAgo = iso => {
+      const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    };
+
+    const STATUS_META = {
+      Pending:   { cls:'st-pending',   label:'Pending' },
+      Accepted:  { cls:'st-accepted',  label:'Accepted' },
+      Fulfilled: { cls:'st-fulfilled', label:'Fulfilled' },
+      Rejected:  { cls:'st-rejected',  label:'Rejected' }
+    };
+
+    function render() {
+      const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
+
+      ['all','Pending','Accepted','Fulfilled','Rejected'].forEach(f => {
+        document.getElementById('cnt-' + f.toLowerCase()).textContent =
+          f === 'all' ? all.length : all.filter(r => r.status === f).length;
+      });
+      document.getElementById('queue-count').textContent =
+        all.filter(r => r.status === 'Pending').length;
+
+      if (!items.length) {
+        list.innerHTML = '';
+        emptyBox.hidden = false;
+        emptyBox.querySelector('.empty-title').textContent =
+          currentFilter === 'all' ? 'No requests in the queue' : `No ${currentFilter.toLowerCase()} requests`;
+        return;
+      }
+      emptyBox.hidden = true;
+
+      list.innerHTML = items.map(r => {
+        const meta = STATUS_META[r.status];
+        const actions = r.status === 'Pending'
+          ? `<button class="qa accept" data-id="${r.id}" data-act="Accepted">Accept</button>
+             <button class="qa reject" data-id="${r.id}" data-act="Rejected">Reject</button>`
+          : r.status === 'Accepted'
+          ? `<button class="qa accept" data-id="${r.id}" data-act="Fulfilled">Mark fulfilled</button>`
+          : '';
+        return `
+        <article class="req-card">
+          <div class="rc-head">
+            <span class="rc-badge">${r.blood}</span>
+            <div class="rc-title">
+              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span></div>
+              <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.urgency} · needed by ${fmtDate(r.neededBy)} · ${timeAgo(r.created)}</div>
+            </div>
+            <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
+          </div>
+          ${r.notes ? `<div class="rc-notes">"${r.notes}"</div>` : ''}
+          <div class="rc-foot">
+            <div class="rc-needby">Forwarded to your hospital queue</div>
+            <div class="qa-group">${actions}</div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    /* ---- Tabs ---- */
+    document.getElementById('trk-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.trk-tab');
+      if (!tab) return;
+      document.querySelectorAll('.trk-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
+
+    /* ---- Accept / Reject / Fulfil (demo) ---- */
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.qa');
+      if (!btn) return;
+      const r = all.find(x => x.id === btn.dataset.id);
+      if (!r) return;
+      r.status = btn.dataset.act;
+      document.getElementById('queue-updated').textContent = 'Updated just now';
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
