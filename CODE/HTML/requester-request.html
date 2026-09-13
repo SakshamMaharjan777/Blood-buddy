@@ -164,6 +164,8 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -214,7 +216,8 @@
       toggle.setAttribute('aria-checked', on);
     });
 
-    /* ---- Submit (demo: save to localStorage, go to tracking) ---- */
+    /* ---- Submit (persists to the shared demo store, then goes to tracking) ----
+       Later backend: POST /api/requests */
     document.getElementById('request-form').addEventListener('submit', function (e) {
       e.preventDefault();
       const submit = document.getElementById('r-submit');
@@ -226,23 +229,23 @@
       submit.textContent = 'Submitting…';
       submit.disabled = true;
 
+      const session = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
       const id = 'BB-' + Date.now().toString(36).toUpperCase();
-      const req = {
+      window.BloodBuddyStore.requests.add({
         id,
         blood: bloodSel.value,
         units: document.getElementById('r-units').value,
         urgency: document.getElementById('r-urgency').value.split(' — ')[0],
         neededBy: document.getElementById('r-by').value,
-        hospital: document.getElementById('r-hospital').value,
+        hospital: '—',
         district: document.getElementById('r-district').value,
         notes: document.getElementById('r-notes').value,
         compatOk: toggle.classList.contains('on'),
         status: 'Pending',
-        created: new Date().toISOString()
-      };
-      const all = JSON.parse(localStorage.getItem('bb_requests') || '[]');
-      all.unshift(req);
-      localStorage.setItem('bb_requests', JSON.stringify(all));
+        requester: (session && session.name) || 'You',
+        created: new Date().toISOString(),
+        timeline: [{ when: new Date().toISOString().slice(0, 16).replace('T', ' '), what: 'Request submitted — compatible donors notified' }]
+      });
 
       submit.textContent = 'Request submitted ✓';
       setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 900);

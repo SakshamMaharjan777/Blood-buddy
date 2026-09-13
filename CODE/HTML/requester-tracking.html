@@ -173,6 +173,8 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -190,17 +192,9 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Demo data (merged with anything submitted on the form page) ---- */
-    const SEED = [
-      { id:'BB-8F3K2M', blood:'O+', units:'2', urgency:'Urgent', hospital:'Bir Hospital, Kathmandu', district:'Kathmandu', neededBy:'2026-09-15', compatOk:true, status:'Matched', created:'2026-09-12T09:24:00', donor:'Arun Shrestha (B+ → O+ compatible)', donorAt:'2026-09-12T11:02:00',
-        timeline:[{when:'2026-09-12 09:24', what:'Request submitted — 14 compatible donors notified'},{when:'2026-09-12 11:02', what:'Arun Shrestha accepted the request'}] },
-      { id:'BB-2QX9P1', blood:'B+', units:'1', urgency:'Normal', hospital:'Patan Hospital, Lalitpur', district:'Lalitpur', neededBy:'2026-09-20', compatOk:false, status:'Pending', created:'2026-09-13T08:10:00',
-        timeline:[{when:'2026-09-13 08:10', what:'Request submitted — 22 compatible donors notified'}] },
-      { id:'BB-7HD4LN', blood:'AB-', units:'1', urgency:'Normal', hospital:'Tribhuvan University Teaching Hospital, Maharajgunj', district:'Kathmandu', neededBy:'2026-08-30', compatOk:true, status:'Completed', created:'2026-08-28T14:45:00', donor:'Priya Karki (AB- exact match)', donorAt:'2026-08-28T15:30:00',
-        timeline:[{when:'2026-08-28 14:45', what:'Request submitted — 6 compatible donors notified'},{when:'2026-08-28 15:30', what:'Priya Karki accepted the request'},{when:'2026-08-30 10:15', what:'Donation completed & verified'}] }
-    ];
-
-    const all = SEED.concat(JSON.parse(localStorage.getItem('bb_requests') || '[]'));
+    /* ---- Demo data — shared store (bb-store.js), persists across pages/roles ---- */
+    const store = window.BloodBuddyStore;
+    let all = store.requests.all();
     const list = document.getElementById('req-list');
     const emptyBox = document.getElementById('trk-empty');
     let currentFilter = 'all';
@@ -220,8 +214,13 @@
 
     const STATUS_META = {
       Pending:   { cls:'st-pending',   label:'Pending' },
+      Forwarded: { cls:'st-pending',   label:'Forwarded to hospital' },
+      Accepted:  { cls:'st-matched',   label:'Accepted' },
+      Fulfilled: { cls:'st-completed', label:'Fulfilled' },
       Matched:   { cls:'st-matched',   label:'Matched' },
-      Completed: { cls:'st-completed', label:'Completed' }
+      Completed: { cls:'st-completed', label:'Completed' },
+      Rejected:  { cls:'st-rejected',  label:'Not available' },
+      Cancelled: { cls:'st-rejected',  label:'Cancelled' }
     };
 
     function render() {
@@ -232,7 +231,7 @@
           f === 'all' ? all.length : all.filter(r => r.status === f).length;
       });
       document.getElementById('open-count').textContent =
-        `${all.filter(r => r.status !== 'Completed').length} requests`;
+        `${all.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled' && r.status !== 'Rejected').length} requests`;
 
       if (!items.length) {
         list.innerHTML = '';
@@ -288,16 +287,15 @@
       currentFilter = tab.dataset.filter;
       render();
     });
-
-    /* ---- New request CTA ---- */
     document.getElementById('new-request-btn').addEventListener('click', () => {
       window.location.href = 'requester-request.html';
     });
 
     /* ---- Detail modal ---- */
+    /* ---- Detail modal (reads live store data so statuses are current) ---- */
     const overlay = document.getElementById('modal-overlay');
     function openModal(id) {
-      const r = all.find(x => x.id === id);
+      const r = store.requests.find(id);
       if (!r) return;
       currentId = id;
       document.getElementById('m-id').textContent = r.id;
@@ -346,11 +344,12 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    /* ---- Cancel request (demo) ---- */
+    /* ---- Cancel request (persists to the shared store) ---- */
     document.getElementById('modal-cancelreq').addEventListener('click', function () {
       const r = all.find(x => x.id === currentId);
       if (!r) return;
-      r.status = 'Cancelled'; // demo: reuse the terminal state
+      store.requests.update(r.id, { status: 'Cancelled' });
+      all = store.requests.all();
       render();
       closeModal();
     });

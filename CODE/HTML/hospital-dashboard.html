@@ -126,6 +126,8 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -147,10 +149,10 @@
     const GROUPS = ['O+','O-','A+','A-','B+','B-','AB+','AB-'];
     const THRESHOLDS = { critical: 4, low: 10 };
 
-    const INVENTORY = {
-      'O+': 24, 'O-': 3, 'A+': 18, 'A-': 6,
-      'B+': 12, 'B-': 2, 'AB+': 8, 'AB-': 5
-    };
+    /* ---- Inventory — shared store (bb-store.js), persists across pages/reloads.
+       Later backend: GET/PUT /api/hospitals/{hospitalId}/inventory ---- */
+    const store = window.BloodBuddyStore;
+    const INVENTORY = store.inventory.all();
 
     const grid = document.getElementById('inv-grid');
     const alertsBox = document.getElementById('hosp-alerts');
@@ -249,6 +251,7 @@
       if (action === 'remove') next = Math.max(0, cur - units);
       if (action === 'set') next = units;
       INVENTORY[currentBg] = next;
+      store.inventory.setUnits(currentBg, next);
 
       this.textContent = 'Saved ✓';
       this.disabled = true;

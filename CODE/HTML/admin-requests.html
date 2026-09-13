@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Moderation — BloodBuddy Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/admin.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Admin Portal active, Moderation current -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="admin-dashboard.html">Admin Portal</a>
+        <a href="admin-requests.html" class="active">Moderation</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="adm-page">
+    <div class="adm-wrap">
+
+      <!-- HERO (alt-hero = hero-donation.jpg, same rotation as hospital-requests) -->
+      <section class="adm-hero alt-hero">
+        <div class="adm-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="admin-dashboard.html">Admin Portal</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Moderation</span>
+          </div>
+          <h1 class="hero-title">All <em>blood requests</em></h1>
+          <p class="hero-sub">Platform-wide view of every blood request. Forward pending requests to the right hospital queue or flag spam.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot"></span>
+          <span><strong id="queue-count">0</strong> awaiting review</span>
+        </div>
+      </section>
+
+      <div class="adm-section-head">
+        <h2 class="adm-section-title">Review queue</h2>
+        <span class="adm-updated" id="queue-updated">Updated just now</span>
+      </div>
+
+      <!-- STATUS TABS -->
+      <div class="trk-tabs" id="trk-tabs">
+        <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
+        <button class="trk-tab" data-filter="Pending">Pending <span class="tab-count" id="cnt-pending">0</span></button>
+        <button class="trk-tab" data-filter="Accepted">Forwarded <span class="tab-count" id="cnt-accepted">0</span></button>
+        <button class="trk-tab" data-filter="Fulfilled">Fulfilled <span class="tab-count" id="cnt-fulfilled">0</span></button>
+        <button class="trk-tab" data-filter="Rejected">Flagged <span class="tab-count" id="cnt-rejected">0</span></button>
+      </div>
+
+      <!-- HOSPITAL FILTER -->
+      <div class="adm-filter-bar">
+        <span class="adm-filter-label">Forwarding target:</span>
+        <select class="filter-select" id="hospital-filter">
+          <option value="">All hospitals</option>
+          <option>TUTH, Maharajgunj</option>
+          <option>Bir Hospital, Kathmandu</option>
+          <option>Patan Hospital, Lalitpur</option>
+          <option>Manmohan Memorial, Kathmandu</option>
+          <option>Nepal Medical College, Kathmandu</option>
+        </select>
+      </div>
+
+      <!-- REQUEST LIST (rendered by JS) -->
+      <section class="queue-list" id="queue-list"></section>
+
+      <!-- EMPTY STATE -->
+      <section class="trk-empty" id="trk-empty" hidden>
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="empty-title" id="empty-title">No requests here</div>
+        <div class="empty-sub">Requests submitted by BloodBuddy requesters appear here for review.</div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="m-title">Forward <em>request</em></div>
+          <div class="modal-sub" id="m-sub">Pick the hospital that should handle this request.</div>
+        </div>
+        <button class="modal-x" id="modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="m-current">
+        <div class="m-current-row"><span>Request</span><b id="m-req">—</b></div>
+        <div class="m-current-row"><span>Blood / Units</span><b id="m-blood">—</b></div>
+        <div class="m-current-row"><span>Requester</span><b id="m-requester">—</b></div>
+      </div>
+
+      <div class="modal-field" id="m-hospital-field">
+        <label class="filter-label" for="m-hospital">Forward to hospital</label>
+        <select class="filter-select" id="m-hospital">
+          <option>TUTH, Maharajgunj</option>
+          <option>Bir Hospital, Kathmandu</option>
+          <option>Patan Hospital, Lalitpur</option>
+          <option>Manmohan Memorial, Kathmandu</option>
+          <option>Nepal Medical College, Kathmandu</option>
+        </select>
+      </div>
+
+      <div class="m-note" id="m-note">Forwarded requests appear in the hospital's queue (<a class="link" href="hospital-requests.html">hospital-requests.html</a>) for Accept / Fulfil.</div>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modal-cancel">Cancel</button>
+        <button class="modal-send" id="m-confirm">Forward request</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="landing.html#about">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Moderation queue — shared store (bb-store.js) ----
+       Shows every Pending request submitted platform-wide, plus the
+       seeded forwarded/flagged ones for context. Persists across
+       pages/reloads. Later backend: GET /api/requests + PATCH /api/requests/{id} */
+    const store = window.BloodBuddyStore;
+    const LEGACY_SEED = [
+      { id:'REQ-494', blood:'A-',  units:'3', urgency:'High',   requester:'Kiran Adhikari',  hospital:'Patan Hospital, Lalitpur', created:'2026-09-12T09:05:00', neededBy:'2026-09-15', status:'Fulfilled', notes:'' },
+      { id:'REQ-490', blood:'O+',  units:'9', urgency:'Normal', requester:'xx_spam_user',    hospital:'—', created:'2026-09-11T22:47:00', neededBy:'2026-09-12', status:'Rejected', notes:'Suspicious volume — flagged for review' }
+    ];
+    (function ensureModerationSeeds() {
+      const ids = store.requests.all().map(r => r.id);
+      LEGACY_SEED.forEach(r => { if (ids.indexOf(r.id) === -1) store.requests.add(r); });
+    })();
+    const all = store.requests.all().slice();
+
+    const list = document.getElementById('queue-list');
+    const emptyBox = document.getElementById('trk-empty');
+    let currentFilter = 'all';
+
+    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    const timeAgo = iso => {
+      const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.round(hrs / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    };
+
+    const STATUS_META = {
+      Pending:   { cls:'st-pending',   label:'Pending review' },
+      Accepted:  { cls:'st-accepted',  label:'Forwarded' },
+      Fulfilled: { cls:'st-fulfilled', label:'Fulfilled' },
+      Rejected:  { cls:'st-rejected',  label:'Flagged' }
+    };
+
+    function render() {
+      ['all','Pending','Accepted','Fulfilled','Rejected'].forEach(f => {
+        document.getElementById('cnt-' + f.toLowerCase()).textContent =
+          f === 'all' ? all.length : all.filter(r => r.status === f).length;
+      });
+      document.getElementById('queue-count').textContent =
+        all.filter(r => r.status === 'Pending').length;
+
+      const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
+
+      if (!items.length) {
+        list.innerHTML = '';
+        emptyBox.hidden = false;
+        document.getElementById('empty-title').textContent =
+          currentFilter === 'all' ? 'No requests here' : `No ${document.querySelector(`.trk-tab[data-filter="${currentFilter}"]`).textContent.trim().toLowerCase()} requests`;
+        return;
+      }
+      emptyBox.hidden = true;
+
+      list.innerHTML = items.map(r => {
+        const meta = STATUS_META[r.status];
+        const actions = r.status === 'Pending'
+          ? `<button class="qa accept" data-id="${r.id}" data-act="forward">Forward to hospital</button>
+             <button class="qa reject" data-id="${r.id}" data-act="Rejected">Flag as spam</button>`
+          : '';
+        return `
+        <article class="req-card">
+          <div class="rc-head">
+            <span class="rc-badge">${r.blood}</span>
+            <div class="rc-title">
+              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span></div>
+              <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.urgency} · needed by ${fmtDate(r.neededBy)} · ${timeAgo(r.created)}</div>
+            </div>
+            <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
+          </div>
+          ${r.notes ? `<div class="rc-notes">"${r.notes}"</div>` : ''}
+          <div class="rc-foot">
+            <div class="rc-needby">${r.hospital !== '—' ? `Handling hospital: <b>${r.hospital}</b>` : 'Awaiting moderation'}</div>
+            <div class="qa-group">${actions}</div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    /* ---- Tabs ---- */
+    document.getElementById('trk-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.trk-tab');
+      if (!tab) return;
+      document.querySelectorAll('.trk-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
+
+    /* ---- Confirm modal (forward / flag) ---- */
+    const overlay = document.getElementById('modal-overlay');
+    let pending = null;
+
+    function openModal(r, act) {
+      pending = { req: r, act };
+      document.getElementById('m-title').innerHTML =
+        act === 'forward' ? 'Forward <em>request</em>' : 'Flag <em>request</em> as spam?';
+      document.getElementById('m-sub').textContent =
+        act === 'forward' ? 'Pick the hospital that should handle this request.' : 'The request is withdrawn and the requester is notified by email.';
+      document.getElementById('m-req').textContent = `${r.id} · ${fmtDate(r.neededBy)}`;
+      document.getElementById('m-blood').textContent = `${r.blood} · ${r.units} unit${r.units > 1 ? 's' : ''} · ${r.urgency}`;
+      document.getElementById('m-requester').textContent = r.requester;
+      document.getElementById('m-hospital-field').style.display = act === 'forward' ? '' : 'none';
+      document.getElementById('m-note').textContent =
+        act === 'forward'
+          ? 'Forwarded requests appear in the hospital\'s queue (hospital-requests.html) for Accept / Fulfil.'
+          : 'Flagged requests stay in the audit log. The requester can appeal by contacting support.';
+      const btn = document.getElementById('m-confirm');
+      btn.textContent = act === 'forward' ? 'Forward request' : 'Flag as spam';
+      btn.classList.toggle('green', act !== 'forward');
+      overlay.classList.add('open');
+    }
+    const closeModal = () => { overlay.classList.remove('open'); pending = null; };
+
+    list.addEventListener('click', e => {
+      const btn = e.target.closest('.qa');
+      if (!btn) return;
+      const r = all.find(x => x.id === btn.dataset.id);
+      if (r) openModal(r, btn.dataset.act);
+    });
+
+    document.getElementById('m-confirm').addEventListener('click', () => {
+      if (!pending) return;
+      if (pending.act === 'forward') {
+        const hospital = document.getElementById('m-hospital').value;
+        store.requests.update(pending.req.id, {
+          status: 'Accepted',
+          hospital: hospital,
+          timeline: (pending.req.timeline || []).concat([{
+            when: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            what: 'Forwarded to ' + hospital + ' by platform admin'
+          }])
+        });
+      } else {
+        store.requests.update(pending.req.id, {
+          status: 'Rejected',
+          timeline: (pending.req.timeline || []).concat([{
+            when: new Date().toISOString().slice(0, 16).replace('T', ' '),
+            what: 'Flagged as spam by platform admin'
+          }])
+        });
+      }
+      const idx = all.findIndex(x => x.id === pending.req.id);
+      if (idx > -1) all[idx] = store.requests.find(pending.req.id);
+      document.getElementById('queue-updated').textContent = 'Updated just now';
+      closeModal();
+      render();
+    });
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    render();
+  </script>
+</body>
+</html>

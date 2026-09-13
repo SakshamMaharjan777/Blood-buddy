@@ -196,6 +196,7 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as landing) ---
@@ -259,9 +260,7 @@
       document.getElementById('results-num').textContent = list.length;
     }
 
-    renderDonors(DONORS);
-
-    /* ---- Search filter (demo) ---- */
+    renderDonors(DONORS);    /* ---- Search filter (demo) ---- */
     document.getElementById('search-btn').addEventListener('click', () => {
       const bg = document.getElementById('f-blood').value;
       const dist = document.getElementById('f-district').value;
@@ -282,6 +281,15 @@
     };
     ['f-blood','f-district','f-avail'].forEach(id =>
       document.getElementById(id).addEventListener('change', syncChips));
+
+    /* ---- Pre-fill filters from URL (?blood=B%2B&district=Kathmandu — from landing search) ---- */
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('blood')) document.getElementById('f-blood').value = urlParams.get('blood');
+    if (urlParams.get('district')) document.getElementById('f-district').value = urlParams.get('district');
+    syncChips();
+
+    // Apply filters once on load so URL params take effect immediately
+    document.getElementById('search-btn').click();
 
     /* ---- Request modal (from your export) ---- */
     const overlay = document.getElementById('modal-overlay');

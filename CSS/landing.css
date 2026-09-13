@@ -525,6 +525,31 @@ a.cta-btn-white, a.cta-btn-outline {
 }
 .check { color: var(--green); font-weight: 700; }
 
+.role-cta {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--red);
+  text-decoration: none;
+}
+.role-cta:hover { text-decoration: underline; }
+
+/* ---------- Nav user chip (logged-in state, from nav.js) ---------- */
+.nav-user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: var(--red-soft);
+  border-radius: 20px;
+}
+.nav-user-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 500;
+}
+.nav-user-label { font-size: 12.5px; font-weight: 500; color: var(--red-dark); white-space: nowrap; }
+
 /* ---------- Compatibility ---------- */
 .compat-grid {
   display: grid;

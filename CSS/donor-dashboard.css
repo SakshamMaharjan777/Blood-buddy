@@ -175,6 +175,122 @@ a.stat-box:focus-visible {
   font-size: 11px; font-weight: 500; color: #3B6D11;
 }
 
+/* =============================================
+   DONOR PROFILE (donor-profile.html)
+   Form card reuses the .history-card shell.
+   ============================================= */
+
+.profile-card {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.profile-legend {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.profile-legend-title { font-family: var(--font-display); font-size: 20px; color: #1A1A1A; }
+.profile-legend-sub { font-size: 12px; color: #9B9B9B; margin-top: 3px; }
+.profile-saved {
+  font-size: 11px; font-weight: 500; color: #3B6D11;
+  background: #EAF3DE; border-radius: 20px;
+  box-shadow: inset 0 0 0 1px #C0DD97;
+  padding: 4px 12px; white-space: nowrap;
+}
+
+.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pf-grid .full { grid-column: 1 / -1; }
+.pf-field { display: flex; flex-direction: column; gap: 6px; }
+.pf-label { font-size: 12px; font-weight: 500; color: #6B6B6B; }
+.pf-input, .pf-select {
+  padding: 10px 12px;
+  background: #F7F6F4;
+  border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  font-family: var(--font-body); font-size: 13px; color: #1A1A1A;
+  width: 100%;
+}
+.pf-select {
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.pf-input:focus, .pf-select:focus { outline: none; box-shadow: inset 0 0 0 1px #C0202A; }
+.pf-input::placeholder { color: #9B9B9B; }
+
+/* Availability toggle row (same pattern as auth.css .toggle-row) */
+.pf-toggle-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 14px 16px;
+  background: #EAF3DE;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px #C0DD97;
+}
+.pf-toggle-row.unavailable {
+  background: #F1F0EE;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+}
+.pf-toggle-title { display: block; font-size: 13px; font-weight: 500; color: #3B6D11; }
+.pf-toggle-row.unavailable .pf-toggle-title { color: #6B6B6B; }
+.pf-toggle-desc { display: block; font-size: 12px; color: #6B6B6B; margin-top: 2px; }
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: #ccc; border-radius: 11px;
+  transition: 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 3px; top: 3px;
+  background: #fff; border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: #3B6D11; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* Unsaved-changes save bar */
+.save-bar {
+  display: none;
+  justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  background: #FBF3E4;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #EFD9AC;
+}
+.save-bar.show { display: flex; }
+.save-bar-text { font-size: 13px; color: #854F0B; }
+.save-bar-actions { display: flex; gap: 8px; }
+.pf-save {
+  padding: 8px 18px; background: #C0202A; border: none; border-radius: 8px;
+  color: #fff; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.pf-save:hover { opacity: 0.9; }
+.pf-cancel {
+  padding: 7px 14px; background: #fff; border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  color: #6B6B6B; font-family: var(--font-body); font-size: 13px; cursor: pointer;
+}
+.pf-cancel:hover { color: #C0202A; box-shadow: inset 0 0 0 1px #C0202A; }
+
+/* Toast (saved confirmation) */
+.pf-toast {
+  position: fixed; left: 50%; bottom: 28px; z-index: 300;
+  transform: translate(-50%, 16px);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px;
+  background: #1A1A1A; color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.pf-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.pf-toast .tick { color: #8FD460; font-weight: 700; }
+
 /* --- MOTION GUARD --- */
 @media (prefers-reduced-motion: reduce) {
   .dash-hero::before { transition: none; }
@@ -182,12 +298,17 @@ a.stat-box:focus-visible {
 }
 
 /* --- RESPONSIVE --- */
-@media (max-width: 1024px) { .dash-stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 1024px) {
+  .dash-stats { grid-template-columns: 1fr 1fr; }
+  .pf-grid { grid-template-columns: 1fr 1fr; }
+}
 @media (max-width: 900px) {
   .dash-hero { height: auto; min-height: 240px; }
   .dash-title { font-size: 30px; line-height: 38px; }
   .dash-urgent { flex-direction: column; align-items: flex-start; }
   .du-actions { width: 100%; }
   .du-actions button { flex: 1; }
+  .pf-grid { grid-template-columns: 1fr; }
+  .profile-legend { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 560px) { .dash-stats { grid-template-columns: 1fr; } }

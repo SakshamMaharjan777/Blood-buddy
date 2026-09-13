@@ -268,7 +268,7 @@
             <div class="summary-grid" id="summary-grid"></div>
           </div>
 
-          <a class="btn-primary btn-block" href="donor-dashboard.html" id="dash-link" onclick="event.preventDefault(); this.textContent='Dashboard coming soon…'">Go to donor dashboard →</a>
+          <a class="btn-primary btn-block" href="donor-dashboard.html" id="dash-link">Go to donor dashboard →</a>
         </div>
 
       </form>
@@ -290,6 +290,7 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow (same as landing) ---
@@ -461,6 +462,21 @@
         hospital: 'Welcome! The ' + hname + ' staff account for ' + fullName + ' is registered — pending verification.'
       };
       document.getElementById('success-sub').textContent = successMsgs[role];
+
+      // Point the final CTA at the right role dashboard
+      const dashboards = {
+        donor: 'donor-dashboard.html',
+        requester: 'requester-search.html',
+        hospital: 'hospital-dashboard.html'
+      };
+      const dashLink = document.getElementById('dash-link');
+      dashLink.href = dashboards[role] || 'donor-dashboard.html';
+      dashLink.textContent = roleMeta[role].dash;
+
+      // Save the demo session so nav is role-aware site-wide
+      if (window.BloodBuddyNav) {
+        window.BloodBuddyNav.setSession({ role: role, name: fullName });
+      }
 
       showStep(3);
     });

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset password — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/auth.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (public) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html#how-it-works">How it works</a>
+        <a href="landing.html#roles">Find donors</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="auth-split">
+
+    <!-- LEFT: red brand panel -->
+    <aside class="auth-panel">
+      <div>
+        <div class="auth-brand">
+          <span class="logo-dot auth-dot"></span>
+          <span class="auth-brand-name">Blood<span class="auth-brand-accent">Buddy</span></span>
+        </div>
+        <h1 class="auth-headline">Locked out?<br><em>We've got</em><br>you covered.</h1>
+        <p class="auth-sub">Enter the email linked to your BloodBuddy account and we'll send you a secure link to set a new password.</p>
+
+        <div class="whats-next" style="margin-top:26px;">
+          <div class="whats-next-label" style="color:rgba(255,255,255,0.55);">What happens next</div>
+          <div class="whats-next-item">
+            <span class="whats-next-num">1</span>
+            <span>You submit your registered email address</span>
+          </div>
+          <div class="whats-next-item">
+            <span class="whats-next-num">2</span>
+            <span>We email you a password reset link (valid 30 minutes)</span>
+          </div>
+          <div class="whats-next-item">
+            <span class="whats-next-num">3</span>
+            <span>Set a new password and log in as usual</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-stats">
+        <div>
+          <div class="auth-stat-num">24/7</div>
+          <div class="auth-stat-label">Reset links available</div>
+        </div>
+        <div>
+          <div class="auth-stat-num">&lt;1 min</div>
+          <div class="auth-stat-label">Typical email delivery</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: forgot password form -->
+    <section class="auth-content">
+      <form class="auth-card" id="forgot-form" novalidate>
+
+        <div class="step-kicker">Password help</div>
+        <h2 class="auth-title">Reset your <em>password</em></h2>
+        <p class="auth-card-sub">Remembered it after all? <a class="link" href="auth-login.html">Back to log in</a>.</p>
+
+        <div class="alert" id="forgot-alert" hidden><span id="forgot-alert-text"></span></div>
+
+        <div class="form-stack" id="forgot-fields">
+          <div class="field-group">
+            <label class="field-label" for="forgot-email">Email address</label>
+            <input class="field-input" type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+
+          <button type="submit" class="btn-primary btn-block" id="forgot-submit">Send reset link →</button>
+        </div>
+
+        <p class="auth-alt">Demo flow — no real email is sent. In the live system this uses the platform's SMTP email service.</p>
+      </form>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="landing.html#about">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // --- Forgot password form (front-end demo) ---
+    const alertBox = document.getElementById('forgot-alert');
+    const alertText = document.getElementById('forgot-alert-text');
+
+    function showAlert(type, msg) {
+      alertBox.className = 'alert alert-' + type;
+      alertText.textContent = msg;
+      alertBox.hidden = false;
+    }
+
+    document.getElementById('forgot-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgot-email').value.trim();
+
+      if (!/^\S+@\S+\.\S+$/.test(email)) return showAlert('error', 'Please enter a valid email address.');
+
+      // Demo: show the "email sent" confirmation state
+      document.getElementById('forgot-fields').innerHTML = `
+        <div class="forgot-sent">
+          <div class="success-icon">✓</div>
+          <h2 class="auth-title center">Check your inbox</h2>
+          <p class="auth-card-sub center">We've sent a password reset link to <b>${email}</b>.<br>The link expires in 30 minutes.</p>
+          <a class="btn-primary btn-block" href="auth-login.html">Back to log in →</a>
+        </div>`;
+      showAlert('success', 'Reset link sent (demo).');
+    });
+  </script>
+</body>
+</html>

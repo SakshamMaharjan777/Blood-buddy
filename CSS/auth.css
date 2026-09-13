@@ -404,6 +404,10 @@ select.field-input {
 }
 .eye-btn:hover { color: var(--red); background: var(--red-soft); }
 
+/* ---------- Forgot-password sent state ---------- */
+.forgot-sent { display: flex; flex-direction: column; }
+.forgot-sent .auth-card-sub { margin-bottom: 20px; }
+
 /* ---------- Success step ---------- */
 .center { text-align: center; }
 .success-icon {

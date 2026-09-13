@@ -101,6 +101,8 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -118,14 +120,30 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Queue data (demo — later: GET /api/hospitals/{id}/requests) ---- */
-    const SEED = [
-      { id:'REQ-501', blood:'O-', units:'2', urgency:'Urgent', requester:'Sita Gurung', hospital:'Bir Hospital, Kathmandu', created:'2026-09-13T07:45:00', neededBy:'2026-09-14', status:'Pending', notes:'Surgery ward, contact 98XXXXXXXX' },
-      { id:'REQ-498', blood:'B+', units:'1', urgency:'Normal', requester:'Ramesh Shrestha', hospital:'Bir Hospital, Kathmandu', created:'2026-09-12T15:20:00', neededBy:'2026-09-19', status:'Accepted', notes:'Maternity ward' },
-      { id:'REQ-492', blood:'AB+', units:'3', urgency:'High', requester:'Anita Rai', hospital:'Bir Hospital, Kathmandu', created:'2026-09-11T10:05:00', neededBy:'2026-09-16', status:'Fulfilled', notes:'' },
-      { id:'REQ-487', blood:'A+', units:'1', urgency:'Normal', requester:'Kiran Adhikari', hospital:'Bir Hospital, Kathmandu', created:'2026-09-10T09:30:00', neededBy:'2026-09-17', status:'Rejected', notes:'Outside service area' }
+    /* ---- Queue data — shared store (bb-store.js) ----
+       Shows every request forwarded to this hospital by the admin,
+       plus the seeded hospital queue. Persists across pages/reloads.
+       Later backend: GET /api/hospitals/{id}/requests */
+    const store = window.BloodBuddyStore;
+    const HOSPITAL = 'Bir Hospital, Kathmandu'; // demo: this hospital's login
+    const LEGACY_SEED = [
+      { id:'REQ-501', blood:'O-', units:'2', urgency:'Urgent', requester:'Sita Gurung', hospital:HOSPITAL, created:'2026-09-13T07:45:00', neededBy:'2026-09-14', status:'Pending', notes:'Surgery ward, contact 98XXXXXXXX' },
+      { id:'REQ-498', blood:'B+', units:'1', urgency:'Normal', requester:'Ramesh Shrestha', hospital:HOSPITAL, created:'2026-09-12T15:20:00', neededBy:'2026-09-19', status:'Accepted', notes:'Maternity ward' },
+      { id:'REQ-492', blood:'AB+', units:'3', urgency:'High', requester:'Anita Rai', hospital:HOSPITAL, created:'2026-09-11T10:05:00', neededBy:'2026-09-16', status:'Fulfilled', notes:'' },
+      { id:'REQ-487', blood:'A+', units:'1', urgency:'Normal', requester:'Kiran Adhikari', hospital:HOSPITAL, created:'2026-09-10T09:30:00', neededBy:'2026-09-17', status:'Rejected', notes:'Outside service area' }
     ];
-    const all = SEED.slice();
+    (function ensureHospitalQueue() {
+      const storeIds = store.requests.all().map(r => r.id);
+      const missing = LEGACY_SEED.filter(r => storeIds.indexOf(r.id) === -1);
+      if (missing.length) {
+        missing.forEach(r => {
+          if (!r.requester) r.requester = r.requester;
+          store.requests.add(r);
+        });
+      }
+    })();
+    const all = store.requests.all().filter(r =>
+      r.hospital === HOSPITAL && r.status !== 'Cancelled');
 
     const list = document.getElementById('queue-list');
     const emptyBox = document.getElementById('trk-empty');
@@ -204,13 +222,24 @@
       render();
     });
 
-    /* ---- Accept / Reject / Fulfil (demo) ---- */
+    /* ---- Accept / Reject / Fulfil (persists to the shared store) ---- */
     list.addEventListener('click', e => {
       const btn = e.target.closest('.qa');
       if (!btn) return;
       const r = all.find(x => x.id === btn.dataset.id);
       if (!r) return;
-      r.status = btn.dataset.act;
+      const patch = { status: btn.dataset.act };
+      if (btn.dataset.act === 'Fulfilled') {
+        // Fulfilling consumes units from the hospital's inventory
+        const inv = store.inventory.all();
+        const units = Math.max(1, parseInt(r.units, 10) || 1);
+        inv[r.blood] = Math.max(0, (inv[r.blood] || 0) - units);
+        store.inventory.save(inv);
+        patch.timeline = (r.timeline || []).concat([{ when: new Date().toISOString().slice(0, 16).replace('T', ' '), what: 'Blood issued from hospital inventory' }]);
+      }
+      store.requests.update(r.id, patch);
+      const idx = all.findIndex(x => x.id === r.id);
+      if (idx > -1) all[idx] = store.requests.find(r.id);
       document.getElementById('queue-updated').textContent = 'Updated just now';
       render();
     });

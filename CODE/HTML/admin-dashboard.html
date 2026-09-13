@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/admin.css" />
+</head>
+<body>
+
+  <!-- NAVBAR — Admin Portal active -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="admin-dashboard.html" class="active">Admin Portal</a>
+        <a href="admin-requests.html">Moderation</a>
+        <a href="landing.html#about">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="adm-page">
+    <div class="adm-wrap">
+
+      <!-- HERO (4th image: adrian-sulyok, completes the rotation) -->
+      <section class="adm-hero">
+        <div class="adm-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Admin Portal</span>
+          </div>
+          <h1 class="hero-title">Platform <em>administration</em></h1>
+          <p class="hero-sub">Moderate users and requests, monitor platform activity, and keep the BloodBuddy network healthy.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot green"></span>
+          <span>All systems <strong>operational</strong></span>
+        </div>
+      </section>
+
+      <!-- KPI CARDS (rendered by JS) -->
+      <section class="kpi-grid" id="kpi-grid"></section>
+
+      <!-- MODERATION SHORTCUT -->
+      <section class="hosp-alert">
+        <div class="ha-icon critical">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="ha-text critical-text"><b><span id="pending-requests">2</span> blood requests</b> are awaiting review on the platform.</div>
+        <a class="ha-action" href="admin-requests.html" style="text-decoration:none;">Review requests →</a>
+      </section>
+
+      <!-- ANALYTICS -->
+      <section class="charts-grid">
+
+        <!-- Donations bar chart (pure CSS bars) -->
+        <div class="chart-card">
+          <div>
+            <div class="chart-title">Donations this week</div>
+            <div class="chart-sub">Units collected across all 5 partner hospitals</div>
+          </div>
+          <div class="bar-chart" id="bar-chart"></div>
+        </div>
+
+        <!-- Users donut (conic-gradient) -->
+        <div class="chart-card">
+          <div>
+            <div class="chart-title">Users by role</div>
+            <div class="chart-sub">Registered accounts, live demo data</div>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut" id="donut">
+              <div class="donut-hole">
+                <div class="donut-total">2,418</div>
+                <div class="donut-cap">total users</div>
+              </div>
+            </div>
+            <div class="donut-legend" id="donut-legend"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- USERS -->
+      <div class="adm-section-head">
+        <h2 class="adm-section-title">User management</h2>
+        <span class="adm-updated" id="users-updated">Updated just now</span>
+      </div>
+
+      <!-- FILTER TABS -->
+      <div class="trk-tabs" id="trk-tabs">
+        <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
+        <button class="trk-tab" data-filter="Donor">Donors <span class="tab-count" id="cnt-donor">0</span></button>
+        <button class="trk-tab" data-filter="Requester">Requesters <span class="tab-count" id="cnt-requester">0</span></button>
+        <button class="trk-tab" data-filter="Hospital">Hospitals <span class="tab-count" id="cnt-hospital">0</span></button>
+        <button class="trk-tab" data-filter="Admin">Admins <span class="tab-count" id="cnt-admin">0</span></button>
+      </div>
+
+      <!-- SEARCH + VIEW -->
+      <div class="users-toolbar">
+        <input class="filter-select users-search" type="search" id="users-search" placeholder="Search name, email, or ID…" />
+        <span class="adm-updated" id="users-shown">—</span>
+        <button class="hosp-secondary-btn" id="view-suspended-btn">View suspended only</button>
+      </div>
+
+      <!-- USERS TABLE (rendered by JS) -->
+      <div class="users-table-card">
+        <table class="users-table" aria-label="Platform users">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Blood / Stock</th>
+              <th>District</th>
+              <th>Joined</th>
+              <th>Status</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+        <div class="ut-empty" id="ut-empty" hidden>
+          <div class="ut-empty-title">No users found</div>
+          <div class="ut-empty-sub">Try clearing the search or switching tabs.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="m-title">Suspend <em>user</em>?</div>
+          <div class="modal-sub" id="m-sub">The user will lose access until reinstated.</div>
+        </div>
+        <button class="modal-x" id="modal-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="m-current">
+        <div class="m-current-row"><span>User</span><b id="m-user">—</b></div>
+        <div class="m-current-row"><span>Role</span><b id="m-role">—</b></div>
+        <div class="m-current-row"><span>Email</span><b id="m-email">—</b></div>
+      </div>
+
+      <div class="m-warning" id="m-warning">Suspended users can't log in, receive alerts, or submit requests. You can restore them any time.</div>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modal-cancel">Cancel</button>
+        <button class="modal-send" id="m-confirm">Suspend user</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Analytics data (demo — later: GET /api/admin/*) ---- */
+    const KPIS = [
+      { label: 'Total users',       num: '2,418', delta: '+124 this month', dir: 'up',
+        icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>' },
+      { label: 'Active requests',   num: '37',    delta: '9 urgent', dir: 'up',
+        icon: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>' },
+      { label: 'Units in stock',    num: '812',   delta: '2 groups critical', dir: 'down',
+        icon: '<path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>' },
+      { label: 'Fulfilled (30d)',   num: '96',    delta: '+8% vs last month', dir: 'up',
+        icon: '<polyline points="20 6 9 17 4 12"/>' }
+    ];
+
+    const WEEK = [
+      { day: 'Mon', v: 34 }, { day: 'Tue', v: 41 }, { day: 'Wed', v: 29 },
+      { day: 'Thu', v: 47 }, { day: 'Fri', v: 52 }, { day: 'Sat', v: 68 },
+      { day: 'Sun', v: 44 }
+    ];
+    const MAXV = Math.max(...WEEK.map(d => d.v));
+
+    const ROLES = [
+      { name: 'Donors',     n: 1796, color: '#C0202A' },
+      { name: 'Requesters', n: 512,  color: '#185FA5' },
+      { name: 'Hospitals',  n: 88,   color: '#3B6D11' },
+      { name: 'Admins',     n: 22,   color: '#D99A22' }
+    ];
+
+    /* ---- Users data — shared store (bb-store.js), persists across pages/reloads.
+       Later backend: GET /api/admin/users + PATCH /api/admin/users/{id} ---- */
+    const store = window.BloodBuddyStore;
+    const USERS = store.users.all();
+
+    const initials = n => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+    const STATUS_META = {
+      Active:    { cls: 'st-active',    label: 'Active' },
+      Suspended: { cls: 'st-rejected',  label: 'Suspended' }
+    };
+
+    /* ---- Render KPIs ---- */
+    document.getElementById('kpi-grid').innerHTML = KPIS.map(k => `
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">${k.label}</span>
+          <span class="kpi-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${k.icon}</svg>
+          </span>
+        </div>
+        <div class="kpi-num">${k.num}</div>
+        <span class="kpi-delta ${k.dir}">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            ${k.dir === 'up' ? '<polyline points="18 15 12 9 6 15"/>' : '<polyline points="6 9 12 15 18 9"/>'}
+          </svg>
+          ${k.delta}
+        </span>
+      </div>`).join('');
+
+    /* ---- Render bar chart ---- */
+    document.getElementById('bar-chart').innerHTML = WEEK.map((d, i) => `
+      <div class="bar-col ${i === WEEK.length - 1 ? 'today' : ''}">
+        <div class="bar-track"><div class="bar-fill" style="--h:${Math.round(d.v / MAXV * 100)}%" data-v="${d.v} units"></div></div>
+        <span class="bar-day">${d.day}</span>
+      </div>`).join('');
+
+    /* ---- Render donut + legend ---- */
+    const totalUsers = ROLES.reduce((s, r) => s + r.n, 0);
+    let acc = 0;
+    const donut = document.getElementById('donut');
+    const stops = ROLES.map(r => {
+      const from = acc / totalUsers * 360;
+      acc += r.n;
+      const to = acc / totalUsers * 360;
+      return `${r.color} ${from.toFixed(1)}deg ${to.toFixed(1)}deg`;
+    }).join(', ');
+    donut.style.background = `conic-gradient(${stops})`;
+    document.getElementById('donut-legend').innerHTML = ROLES.map(r => `
+      <div class="dl-row">
+        <span class="dl-dot" style="background:${r.color}"></span>
+        ${r.name}<b>${r.n.toLocaleString()}</b>
+      </div>`).join('');
+    document.querySelector('.donut-total').textContent = totalUsers.toLocaleString();
+
+    /* ---- Users table ---- */
+    const tbody = document.getElementById('users-tbody');
+    const emptyBox = document.getElementById('ut-empty');
+    let currentFilter = 'all';
+    let suspendedOnly = false;
+
+    function render() {
+      ['all', 'Donor', 'Requester', 'Hospital', 'Admin'].forEach(f => {
+        document.getElementById('cnt-' + f.toLowerCase()).textContent =
+          f === 'all' ? USERS.length : USERS.filter(u => u.role === f).length;
+      });
+
+      const q = document.getElementById('users-search').value.trim().toLowerCase();
+      let items = currentFilter === 'all' ? USERS : USERS.filter(u => u.role === currentFilter);
+      if (suspendedOnly) items = items.filter(u => u.status === 'Suspended');
+      if (q) items = items.filter(u =>
+        u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q));
+
+      document.getElementById('users-shown').textContent = `${items.length} of ${USERS.length} shown`;
+
+      if (!items.length) {
+        tbody.innerHTML = '';
+        emptyBox.hidden = false;
+        return;
+      }
+      emptyBox.hidden = true;
+
+      tbody.innerHTML = items.map(u => {
+        const meta = STATUS_META[u.status];
+        const actions = u.status === 'Active'
+          ? `<button class="ut-btn danger" data-id="${u.id}" data-act="Suspended">Suspend</button>`
+          : `<button class="ut-btn restore" data-id="${u.id}" data-act="Active">Restore</button>`;
+        return `
+        <tr>
+          <td>
+            <div class="ut-user">
+              <div class="ut-avatar">${initials(u.name)}</div>
+              <div>
+                <div class="ut-name">${u.name}</div>
+                <div class="ut-mail">${u.email} · ${u.id}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="ut-role ${u.role.toLowerCase()}">${u.role}</span></td>
+          <td class="ut-meta">${u.blood}</td>
+          <td class="ut-meta">${u.district}</td>
+          <td class="ut-meta">${fmtDate(u.joined)}</td>
+          <td><span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span></td>
+          <td><div class="ut-actions">${actions}</div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    /* ---- Tabs ---- */
+    document.getElementById('trk-tabs').addEventListener('click', e => {
+      const tab = e.target.closest('.trk-tab');
+      if (!tab) return;
+      document.querySelectorAll('.trk-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
+
+    /* ---- Search + suspended toggle ---- */
+    document.getElementById('users-search').addEventListener('input', render);
+    document.getElementById('view-suspended-btn').addEventListener('click', function () {
+      suspendedOnly = !suspendedOnly;
+      this.textContent = suspendedOnly ? 'Show all users' : 'View suspended only';
+      this.style.color = suspendedOnly ? '#C0202A' : '';
+      this.style.boxShadow = suspendedOnly ? 'inset 0 0 0 1px #C0202A' : '';
+      render();
+    });
+
+    /* ---- Confirm modal (suspend / restore) ---- */
+    const overlay = document.getElementById('modal-overlay');
+    let pending = null;
+
+    function openModal(u, act) {
+      pending = { user: u, act };
+      document.getElementById('m-title').innerHTML =
+        act === 'Suspended' ? 'Suspend <em>user</em>?' : 'Restore <em>user</em>?';
+      document.getElementById('m-sub').textContent =
+        act === 'Suspended' ? 'The user will lose access until reinstated.' : 'The user will regain full platform access.';
+      document.getElementById('m-user').textContent = `${u.name} · ${u.id}`;
+      document.getElementById('m-role').textContent = u.role;
+      document.getElementById('m-email').textContent = u.email;
+      document.getElementById('m-warning').textContent =
+        act === 'Suspended'
+          ? "Suspended users can't log in, receive alerts, or submit requests. You can restore them any time."
+          : 'Restored users can immediately log in and interact with the platform again.';
+      const btn = document.getElementById('m-confirm');
+      btn.textContent = act === 'Suspended' ? 'Suspend user' : 'Restore user';
+      btn.classList.toggle('green', act === 'Active');
+      overlay.classList.add('open');
+    }
+    const closeModal = () => { overlay.classList.remove('open'); pending = null; };
+
+    tbody.addEventListener('click', e => {
+      const btn = e.target.closest('.ut-btn');
+      if (!btn) return;
+      const u = USERS.find(x => x.id === btn.dataset.id);
+      if (u) openModal(u, btn.dataset.act);
+    });
+
+    document.getElementById('m-confirm').addEventListener('click', () => {
+      if (!pending) return;
+      store.users.setStatus(pending.user.id, pending.act);
+      document.getElementById('users-updated').textContent = 'Updated just now';
+      closeModal();
+      render();
+    });
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    render();
+  </script>
+</body>
+</html>

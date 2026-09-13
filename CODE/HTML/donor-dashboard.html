@@ -24,8 +24,8 @@
       </button>
       <div class="nav-links" id="nav-links">
         <a href="landing.html">Home</a>
-        <a href="requester-search.html" class="active">Find Donors</a>
-        <a href="landing.html#roles">Hospitals</a>
+        <a href="donor-dashboard.html">Donor Portal</a>
+        <a href="donor-profile.html">My Profile</a>
         <a href="landing.html#about">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
@@ -46,12 +46,12 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             <span>Donor Dashboard</span>
           </div>
-          <h1 class="dash-title"><span id="greeting">Good morning</span>, <em>Saksham</em></h1>
-          <p class="dash-sub">You're registered as a blood donor in Kathmandu. Your next eligible donation date is 14 Aug 2025.</p>
+          <h1 class="dash-title"><span id="greeting">Good morning</span>, <em id="dash-name">Saksham</em></h1>
+          <p class="dash-sub" id="dash-sub">You're registered as a blood donor in Kathmandu. Your next eligible donation date is 14 Aug 2025.</p>
         </div>
-        <div class="hero-pill">
+        <div class="hero-pill" id="hero-pill">
           <span class="pill-dot green"></span>
-          <span>Available to Donate</span>
+          <span id="hero-pill-text">Available to Donate</span>
         </div>
       </section>
 
@@ -188,6 +188,7 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as landing/requester-search) ---
@@ -209,6 +210,19 @@
     const h = new Date().getHours();
     document.getElementById('greeting').textContent =
       h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+
+    /* ---- Reflect the saved donor profile (from donor-profile.html localStorage) ---- */
+    let profile = {};
+    try { profile = JSON.parse(localStorage.getItem('bb_donor_profile') || '{}'); } catch (e) { profile = {}; }
+    if (profile.fname) {
+      document.getElementById('dash-name').textContent = profile.fname;
+      document.getElementById('dash-sub').textContent =
+        `You're registered as a ${profile.blood || ''} blood donor in ${profile.district || 'Kathmandu'}. Your next eligible donation date is 14 Aug 2025.`.replace('a  blood', 'a blood');
+    }
+    if (profile.available === false) {
+      document.getElementById('hero-pill-text').textContent = 'Not Available';
+      document.querySelector('#hero-pill .pill-dot').style.background = '#9B9B9B';
+    }
 
     // Urgent alert actions
     document.getElementById('dismiss-btn').addEventListener('click', () => {

@@ -185,6 +185,7 @@
             <li><span class="check">✓</span> Receive urgent request alerts</li>
             <li><span class="check">✓</span> Track donation history</li>
           </ul>
+          <a class="role-cta" href="donor-dashboard.html">Open donor portal →</a>
         </div>
 
         <div class="role-card">
@@ -200,6 +201,7 @@
             <li><span class="check">✓</span> Track request status</li>
             <li><span class="check">✓</span> Email confirmation on match</li>
           </ul>
+          <a class="role-cta" href="requester-search.html">Open requester portal →</a>
         </div>
 
         <div class="role-card">
@@ -215,6 +217,7 @@
             <li><span class="check">✓</span> View incoming requests</li>
             <li><span class="check">✓</span> Update stock levels instantly</li>
           </ul>
+          <a class="role-cta" href="hospital-dashboard.html">Open hospital portal →</a>
         </div>
 
       </div>
@@ -279,6 +282,7 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow ---
@@ -339,7 +343,8 @@
         result.hidden = false;
         return;
       }
-      resultText.innerHTML = `Searching for ${bg} donors in ${dist}... <a class="link" href="auth-login.html">Log in</a> or <a class="link" href="auth-register.html?role=requester">register</a> to view results.`;
+      const params = `blood=${encodeURIComponent(bg)}&district=${encodeURIComponent(dist)}`;
+      resultText.innerHTML = `Searching for ${bg} donors in ${dist}... <a class="link" href="requester-search.html?${params}">View matching donors</a> — <a class="link" href="auth-login.html">log in</a> or <a class="link" href="auth-register.html?role=requester">register</a> for full results.`;
       result.style.borderColor = '#C0DD97';
       result.style.background = '#EAF3DE';
       resultText.style.color = '#3B6D11';

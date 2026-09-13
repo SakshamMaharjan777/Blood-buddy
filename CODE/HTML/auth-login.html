@@ -101,6 +101,16 @@
 
         <div class="form-stack">
           <div class="field-group">
+            <label class="field-label" for="login-role">I'm logging in as</label>
+            <select class="field-input" id="login-role">
+              <option value="donor" selected>Donor</option>
+              <option value="requester">Requester</option>
+              <option value="hospital">Hospital staff</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+
+          <div class="field-group">
             <label class="field-label" for="login-email">Email address</label>
             <input class="field-input" type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
           </div>
@@ -121,7 +131,7 @@
             <input type="checkbox" id="login-remember" />
             <span>Remember me</span>
           </label>
-          <a class="link" href="#" id="forgot-link">Forgot password?</a>
+          <a class="link" href="auth-forgot.html" id="forgot-link">Forgot password?</a>
         </div>
 
         <button type="submit" class="btn-primary btn-block" id="login-submit">Log in →</button>
@@ -146,6 +156,7 @@
     </div>
   </footer>
 
+  <script src="../js/nav.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow (same as landing) ---
@@ -183,17 +194,23 @@
       if (pass.length < 6) return showAlert('error', 'Password must be at least 6 characters.');
 
       showAlert('success', 'Logged in as ' + email + ' (demo) — taking you to your dashboard…');
-      setTimeout(() => { window.location.href = 'donor-dashboard.html'; }, 900);
+      const role = document.getElementById('login-role').value;
+      const dashboards = {
+        donor: 'donor-dashboard.html',
+        requester: 'requester-search.html',
+        hospital: 'hospital-dashboard.html',
+        admin: 'admin-dashboard.html'
+      };
+      const target = dashboards[role] || 'donor-dashboard.html';
+      if (window.BloodBuddyNav) {
+        window.BloodBuddyNav.setSession({ role: role, name: email.split('@')[0] });
+      }
+      setTimeout(() => { window.location.href = target; }, 900);
     });
 
     document.getElementById('toggle-login-pass').addEventListener('click', () => {
       const p = document.getElementById('login-pass');
       p.type = p.type === 'password' ? 'text' : 'password';
-    });
-
-    document.getElementById('forgot-link').addEventListener('click', (e) => {
-      e.preventDefault();
-      showAlert('info', 'Password reset is coming soon. For now, please register a new account if you\u2019re locked out.');
     });
   </script>
 </body>
