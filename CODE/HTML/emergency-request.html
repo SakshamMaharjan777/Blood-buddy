@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emergency Blood Request — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/requester-search.css" />
+  <link rel="stylesheet" href="../../CSS/requester-request.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
+  <style>
+    /* emergency-request only — red urgency hero + member nudge card */
+    .em-hero { background: linear-gradient(rgba(140, 16, 22, 0.82), rgba(140, 16, 22, 0.82)), url('../../images/hero-donation.jpg') center/cover no-repeat; }
+    .em-nudge {
+      margin-top: 16px; padding: 14px 18px; border-radius: 12px;
+      background: #FDF6E9; border: 1px solid #EAD9AE;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    }
+    .em-nudge-text { font-size: 13.5px; color: #6B5A23; }
+    .em-nudge-text a { color: #A32D2D; font-weight: 500; }
+    .em-success {
+      padding: 34px 28px; text-align: center;
+      background: #FFFFFF; border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(59, 109, 17, 0.25), 0 10px 30px rgba(43, 15, 20, 0.06);
+    }
+    .em-success h2 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 26px; margin: 10px 0 6px; color: #2B0F14; }
+    .em-success p { color: #6D5A5E; font-size: 14px; margin: 0 0 18px; }
+    .em-success .em-id { font-size: 13px; color: #3B6D11; background: #EAF3DE; border-radius: 999px; padding: 6px 14px; display: inline-block; margin-bottom: 14px; }
+    .em-success a.em-track { color: #A32D2D; font-weight: 500; }
+
+    /* Status-lookup card — guests follow their EM request by ID */
+    .em-lookup { margin-top: 18px; }
+    .em-lookup-title { display: flex; align-items: center; gap: 8px; font-family: 'DM Serif Display', serif; font-weight: 400; font-size: 19px; color: #2B0F14; margin-bottom: 12px; }
+    .lk-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .lk-row .filter-select { flex: 1 1 260px; }
+    .lk-btn { padding: 12px 22px; }
+    .lk-err { color: #A32D2D; font-size: 13.5px; margin: 12px 0 0; }
+    .lk-card { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(59, 109, 17, 0.22); }
+    .lk-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .lk-title { flex: 1; min-width: 180px; font-weight: 500; color: #2B0F14; font-size: 14.5px; }
+    .lk-sub { font-weight: 400; color: #8A7B7E; font-size: 12.5px; margin-top: 2px; }
+    .lk-tl { margin: 12px 0 0; padding-left: 18px; color: #6D5A5E; font-size: 12.5px; }
+    .lk-tl li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="emergency-request.html" class="active">Emergency</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="req-page">
+    <div class="req-wrap">
+
+      <!-- HERO — red urgency treatment -->
+      <section class="req-hero em-hero alt-hero">
+        <div class="req-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Emergency request</span>
+          </div>
+          <h1 class="hero-title" style="color:#fff;">Need blood <em>right now?</em></h1>
+          <p class="hero-sub" style="color:rgba(255,255,255,0.92);">No account needed. Tell us what your patient needs — every compatible, available donor in the district gets an urgent email alert.</p>
+        </div>
+        <div class="hero-pill">
+          <span class="pill-dot"></span>
+          <span>Emergency? Also call <strong>102</strong> (ambulance) or your hospital's blood bank</span>
+        </div>
+      </section>
+
+      <!-- FORM CARD — guest urgent request -->
+      <section class="form-card" id="em-form-wrap">
+        <form id="em-form" novalidate>
+          <div class="form-grid">
+
+            <div class="form-field">
+              <label class="filter-label" for="e-blood">Blood group needed <b class="req-star">*</b></label>
+              <select class="filter-select" id="e-blood" required>
+                <option value="">Select blood group</option>
+                <option>O-</option><option>O+</option><option>A+</option><option>A-</option>
+                <option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="e-units">Units needed</label>
+              <select class="filter-select" id="e-units">
+                <option>1</option><option>2</option><option>3</option><option>4+</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="e-by">Needed by</label>
+              <input class="filter-select" type="date" id="e-by" />
+            </div>
+
+            <div class="form-field">
+              <label class="filter-label" for="e-district">District / City <b class="req-star">*</b></label>
+              <select class="filter-select" id="e-district" required>
+                <option value="">Select location</option>
+                <option>Kathmandu</option><option>Lalitpur</option><option>Bhaktapur</option>
+                <option>Pokhara</option><option>Chitwan</option><option>Butwal</option><option>Biratnagar</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="e-hospital">Hospital / Location</label>
+              <select class="filter-select" id="e-hospital">
+                <option selected>Tribhuvan University Teaching Hospital, Maharajgunj</option>
+                <option>Bir Hospital, Kathmandu</option>
+                <option>Patan Hospital, Lalitpur</option>
+                <option>Manmohan Memorial Community Hospital, Kathmandu</option>
+                <option>Nepal Medical College Teaching Hospital, Jorpati</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="e-contact">Contact number <span class="opt">(so donors can reach you fast)</span></label>
+              <input class="filter-select" type="tel" id="e-contact" placeholder="98XXXXXXXX" />
+            </div>
+
+            <div class="form-field form-field-full">
+              <label class="filter-label" for="e-notes">Patient / situation details <span class="opt">(optional)</span></label>
+              <textarea class="modal-textarea" id="e-notes" placeholder="e.g. patient name, ward, accident emergency, contact person…"></textarea>
+            </div>
+          </div>
+
+          <!-- COMPATIBILITY HINT (from proposal Appendix A) -->
+          <div class="compat-hint" id="compat-hint" hidden>
+            <div class="compat-hint-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Donors who can give to <b id="compat-group">B+</b> patients:
+            </div>
+            <div class="compat-chips" id="compat-chips"></div>
+            <div class="compat-note">We always alert exact-match donors first, then compatible ones (O- is the universal donor).</div>
+          </div>
+
+          <div class="form-actions">
+            <a class="modal-cancel" href="landing.html">Cancel</a>
+            <button class="modal-send" id="e-submit" type="submit">Send emergency alert</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- SUCCESS STATE -->
+      <section class="em-success" id="em-success" hidden>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <h2>Emergency alert sent</h2>
+        <p>Every compatible, available donor near <b id="ok-district">you</b> is being emailed right now.<br>Keep your phone close — donors may call the contact number you left.</p>
+        <div class="em-id">Request ID: <b id="ok-id">—</b></div>
+        <p style="margin-bottom:0;">Remember this ID: <a class="em-track" href="#" id="ok-track">check its status here</a> anytime,<br>or <a class="em-track" href="emergency-request.html">submit another emergency request</a>.</p>
+      </section>
+
+      <!-- CHECK A REQUEST — guests follow their EM request by ID (public, no login) -->
+      <section class="form-card em-lookup">
+        <div class="em-lookup-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Already submitted? Check its status
+        </div>
+        <div class="lk-row">
+          <input class="filter-select" id="lk-id" placeholder="Enter your request ID (e.g. EM-MA2B4K)" aria-label="Emergency request ID" />
+          <button class="modal-send lk-btn" id="lk-btn" type="button">Check status</button>
+        </div>
+        <div id="lk-result" aria-live="polite"></div>
+      </section>
+
+      <!-- MEMBER NUDGE — hidden by nav.js for logged-in users -->
+      <div class="em-nudge" id="em-nudge" data-guest-only>
+        <span class="em-nudge-text"><b>Requesting often?</b> Log in to track all your requests in one place and search the full donor directory.</span>
+        <span><a class="link" href="auth-login.html">Log in</a> &nbsp;·&nbsp; <a class="link" href="auth-register.html?role=requester">Register</a></span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-validate.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-compat.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    /* ---- Compatibility chart (proposal Appendix A) — shared, see bb-compat.js ---- */
+    const COMPAT = window.BloodBuddyCompat.groups;
+
+    const bloodSel = document.getElementById('e-blood');
+    const distSel = document.getElementById('e-district');
+    const hint = document.getElementById('compat-hint');
+    const chips = document.getElementById('compat-chips');
+    const groupLabel = document.getElementById('compat-group');
+
+    bloodSel.addEventListener('change', () => {
+      const g = bloodSel.value;
+      groupLabel.textContent = g || '—';
+      hint.hidden = !g;
+      chips.innerHTML = (COMPAT[g] || []).map(c =>
+        `<span class="chip chip-red ${c === g ? 'is-exact' : ''}"><span class="chip-drop"></span><b>${c}</b>${c === g ? ' (exact)' : ''}</span>`
+      ).join('');
+    });
+
+    /* ---- Submit (validated client-side, then POST /api/requests via the
+       API layer — mocked over the shared store; guest submissions stay
+       flagged Emergency so admin/hospital see them as before) ---- */
+    const V = window.BloodBuddyValidate;
+    const API = window.BloodBuddyAPI;
+    V.bindLive(document.querySelectorAll('#em-form select, #em-form input, #em-form textarea'));
+
+    document.getElementById('em-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const submit = document.getElementById('e-submit');
+
+      const failed = V.checkAll([
+        { input: bloodSel, rules: { required: true, blood: true } },
+        { input: distSel, rules: { required: true } },
+        { input: document.getElementById('e-by'), rules: { required: true, future: true } },
+        { input: document.getElementById('e-contact'), rules: { required: true, phone: true } }
+      ]);
+      if (failed.length) return;
+
+      submit.textContent = 'Sending alert…';
+      submit.disabled = true;
+
+      const now = new Date();
+      const contact = document.getElementById('e-contact').value.trim();
+      const notes = document.getElementById('e-notes').value.trim();
+      const when = now.toISOString().slice(0, 16).replace('T', ' ');
+      let created;
+      try {
+        created = await API.requests.create({
+          emergency: true, /* mock prefixes the id with EM- */
+          blood: bloodSel.value,
+          units: document.getElementById('e-units').value,
+          urgency: 'Urgent', /* this page is the emergency flow */
+          neededBy: document.getElementById('e-by').value,
+          hospital: document.getElementById('e-hospital').value,
+          district: distSel.value,
+          notes: notes + (contact ? (notes ? ' · ' : '') + 'Contact: ' + contact : ''),
+          compatOk: true, /* emergencies alert compatible donors too */
+          requester: 'Guest (emergency)',
+          timeline: [
+            { when: when, what: 'Emergency request submitted from public form — compatible donors alerted' },
+            { when: when, what: 'Exact-match donors in ' + distSel.value + ' notified first, compatible groups next' }
+          ]
+        });
+      } catch (err) {
+        submit.textContent = 'Send emergency alert';
+        submit.disabled = false;
+        return;
+      }
+      /* POST /api/requests returns the created record — read the id from the
+         response instead of guessing it is whatever sits at the top of the
+         store (which broke if another page wrote a request in between). */
+      const id = created.id;
+
+      /* Success state (stay on page — the guest has no tracker to go to) */
+      document.getElementById('em-form-wrap').hidden = true;
+      document.getElementById('ok-id').textContent = id;
+      document.getElementById('ok-district').textContent = distSel.value;
+      document.getElementById('em-success').hidden = false;
+
+      /* Point "check its status here" at the lookup card below */
+      const track = document.getElementById('ok-track');
+      track.setAttribute('href', '#lk-id');
+      track.removeAttribute('id');
+      track.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const inp = document.getElementById('lk-id');
+        inp.value = id;
+        lookup(id);
+        inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ---- Status lookup — guests follow their EM request by ID (public, no login) ----
+       Later backend: GET /api/requests/{id} */
+    const GUEST_PILL = {
+      Pending:   { cls: 'st-pending',   label: 'Pending' },
+      Forwarded: { cls: 'st-pending',   label: 'Forwarded to hospital' },
+      Accepted:  { cls: 'st-accepted', label: 'Accepted' },
+      Fulfilled: { cls: 'st-fulfilled', label: 'Fulfilled' },
+      Matched:   { cls: 'st-accepted', label: 'Matched' },
+      Completed: { cls: 'st-fulfilled', label: 'Completed' },
+      Rejected:  { cls: 'st-rejected', label: 'Not available' },
+      Cancelled: { cls: 'st-rejected', label: 'Cancelled' }
+    };
+    function renderLookup(id) {
+      const r = window.BloodBuddyStore.requests.find(id);
+      const out = document.getElementById('lk-result');
+      if (!r || (r.requester || '').indexOf('Guest') !== 0) {
+        out.innerHTML = '<p class="lk-err">No emergency request found with that ID. Double-check the ID (it starts with EM-) — or submit a new request above.</p>';
+        return;
+      }
+      const pill = GUEST_PILL[r.status] || GUEST_PILL.Pending;
+      const units = r.units + ' unit' + (parseInt(r.units, 10) > 1 ? 's' : '');
+      const tl = (r.timeline || []).map(t => '<li><b>' + t.when + '</b> — ' + t.what + '</li>').join('');
+      out.innerHTML =
+        '<div class="lk-card">' +
+          '<div class="lk-head">' +
+            '<span class="rc-badge">' + r.blood + '</span>' +
+            '<div class="lk-title">' + r.id + ' · ' + units + ' · ' + r.district +
+              '<div class="lk-sub">' + (r.hospital || '—') + ' · submitted ' + new Date(r.created).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' +
+            '</div>' +
+            '<span class="rc-status ' + pill.cls + '"><span class="dot"></span>' + pill.label + '</span>' +
+          '</div>' +
+          (tl ? '<ul class="lk-tl">' + tl + '</ul>' : '') +
+        '</div>';
+    }
+    function lookup(id) {
+      const v = (id || document.getElementById('lk-id').value || '').trim().toUpperCase();
+      if (!v) {
+        document.getElementById('lk-result').innerHTML = '<p class="lk-err">Enter the request ID from your confirmation (it starts with EM-).</p>';
+        return;
+      }
+      renderLookup(v);
+    }
+    document.getElementById('lk-btn').addEventListener('click', () => lookup());
+    document.getElementById('lk-id').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); lookup(); }
+      /* Esc in the input closes nothing — stop it reaching nav.js's
+         "Esc returns a member to their dashboard" handler */
+      if (e.key === 'Escape') e.stopPropagation();
+    });
+  </script>
+</body>
+</html>

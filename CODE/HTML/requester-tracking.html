@@ -26,7 +26,7 @@
         <a href="landing.html">Home</a>
         <a href="requester-search.html">Find Donors</a>
         <a href="requester-tracking.html" class="active">My Requests</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -61,6 +61,8 @@
         <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
         <button class="trk-tab" data-filter="Pending">Pending <span class="tab-count" id="cnt-pending">0</span></button>
         <button class="trk-tab" data-filter="Matched">Matched <span class="tab-count" id="cnt-matched">0</span></button>
+        <button class="trk-tab" data-filter="Accepted">Accepted <span class="tab-count" id="cnt-accepted">0</span></button>
+        <button class="trk-tab" data-filter="Fulfilled">Fulfilled <span class="tab-count" id="cnt-fulfilled">0</span></button>
         <button class="trk-tab" data-filter="Completed">Completed <span class="tab-count" id="cnt-completed">0</span></button>
       </div>
 
@@ -167,14 +169,17 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -192,13 +197,24 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Demo data — shared store (bb-store.js), persists across pages/roles ---- */
+    /* ---- My Requests — fetched through the API layer (GET /api/requests
+       filtered by requester, mocked over the shared bb-store; persists
+       across pages/roles). Status changes go through PATCH …/requests/{id}. ---- */
     const store = window.BloodBuddyStore;
-    let all = store.requests.all();
+    const API = window.BloodBuddyAPI;
+    const session = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
+    let all = [];
     const list = document.getElementById('req-list');
     const emptyBox = document.getElementById('trk-empty');
     let currentFilter = 'all';
     let currentId = null;
+
+    function loadRequests() {
+      return API.requests.list({ requester: (session && session.name) || '' }).then(items => {
+        all = items;
+        render();
+      });
+    }
 
     const initials = n => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
     const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
@@ -226,22 +242,30 @@
     function render() {
       const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
 
-      ['all','Pending','Matched','Completed'].forEach(f => {
+      /* Matched = a donor committed (see the donor dashboard); it is a live
+         state a requester must be able to see, not just an "All" row. */
+      ['all','Pending','Matched','Accepted','Fulfilled','Completed'].forEach(f => {
         document.getElementById('cnt-' + f.toLowerCase()).textContent =
           f === 'all' ? all.length : all.filter(r => r.status === f).length;
       });
+      const DONE = ['Completed', 'Fulfilled', 'Cancelled', 'Rejected'];
       document.getElementById('open-count').textContent =
-        `${all.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled' && r.status !== 'Rejected').length} requests`;
+        `${all.filter(r => DONE.indexOf(r.status) === -1).length} requests`;
 
       if (!items.length) {
         list.innerHTML = '';
-        emptyBox.hidden = all.length ? false : true;
-        emptyBox.querySelector('.empty-title').textContent =
-          currentFilter === 'all' ? 'No blood requests yet' : `No ${currentFilter.toLowerCase()} requests`;
-        emptyBox.querySelector('.empty-sub').textContent = currentFilter === 'all'
-          ? "When you submit a request, you'll be able to track its status and donor responses here."
-          : 'Requests will appear here as their status changes.';
-        emptyBox.querySelector('.empty-btn').style.display = currentFilter === 'all' ? '' : 'none';
+        /* Show the empty box only when the store itself is empty; if the store has
+           requests but none match this filter, keep the box hidden (it would cover
+           the list area with a confusing "no requests yet" message). */
+        emptyBox.hidden = all.length > 0;
+        if (!emptyBox.hidden) {
+          emptyBox.querySelector('.empty-title').textContent =
+            currentFilter === 'all' ? 'No blood requests yet' : `No ${currentFilter.toLowerCase()} requests`;
+          emptyBox.querySelector('.empty-sub').textContent = currentFilter === 'all'
+            ? "When you submit a request, you'll be able to track its status and donor responses here."
+            : 'Requests will appear here as their status changes.';
+          emptyBox.querySelector('.empty-btn').style.display = currentFilter === 'all' ? '' : 'none';
+        }
         return;
       }
       emptyBox.hidden = true;
@@ -254,7 +278,7 @@
             <span class="rc-badge">${r.blood}</span>
             <div class="rc-title">
               <div class="rc-name">${r.hospital.split(',')[0]} <span class="rc-id">· ${r.id}</span></div>
-              <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.district} · ${r.urgency} · submitted ${timeAgo(r.created)}</div>
+              <div class="rc-sub">${r.units} unit${parseInt(r.units, 10) > 1 ? 's' : ''} · ${r.district} · ${r.urgency} · submitted ${timeAgo(r.created)}</div>
             </div>
             <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
           </div>
@@ -277,6 +301,11 @@
         </article>`;
       }).join('');
     }
+
+    /* ---- Initial load (also updates the tab counts + open-request pill) ----
+       Renders once the (mock) API resolves; previous versions only called
+       render() from event handlers, so a fresh load showed an empty list. */
+    loadRequests();
 
     /* ---- Tabs ---- */
     document.getElementById('trk-tabs').addEventListener('click', e => {
@@ -301,7 +330,7 @@
       document.getElementById('m-id').textContent = r.id;
       document.getElementById('m-created').textContent = 'Submitted ' + fmtTime(r.created);
       document.getElementById('m-blood').textContent = r.blood;
-      document.getElementById('m-units').textContent = r.units + ' unit' + (r.units > 1 ? 's' : '');
+      document.getElementById('m-units').textContent = r.units + ' unit' + (parseInt(r.units, 10) > 1 ? 's' : '');
       document.getElementById('m-urgency').textContent = r.urgency;
       document.getElementById('m-status').textContent = r.status;
       document.getElementById('m-hospital').textContent = r.hospital;
@@ -327,10 +356,15 @@
       if (r.status === 'Completed') {
         completed.classList.add('done');
         completed.querySelector('.tl-when').textContent = r.timeline[r.timeline.length - 1].when;
+      } else if (r.status === 'Fulfilled') {
+        completed.classList.add('done');
+        completed.querySelector('.tl-when').textContent =
+          (r.timeline && r.timeline.length ? r.timeline[r.timeline.length - 1].when : '');
+        completed.querySelector('.tl-what').textContent = 'Blood issued from hospital inventory';
       }
 
       document.getElementById('modal-cancelreq').style.display =
-        r.status === 'Completed' ? 'none' : '';
+        ['Completed', 'Fulfilled', 'Rejected', 'Cancelled'].indexOf(r.status) > -1 ? 'none' : '';
       overlay.classList.add('open');
     }
     const closeModal = () => overlay.classList.remove('open');
@@ -344,13 +378,11 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    /* ---- Cancel request (persists to the shared store) ---- */
+    /* ---- Cancel request (PATCH /api/requests/{id} via the API layer) ---- */
     document.getElementById('modal-cancelreq').addEventListener('click', function () {
       const r = all.find(x => x.id === currentId);
       if (!r) return;
-      store.requests.update(r.id, { status: 'Cancelled' });
-      all = store.requests.all();
-      render();
+      API.requests.update(r.id, { status: 'Cancelled' }).then(() => loadRequests());
       closeModal();
     });
   </script>

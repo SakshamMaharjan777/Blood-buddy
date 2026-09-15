@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/hospital.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -26,7 +27,7 @@
         <a href="landing.html">Home</a>
         <a href="hospital-dashboard.html" class="active">Hospital Portal</a>
         <a href="hospital-requests.html">Requests</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -50,8 +51,8 @@
           <p class="hero-sub">Live stock levels for your hospital's blood bank. Update units as collections and usage happen.</p>
         </div>
         <div class="hero-pill">
-          <span class="pill-dot green"></span>
-          <span>Blood bank <strong>open</strong> · updated just now</span>
+          <span class="pill-dot green" id="hero-pill-dot"></span>
+          <span id="hero-pill-text">Blood bank <strong>open</strong> · updated just now</span>
         </div>
       </section>
 
@@ -120,14 +121,17 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -149,10 +153,25 @@
     const GROUPS = ['O+','O-','A+','A-','B+','B-','AB+','AB-'];
     const THRESHOLDS = { critical: 4, low: 10 };
 
-    /* ---- Inventory — shared store (bb-store.js), persists across pages/reloads.
-       Later backend: GET/PUT /api/hospitals/{hospitalId}/inventory ---- */
+    /* ---- Inventory — fetched through the API layer (GET
+       /api/hospitals/inventory, mocked over the shared store; persists
+       across pages/reloads). Updates go through PUT …/inventory/{group}.
+       Real endpoints: GET/PUT /api/hospitals/{hospitalId}/inventory ---- */
     const store = window.BloodBuddyStore;
-    const INVENTORY = store.inventory.all();
+    const API = window.BloodBuddyAPI;
+    const INVENTORY = store.inventory.all(); /* sync mirror for render math */
+
+    /* Hero pill mirrors the blood-bank-open toggle from hospital-profile.html
+       so the two pages can't disagree about whether the bank accepts requests.
+       Read through the API layer (GET /api/profile/hospital, mocked over
+       bb_hospital_profile) rather than straight from localStorage; the static
+       markup already says "Blood bank open", so only the closed case repaints. */
+    API.profile.get('hospital').then(saved => {
+      if (saved && saved.open === false) {
+        document.getElementById('hero-pill-text').textContent = 'Blood bank closed';
+        document.getElementById('hero-pill-dot').style.background = '#9B9B9B';
+      }
+    });
 
     const grid = document.getElementById('inv-grid');
     const alertsBox = document.getElementById('hosp-alerts');
@@ -196,7 +215,12 @@
         </div>`).join('') : '';
     }
 
-    render();
+    /* ---- Initial render via the API layer (GET /api/hospitals/inventory,
+       mocked over the shared store — the fetch flow the real backend plugs into) ---- */
+    API.inventory.get().then(inv => {
+      Object.keys(inv).forEach(g => { INVENTORY[g] = inv[g]; });
+      render();
+    });
 
     /* ---- Adjust-stock modal ---- */
     const overlay = document.getElementById('modal-overlay');
@@ -250,17 +274,20 @@
       if (action === 'add') next = cur + units;
       if (action === 'remove') next = Math.max(0, cur - units);
       if (action === 'set') next = units;
-      INVENTORY[currentBg] = next;
-      store.inventory.setUnits(currentBg, next);
 
-      this.textContent = 'Saved ✓';
-      this.disabled = true;
-      render();
-      setTimeout(() => {
-        overlay.classList.remove('open');
-        this.textContent = 'Save update';
-        this.disabled = false;
-      }, 700);
+      /* PUT /api/hospitals/inventory/{bloodGroup} — mock writes the store
+         synchronously, then the UI reflects the new level. */
+      API.inventory.update(currentBg, next).then(res => {
+        INVENTORY[currentBg] = res.units;
+        this.textContent = 'Saved ✓';
+        this.disabled = true;
+        render();
+        setTimeout(() => {
+          overlay.classList.remove('open');
+          this.textContent = 'Save update';
+          this.disabled = false;
+        }, 700);
+      });
     });
 
     const closeModal = () => overlay.classList.remove('open');

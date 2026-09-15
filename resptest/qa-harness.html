@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font-family: monospace; font-size: 12px; }
+  #frame-wrap { position: absolute; left: -10000px; top: 0; }
+</style>
+<title>QA-RUNNING</title>
+</head>
+<body>
+<div id="frame-wrap"></div>
+<pre id="out">starting…</pre>
+<script>
+(async function () {
+  'use strict';
+  const P = '/CODE/HTML/';
+  const results = [];
+  let pass = 0, fail = 0;
+
+  function check(name, ok, detail) {
+    results.push({ name: name, ok: !!ok, detail: detail === undefined ? '' : String(detail) });
+    if (ok) { pass++; } else { fail++; }
+  }
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function clearStorage() {
+    try { localStorage.clear(); } catch (e) {}
+  }
+  function primeStorage(session, seed) {
+    clearStorage();
+    try {
+      if (session) localStorage.setItem('bb_session', JSON.stringify(session));
+      if (seed) seed(); /* runs BEFORE the iframe loads — pages see these records */
+    } catch (e) {}
+  }
+
+  function loadPath(path) {
+    return new Promise((resolve) => {
+      const f = document.createElement('iframe');
+      f.width = 1280; f.height = 900;
+      f.src = path;
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(f); } };
+      f.onload = finish;
+      setTimeout(finish, 4000); // never hang on a page that never fires load
+      document.getElementById('frame-wrap').appendChild(f);
+    });
+  }
+
+  function dumpPartial() {
+    const lines = results.map(r => (r.ok ? 'PASS ' : 'FAIL ') + r.name + (r.detail && !r.ok ? ' — ' + r.detail : ''));
+    document.getElementById('out').textContent = lines.join('\n') + '\n\nTOTAL: ' + pass + ' passed, ' + fail + ' failed';
+  }
+
+  async function withPage(page, opts, fn) {
+    opts = opts || {};
+    try {
+      primeStorage(opts.session || null, opts.seed);
+      const f = await loadPath(page.charAt(0) === '/' ? page : P + page);
+      await sleep(500);
+      const doc = f.contentDocument, win = f.contentWindow;
+      try {
+        await fn({ f: f, doc: doc, win: win });
+      } catch (e) {
+        check(page + ' harness error', false, (e && e.message) || String(e));
+      }
+      f.remove();
+      await sleep(30);
+    } catch (e) {
+      check(page + ' load error', false, (e && e.message) || String(e));
+    }
+    dumpPartial(); // survive interruptions — results visible even if a later section dies
+  }
+
+  const $ = (doc, s) => doc.querySelector(s);
+  const $$ = (doc, s) => Array.from(doc.querySelectorAll(s));
+
+  /* A yyyy-mm-dd date `days` from now — the required+future rules need a real
+     future date, and computing it keeps the harness from rotting with the calendar. */
+  const futureDate = (days) => new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+
+  /* ================= 1. RENDER SMOKE — every page =================
+     Role-private pages are smoke-tested twice: once under the correct
+     session (must render), once logged-out (must bounce to login —
+     RBAC guard). Requester pages are public on purpose. */
+  const smokePublic = [
+    ['landing.html', '.hero-title'],
+    ['auth-login.html', '#login-form'],
+    ['auth-register.html', '#to-step-2'],
+    ['auth-forgot.html', '#forgot-form'],
+    ['emergency-request.html', '#em-form'],
+    ['about.html', '.about-hero'],
+    ['contact.html', '#contact-form'],
+    ['terms.html', '.legal-card'],
+    ['privacy.html', '.legal-card'],
+  ];
+  const smokePrivate = [
+    ['donor-dashboard.html', '#urgent-banner'],
+    ['donor-history.html', '#history-body'],
+    ['donor-profile.html', '#save-bar'],
+    ['requester-search.html', '#donor-grid'],
+    ['requester-request.html', '#request-form'],
+    ['requester-tracking.html', '#req-list'],
+    ['requester-profile.html', '#save-bar'],
+    ['hospital-dashboard.html', '#inv-grid'],
+    ['hospital-requests.html', '#queue-list'],
+    ['hospital-profile.html', '#save-bar'],
+    ['admin-dashboard.html', '#users-tbody'],
+    ['admin-requests.html', '#queue-list'],
+    ['admin-profile.html', '#save-bar'],
+  ];
+  const SMOKE_SESSION = {
+    'donor-dashboard.html': { role: 'donor', name: 'Sita Gurung' },
+    'donor-history.html': { role: 'donor', name: 'Sita Gurung' },
+    'donor-profile.html': { role: 'donor', name: 'Sita Gurung' },
+    'requester-search.html': { role: 'requester', name: 'Ramesh Shrestha' },
+    'requester-request.html': { role: 'requester', name: 'Ramesh Shrestha' },
+    'requester-tracking.html': { role: 'requester', name: 'Ramesh Shrestha' },
+    'requester-profile.html': { role: 'requester', name: 'Ramesh Shrestha' },
+    'hospital-dashboard.html': { role: 'hospital', name: 'Bir Hospital' },
+    'hospital-requests.html': { role: 'hospital', name: 'Bir Hospital' },
+    'hospital-profile.html': { role: 'hospital', name: 'Bir Hospital' },
+    'admin-dashboard.html': { role: 'admin', name: 'Admin' },
+    'admin-requests.html': { role: 'admin', name: 'Admin' },
+    'admin-profile.html': { role: 'admin', name: 'Admin' },
+  };
+  for (const [page, sel] of smokePublic) {
+    await withPage(page, {}, ({ doc }) => {
+      check(page + ' renders (' + sel + ')', !!$(doc, sel));
+      check(page + ' navbar + footer present', !!$(doc, '#nav-links') && !!$(doc, '.footer'));
+    });
+  }
+  for (const [page, sel] of smokePrivate) {
+    await withPage(page, { session: SMOKE_SESSION[page] }, ({ doc }) => {
+      check(page + ' renders with the right role (' + sel + ')', !!$(doc, sel));
+      check(page + ' navbar + footer present', !!$(doc, '#nav-links') && !!$(doc, '.footer'));
+    });
+    await withPage(page, {}, ({ doc }) => {
+      check(page + ' (logged out) bounces to login (RBAC guard)', /auth-login\.html/.test(doc.location.href),
+        doc.location.href);
+    });
+  }
+
+  /* ============ 2. LANDING FOOTER LINKS WIRED + EMERGENCY CTAs ============ */
+  await withPage('landing.html', {}, ({ doc }) => {
+    const hrefs = $$(doc, '.footer a').map(a => a.getAttribute('href'));
+    check('landing: footer About → about.html', hrefs.indexOf('about.html') > -1, hrefs.join(','));
+    check('landing: footer Contact → contact.html', hrefs.indexOf('contact.html') > -1, hrefs.join(','));
+    const ghost = $(doc, '.hero-btns .btn-ghost');
+    check('landing: "Find blood now" goes to the public emergency flow (guests)',
+      !!ghost && ghost.getAttribute('href') === 'emergency-request.html' && ghost.getAttribute('data-em') === 'find',
+      ghost ? ghost.getAttribute('href') : 'missing');
+    const ctaReq = $(doc, '.cta-btn-outline');
+    check('landing: "Request blood" CTA goes to the emergency flow (guests)',
+      !!ctaReq && ctaReq.getAttribute('href') === 'emergency-request.html', ctaReq ? ctaReq.getAttribute('href') : 'missing');
+    const reqCard = $(doc, 'a[data-bb-return="requester-search.html"]');
+    check('landing: "Open requester portal" locked behind login for guests',
+      !!reqCard && reqCard.getAttribute('href') === 'auth-login.html', reqCard ? reqCard.getAttribute('href') : 'not rewired');
+  });
+
+  /* ============ 3. STORE BUG REGRESSION (fresh browser seeds) ============ */
+  await withPage('admin-requests.html', { session: { role: 'admin', name: 'Admin' } }, ({ doc }) => {
+    const cards = $$(doc, '#queue-list .req-card');
+    check('admin-requests: fresh-store queue renders (status fallback fix)', cards.length >= 5, cards.length + ' cards');
+    const matched = cards.find(c => c.textContent.indexOf('BB-8F3K2M') > -1);
+    check('admin-requests: Matched seed shows a status label', !!matched && !!matched.querySelector('.rc-status'),
+      matched ? matched.querySelector('.rc-status').textContent.trim() : 'card missing');
+  });
+
+  await withPage('hospital-requests.html', { session: { role: 'hospital', name: 'Bir Hospital' } }, ({ doc, win }) => {
+    const cards = $$(doc, '#queue-list .req-card');
+    check('hospital-requests: fresh-store queue renders (status fallback fix)', cards.length >= 4, cards.length + ' cards');
+    const matched = cards.find(c => c.textContent.indexOf('BB-8F3K2M') > -1);
+    check('hospital-requests: Matched seed shows a status label', !!matched && !!matched.querySelector('.rc-status'),
+      matched ? matched.querySelector('.rc-status').textContent.trim() : 'card missing');
+  });
+
+  /* Emergency badge — seed a guest EM request BEFORE the page loads */
+  await withPage('hospital-requests.html', {
+    session: { role: 'hospital', name: 'Bir Hospital' },
+    seed: () => {
+      const reqs = JSON.parse(localStorage.getItem('bb_db.requests') || '[]');
+      reqs.unshift({ id: 'EM-QA1', blood: 'B-', units: '2', urgency: 'Urgent', requester: 'Guest (emergency)', hospital: 'Bir Hospital, Kathmandu', district: 'Lalitpur', created: new Date().toISOString(), neededBy: '2026-09-20', status: 'Pending', notes: '' });
+      localStorage.setItem('bb_db.requests', JSON.stringify(reqs));
+    }
+  }, ({ doc }) => {
+    const em = $$(doc, '.req-card').find(c => c.textContent.indexOf('EM-QA1') > -1);
+    check('hospital-requests: guest EM request carries the Emergency badge', !!em && !!em.querySelector('.em-tag'),
+      em ? (em.querySelector('.em-tag') ? 'tagged' : 'no tag') : 'card missing');
+    const member = $$(doc, '.req-card').find(c => c.textContent.indexOf('REQ-501') > -1);
+    check('hospital-requests: member request has no Emergency badge', !!member && !member.querySelector('.em-tag'));
+  });
+
+  /* ============ 4. SESSION-AWARE NAV (role links rebuilt on every page) ============ */
+  await withPage('landing.html', { session: { role: 'donor', name: 'Sita Gurung' } }, ({ doc }) => {
+    const chip = $(doc, '.nav-user-chip .nav-user-label');
+    check('landing: session chip shows name', !!chip && chip.textContent === 'Sita Gurung', chip ? chip.textContent : 'no chip');
+    const portal = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'donor-dashboard.html');
+    check('landing: donor portal links injected into nav', !!portal && portal.textContent === 'Donor Portal',
+      portal ? portal.textContent : 'no portal link');
+    const profile = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'donor-profile.html');
+    check('landing: My Profile link present while logged in', !!profile);
+    const marketing = $$(doc, '.nav-links a').filter(a => /how-it-works|#roles/.test(a.getAttribute('href') || ''));
+    check('landing: marketing links replaced while logged in', marketing.length === 0, marketing.map(a => a.getAttribute('href')).join(','));
+    const login = $(doc, '#nav-actions a[href="auth-login.html"]');
+    check('landing: auth buttons replaced by chip', !login);
+    const chipLink = $(doc, 'a.nav-user-chip');
+    check('landing: profile chip is a link to donor profile',
+      !!chipLink && chipLink.getAttribute('href') === 'donor-profile.html',
+      chipLink ? chipLink.getAttribute('href') : 'chip not a link');
+  });
+
+  /* ============ 4b. PUBLIC PAGE + SESSION — portal links persist (About regression) ============ */
+  await withPage('about.html', { session: { role: 'donor', name: 'Sita Gurung' } }, ({ doc }) => {
+    const portal = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'donor-dashboard.html');
+    check('about: donor portal link present while logged in', !!portal, portal ? portal.textContent : 'missing');
+    const profile = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'donor-profile.html');
+    check('about: My Profile link present while logged in', !!profile);
+    const about = $(doc, '.nav-links a[href="about.html"]');
+    check('about: About link kept and still active', !!about && about.classList.contains('active'),
+      about ? 'active=' + about.classList.contains('active') : 'About link missing');
+    const marketing = $$(doc, '.nav-links a').filter(a => /how-it-works|#roles/.test(a.getAttribute('href') || ''));
+    check('about: generic marketing links replaced while logged in', marketing.length === 0, marketing.map(a => a.getAttribute('href')).join(','));
+
+    /* In-page CTAs must not offer registration to a logged-in donor */
+    const reg = $(doc, '.cta-btn-white');
+    check('about: donor no longer sees "Register as donor" CTA',
+      !!reg && reg.getAttribute('href') === 'donor-dashboard.html' && reg.textContent === 'Go to Donor Portal',
+      reg ? reg.getAttribute('href') + ' / ' + reg.textContent : 'CTA missing');
+    const req = $(doc, '.cta-btn-outline');
+    check('about: donor no longer sees the "Request blood" CTA (requester-only action)',
+      !req, req ? 'still present: ' + req.getAttribute('href') : 'removed');
+    const bandBtns = $$(doc, '.cta-btns a');
+    check('about: donor CTA band keeps only the portal button', bandBtns.length === 1 && bandBtns[0].textContent === 'Go to Donor Portal',
+      bandBtns.map(b => b.textContent).join(',') || 'empty');
+    const navReg = $(doc, '#nav-actions a[href="auth-register.html"]');
+    check('about: navbar Register replaced by chip', !navReg);
+  });
+
+  /* ============ 4c. REQUESTER SESSION — role-specific links on public page ============ */
+  await withPage('contact.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, ({ doc }) => {
+    const search = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'requester-search.html');
+    const tracking = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === 'requester-tracking.html');
+    check('contact: requester links injected while logged in', !!search && !!tracking,
+      search ? (tracking ? 'ok' : 'tracking missing') : 'search missing');
+    const contact = $(doc, '.nav-links a[href="contact.html"]');
+    check('contact: Contact link kept and still active', !!contact && contact.classList.contains('active'));
+    const chipLink = $(doc, 'a.nav-user-chip');
+    check('contact: requester chip links to the requester profile',
+      !!chipLink && chipLink.getAttribute('href') === 'requester-profile.html',
+      chipLink ? chipLink.getAttribute('href') : 'chip not a link');
+  });
+
+  /* ============ 4c2. REQUESTER SESSION — member CTA destinations ============ */
+  await withPage('landing.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, ({ doc }) => {
+    const req = $(doc, '.cta-btn-outline');
+    check('landing (requester session): "Request blood" CTA becomes the member request form',
+      !!req && req.getAttribute('href') === 'requester-request.html', req ? req.getAttribute('href') : 'missing');
+    const ghost = $(doc, '.hero-btns .btn-ghost');
+    check('landing (requester session): "Find blood now" becomes the donor search',
+      !!ghost && ghost.getAttribute('href') === 'requester-search.html', ghost ? ghost.getAttribute('href') : 'missing');
+  });
+
+  /* ============ 4d. LANDING CTAs STAY MARKETING WHEN LOGGED OUT ============ */
+  await withPage('landing.html', {}, ({ doc }) => {
+    const hero = $(doc, '.hero-btns .btn-primary');
+    check('landing (logged out): hero CTA still "Register as donor" → register',
+      !!hero && hero.getAttribute('href') === 'auth-register.html?role=donor', hero ? hero.getAttribute('href') : 'missing');
+    const bottom = $(doc, '.cta-btn-white');
+    check('landing (logged out): bottom CTA still register',
+      !!bottom && bottom.getAttribute('href') === 'auth-register.html?role=donor', bottom ? bottom.getAttribute('href') : 'missing');
+  });
+
+  /* ============ 4e. SESSION-AWARE QUICK-SEARCH NUDGE ============ */
+  await withPage('landing.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    $(doc, '#blood-group').value = 'O-';
+    $(doc, '#district').value = 'Kathmandu';
+    $(doc, '#search-btn').click();
+    await sleep(50);
+    const text = $(doc, '#search-result-text').textContent;
+    check('landing (requester session): quick-search skips the login/register nudge',
+      text.indexOf('log in') === -1 && text.indexOf('register') === -1 && text.indexOf('unrestricted') > -1,
+      text.trim());
+  });
+
+  /* ============ 5. SEARCH MODAL — correct donor after filtering ============
+     Filter B+ + available → cards [Arun, Sunita, Priya, Rajan, Deepa, Mina].
+     Click the 3rd (Priya, filtered index 2). Pre-fix code looked up DONORS[2]
+     = Bikash (B-) — so this catches the index bug. */
+  await withPage('requester-search.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    const selB = $(doc, '#f-blood'); selB.value = 'B+';
+    const selA = $(doc, '#f-avail'); selA.value = 'available';
+    $(doc, '#search-btn').click();
+    await sleep(80);
+    const cards = $$(doc, '.donor-card');
+    check('requester-search: filtered list renders 6 cards', cards.length === 6, cards.length + ' cards');
+    const card = cards[2];
+    const cardName = card.querySelector('.dc-name').textContent.trim();
+    const reqBtn = card.querySelector('.dc-request');
+    check('requester-search: Request button on 3rd card', !!reqBtn);
+    reqBtn.click();
+    await sleep(60);
+    const modalName = $(doc, '#m-donor-name').textContent.trim();
+    check('requester-search: modal shows the CARD donor after filtering (index bug fix)', modalName === cardName,
+      'card=' + cardName + ' modal=' + modalName);
+    check('requester-search: modal overlay open', $(doc, '#modal-overlay').classList.contains('open'));
+  });
+
+  /* ============ 6. REQUEST SUBMIT → STORE + TRACKING REDIRECT ============ */
+  await withPage('requester-request.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    const sel = $(doc, '#r-blood');
+    sel.value = 'O-';
+    sel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await sleep(60);
+    check('requester-request: compat chips render for O-', $(doc, '#compat-chips').textContent.indexOf('O-') > -1,
+      $(doc, '#compat-chips').textContent.trim());
+    $(doc, '#compat-toggle').click();
+    $(doc, '#r-notes').value = 'QA harness test';
+    /* needed-by is required + must be a future date (bb-validate.js), so a
+       valid value is needed for the submit to reach POST /api/requests. */
+    $(doc, '#r-by').value = futureDate(7);
+    $(doc, '#request-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1400);
+    let reqs = [];
+    try { reqs = JSON.parse(win.localStorage.getItem('bb_db.requests') || '[]'); } catch (e) {}
+    const added = reqs.find(r => r.blood === 'O-' && r.notes === 'QA harness test');
+    check('requester-request: submit persists Pending request to store', !!added && added.status === 'Pending',
+      added ? JSON.stringify({ status: added.status }) : 'not found');
+    check('requester-request: redirects to tracking page', win.location.pathname.indexOf('requester-tracking') > -1,
+      win.location.pathname);
+  });
+
+  /* ============ 7. TRACKING — seeds, detail modal, cancel ============
+     "My Requests" is per-user now (GET /api/requests?requester=…), so the
+     harness seeds requests owned by the logged-in requester instead of
+     relying on the store's shared seeds (those belong to other people). */
+  await withPage('requester-tracking.html', {
+    session: { role: 'requester', name: 'Ramesh Shrestha' },
+    seed: () => {
+      const base = {
+        requester: 'Ramesh Shrestha', hospital: 'Patan Hospital, Lalitpur', district: 'Lalitpur',
+        created: new Date().toISOString(), neededBy: '2026-12-31', notes: '',
+        timeline: [{ when: '2026-09-13 08:10', what: 'Request submitted — compatible donors notified' }]
+      };
+      localStorage.setItem('bb_db.requests', JSON.stringify([
+        Object.assign({}, base, { id: 'BB-8F3K2M', blood: 'O+', units: '2', urgency: 'Urgent', status: 'Matched', donor: 'Arun Shrestha', donorAt: new Date().toISOString() }),
+        Object.assign({}, base, { id: 'QA-TRK1', blood: 'B+', units: '1', urgency: 'Normal', status: 'Pending' }),
+        Object.assign({}, base, { id: 'QA-TRK2', blood: 'A+', units: '3', urgency: 'High', status: 'Accepted' }),
+        Object.assign({}, base, { id: 'QA-TRK3', blood: 'AB-', units: '1', urgency: 'Normal', status: 'Completed' })
+      ]));
+    }
+  }, async ({ doc, win }) => {
+    const cards = $$(doc, '#req-list .req-card');
+    check('tracking: seeded requests render', cards.length >= 4, cards.length + ' cards');
+    const target = cards.find(c => c.dataset.id === 'BB-8F3K2M');
+    check('tracking: Matched seed card present', !!target);
+    if (target) {
+      target.querySelector('.rc-view').click();
+      await sleep(60);
+      check('tracking: detail modal opens', $(doc, '#modal-overlay').classList.contains('open'));
+      check('tracking: modal shows request id', $(doc, '#m-id').textContent.trim() === 'BB-8F3K2M', $(doc, '#m-id').textContent);
+      const cancelBtn = $(doc, '#modal-cancelreq');
+      check('tracking: cancel visible for non-completed request', cancelBtn.style.display !== 'none');
+      cancelBtn.click();
+      await sleep(80);
+      let r = null;
+      try { r = JSON.parse(win.localStorage.getItem('bb_db.requests')).find(x => x.id === 'BB-8F3K2M'); } catch (e) {}
+      check('tracking: cancel persists Cancelled status', !!r && r.status === 'Cancelled', r ? r.status : 'missing');
+      check('tracking: modal closed after cancel', !$(doc, '#modal-overlay').classList.contains('open'));
+    }
+  });
+
+  /* ============ 7b. SEARCH MODAL — request persists to the store ============ */
+  await withPage('requester-search.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    const card = $$(doc, '.donor-card').find(c => c.textContent.indexOf('Arun Shrestha') > -1);
+    check('requester-search: Arun card present', !!card);
+    if (!card) return;
+    card.querySelector('.dc-request').click();
+    await sleep(60);
+    check('requester-search: request modal opens', $(doc, '#modal-overlay').classList.contains('open'));
+    $(doc, '#m-notes').value = 'QA direct-to-donor request';
+    $(doc, '#modal-send').click();
+    await sleep(80);
+    const reqs = JSON.parse(win.localStorage.getItem('bb_db.requests') || '[]');
+    const added = reqs.find(r => r.notes === 'QA direct-to-donor request');
+    check('requester-search: send persists a Pending request to the store', !!added && added.status === 'Pending',
+      added ? JSON.stringify({ status: added.status, blood: added.blood, hospital: added.hospital }) : 'not found');
+    check('requester-search: persisted request carries the donor blood group', !!added && added.blood === 'B+',
+      added ? added.blood : 'n/a');
+    /* the redirect hangs off POST /api/requests resolving — it must still fire */
+    await sleep(1000);
+    check('requester-search: redirects to tracking once the POST resolves',
+      /requester-tracking\.html/.test(win.location.href), win.location.pathname);
+  });
+
+  /* ============ 8. HOSPITAL QUEUE — accept → fulfil → inventory decrement ============ */
+  await withPage('hospital-requests.html', { session: { role: 'hospital', name: 'Bir Hospital' } }, async ({ doc, win }) => {
+    const readStore = () => JSON.parse(win.localStorage.getItem('bb_db.requests'));
+    const card = $$(doc, '.req-card').find(c => c.textContent.indexOf('REQ-501') > -1);
+    check('hospital-requests: pending seed REQ-501 present', !!card);
+    if (!card) return;
+    const acceptBtn = card.querySelector('.qa.accept');
+    check('hospital-requests: Accept button rendered', !!acceptBtn);
+    acceptBtn.click();
+    await sleep(80);
+    let r = readStore().find(x => x.id === 'REQ-501');
+    check('hospital-requests: accept persists Accepted', !!r && r.status === 'Accepted', r ? r.status : 'missing');
+    const card2 = $$(doc, '.req-card').find(c => c.textContent.indexOf('REQ-501') > -1);
+    const fulfil = card2.querySelector('.qa.accept');
+    check('hospital-requests: Mark-fulfilled button appears after accept', !!fulfil && fulfil.textContent.indexOf('fulfilled') > -1,
+      fulfil ? fulfil.textContent : 'no button');
+    const invBefore = JSON.parse(win.localStorage.getItem('bb_db.inventory'))['O-'];
+    fulfil.click();
+    await sleep(80);
+    r = readStore().find(x => x.id === 'REQ-501');
+    const invAfter = JSON.parse(win.localStorage.getItem('bb_db.inventory'))['O-'];
+    check('hospital-requests: fulfil persists + decrements inventory (2 units)', !!r && r.status === 'Fulfilled' && invAfter === invBefore - 2,
+      'status=' + (r ? r.status : '?') + ' inv ' + invBefore + '→' + invAfter);
+  });
+
+  /* ============ 9. ADMIN MODERATION — forward to hospital ============ */
+  await withPage('admin-requests.html', { session: { role: 'admin', name: 'Admin' } }, async ({ doc, win }) => {
+    /* The queue pages at 5/page; widen to 10 so the whole queue is visible. */
+    const sizeSel = $(doc, '#queue-pager .bb-pager-select');
+    sizeSel.value = '10';
+    sizeSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await sleep(60);
+    check('admin-requests: per-page selector widens the queue to 10',
+      $$(doc, '#queue-list .req-card').length === 6, $$(doc, '#queue-list .req-card').length + ' cards');
+    const card = $$(doc, '.req-card').find(c => c.textContent.indexOf('BB-5MN8VX') > -1);
+    check('admin-requests: pending platform request present', !!card);
+    if (!card) return;
+    card.querySelector('.qa.accept').click();
+    await sleep(60);
+    check('admin-requests: forward modal opens', $(doc, '#modal-overlay').classList.contains('open'));
+    $(doc, '#m-hospital').value = 'Bir Hospital, Kathmandu';
+    $(doc, '#m-confirm').click();
+    await sleep(80);
+    const r = JSON.parse(win.localStorage.getItem('bb_db.requests')).find(x => x.id === 'BB-5MN8VX');
+    check('admin-requests: forward persists Accepted + hospital', !!r && r.status === 'Accepted' && r.hospital === 'Bir Hospital, Kathmandu',
+      r ? JSON.stringify({ status: r.status, hospital: r.hospital }) : 'missing');
+  });
+
+  /* Emergency badge in moderation — seed a guest EM request BEFORE load */
+  await withPage('admin-requests.html', {
+    session: { role: 'admin', name: 'Admin' },
+    seed: () => {
+      const reqs = JSON.parse(localStorage.getItem('bb_db.requests') || '[]');
+      reqs.unshift({ id: 'EM-QA2', blood: 'O-', units: '1', urgency: 'Urgent', requester: 'Guest (emergency)', hospital: '—', district: 'Kathmandu', created: new Date().toISOString(), neededBy: '2026-09-20', status: 'Pending', notes: '' });
+      localStorage.setItem('bb_db.requests', JSON.stringify(reqs));
+    }
+  }, ({ doc }) => {
+    const em = $$(doc, '.req-card').find(c => c.textContent.indexOf('EM-QA2') > -1);
+    check('admin-requests: guest EM request carries the Emergency badge', !!em && !!em.querySelector('.em-tag'),
+      em ? (em.querySelector('.em-tag') ? 'tagged' : 'no tag') : 'card missing');
+    const member = $$(doc, '.req-card').find(c => c.textContent.indexOf('REQ-494') > -1);
+    check('admin-requests: member request has no Emergency badge', !!member && !member.querySelector('.em-tag'));
+  });
+
+  /* ============ 10. HOSPITAL INVENTORY — adjust modal save ============ */
+  await withPage('hospital-dashboard.html', { session: { role: 'hospital', name: 'Bir Hospital' } }, async ({ doc, win }) => {
+    const cards = $$(doc, '#inv-grid > *');
+    check('hospital-dashboard: 8 blood group cards render', cards.length === 8, cards.length + ' cards');
+    const addBtn = $(doc, '.inv-adjust[data-bg="O-"]');
+    check('hospital-dashboard: adjust button exists', !!addBtn);
+    if (!addBtn) return;
+    addBtn.click();
+    await sleep(60);
+    check('hospital-dashboard: modal opens with current units', $(doc, '#modal-overlay').classList.contains('open') &&
+      $(doc, '#m-bg').textContent.trim() === 'O-', $(doc, '#m-bg').textContent);
+    const act = $(doc, '#m-action'); act.value = 'add';
+    act.dispatchEvent(new win.Event('change', { bubbles: true }));
+    const un = $(doc, '#m-units'); un.value = '5';
+    un.dispatchEvent(new win.Event('input', { bubbles: true }));
+    $(doc, '#m-save').click();
+    await sleep(80);
+    const inv = JSON.parse(win.localStorage.getItem('bb_db.inventory'));
+    check('hospital-dashboard: stock update persists (O- 3→8)', inv['O-'] === 8, 'O-=' + inv['O-']);
+  });
+
+  /* ============ 11. ADMIN USERS — table, suspend flow ============ */
+  await withPage('admin-dashboard.html', { session: { role: 'admin', name: 'Admin' } }, async ({ doc, win }) => {
+    const rows = $$(doc, '#users-tbody tr');
+    check('admin-dashboard: users table pages at 5 rows per page', rows.length === 5, rows.length + ' rows');
+    check('admin-dashboard: users pager reports 2 pages for 10 users',
+      !!$(doc, '#users-pager .bb-pager') && $(doc, '#users-pager .bb-pager-last').textContent === '2',
+      $(doc, '#users-pager .bb-pager-last') ? $(doc, '#users-pager .bb-pager-last').textContent + ' pages' : 'no pager');
+    const total = $(doc, '.donut-total');
+    check('admin-dashboard: donut total rendered', !!total && total.textContent.trim().length > 0, total ? total.textContent : 'missing');
+    const btn = $$(doc, '.ut-btn').find(b => b.dataset.act === 'Suspended');
+    check('admin-dashboard: suspend button present', !!btn);
+    if (!btn) return;
+    const uid = btn.dataset.id;
+    btn.click();
+    await sleep(60);
+    check('admin-dashboard: confirm modal opens', $(doc, '#modal-overlay').classList.contains('open'));
+    $(doc, '#m-confirm').click();
+    await sleep(80);
+    const u = JSON.parse(win.localStorage.getItem('bb_db.users')).find(x => x.id === uid);
+    check('admin-dashboard: suspend persists', !!u && u.status === 'Suspended', u ? u.status : 'missing');
+
+    /* Reset demo data (confirm is auto-dismissed in headless — override it) */
+    win.confirm = () => true;
+    $(doc, '#reset-demo-btn').click();
+    await sleep(400); // page reloads itself after reset
+    let u2 = null;
+    try { u2 = JSON.parse(localStorage.getItem('bb_db.users')).find(x => x.id === uid); } catch (e) {}
+    check('admin-dashboard: reset demo data restores seed state', !!u2 && u2.status === 'Active', u2 ? u2.status : 'missing');
+  });
+
+  /* ============ 12. LOGIN — session + role redirect ============ */
+  await withPage('auth-login.html', {}, async ({ doc, win }) => {
+    $(doc, '#login-email').value = 'qa.tester@bloodbuddy.np';
+    $(doc, '#login-pass').value = 'secret123';
+    const roleSel = $(doc, '#login-role');
+    roleSel.value = 'hospital';
+    $(doc, '#login-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1300);
+    let sess = null;
+    try { sess = JSON.parse(win.localStorage.getItem('bb_session') || 'null'); } catch (e) {}
+    check('auth-login: session saved with picked role', !!sess && sess.role === 'hospital', JSON.stringify(sess));
+    check('auth-login: redirects to hospital dashboard', win.location.pathname.indexOf('hospital-dashboard') > -1,
+      win.location.pathname);
+  });
+
+  /* ============ 13. REGISTER — donor wizard end-to-end ============ */
+  await withPage('auth-register.html', {}, async ({ doc, win }) => {
+    const radio = $(doc, 'input[name="role"][value="donor"]');
+    radio.checked = true;
+    radio.dispatchEvent(new win.Event('change', { bubbles: true }));
+    $(doc, '#to-step-2').click();
+    await sleep(60);
+    check('auth-register: step 2 visible after Continue', !$(doc, '#step-2').hidden);
+    $(doc, '#reg-fname').value = 'QA';
+    $(doc, '#reg-lname').value = 'Tester';
+    $(doc, '#reg-email').value = 'qa.tester@example.com';
+    $(doc, '#reg-phone').value = '9801234567';
+    $(doc, '#reg-blood').value = 'B+';
+    $(doc, '#reg-district').value = 'Kathmandu';
+    $(doc, '#reg-pass').value = 'secret123';
+    $(doc, '#reg-terms').checked = true;
+    $(doc, '#to-step-3').click();
+    await sleep(80);
+    check('auth-register: success step shown (validation passed)', !$(doc, '#step-3').hidden);
+    const dash = $(doc, '#dash-link');
+    check('auth-register: CTA targets donor dashboard', /donor-dashboard\.html$/.test(dash.getAttribute('href')),
+      dash.getAttribute('href'));
+    check('auth-register: summary rendered', $(doc, '#summary-grid').textContent.indexOf('B+') > -1);
+    check('auth-register: Terms/Privacy links wired to real pages',
+      !!$(doc, 'a[href="terms.html"]') && !!$(doc, 'a[href="privacy.html"]'));
+  });
+
+  /* ============ 14. CONTACT — form success + FAQ toggle ============ */
+  await withPage('contact.html', {}, async ({ doc, win }) => {
+    $(doc, '#ct-name').value = 'QA Tester';
+    $(doc, '#ct-email').value = 'qa@example.com';
+    $(doc, '#ct-message').value = 'Hello from the QA harness.';
+    $(doc, '#contact-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1000);
+    check('contact: success state shows', !$(doc, '#ct-success').hidden);
+    check('contact: form hidden after success', $(doc, '#contact-form').hidden);
+    const item = $$(doc, '.ct-faq-item')[1];
+    item.querySelector('.ct-faq-q').click();
+    await sleep(30);
+    check('contact: FAQ item toggles open', item.classList.contains('open'));
+  });
+
+  /* ============ 15. ABOUT — key content ============ */
+  await withPage('about.html', {}, ({ doc }) => {
+    const hosp = $$(doc, '.ab-hosp');
+    check('about: 5 partner hospitals listed', hosp.length === 5, hosp.length + ' cards');
+    check('about: mentions TUTH', doc.body.textContent.indexOf('Tribhuvan University Teaching Hospital') > -1);
+    check('about: CTA present', !!$(doc, '.cta-box'));
+  });
+
+  /* ============ 16. 404 — root page, absolute links ============ */
+  await withPage('/404.html', {}, ({ doc }) => {
+    check('404: branded card renders', !!$(doc, '.nf-card'));
+    check('404: home link is root-absolute', $(doc, '.nf-btn-red').getAttribute('href') === '/CODE/HTML/landing.html',
+      $(doc, '.nf-btn-red').getAttribute('href'));
+    const srcs = $$(doc, 'script[src]');
+    check('404: self-contained (no nav.js/main.js/bb-store)', srcs.length === 0, srcs.map(s => s.getAttribute('src')).join(','));
+  });
+
+  /* ============ 16b. EMERGENCY FLOW — guest submit → store → member visible ====== */
+  await withPage('emergency-request.html', {}, async ({ doc, win }) => {
+    check('emergency: member nudge visible for guests', !!$(doc, '#em-nudge'));
+    const sel = $(doc, '#e-blood');
+    sel.value = 'B-';
+    sel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await sleep(60);
+    check('emergency: compat chips render for B-', $(doc, '#compat-chips').textContent.indexOf('B-') > -1,
+      $(doc, '#compat-chips').textContent.trim());
+    check('emergency: guest can submit without login (public by design)', !$(doc, '#e-submit').disabled);
+    $(doc, '#e-district').value = 'Lalitpur';
+    $(doc, '#e-contact').value = '9800000000';
+    /* blood + district + needed-by + contact are all required (bb-validate.js) */
+    $(doc, '#e-by').value = futureDate(3);
+    $(doc, '#em-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(100);
+    const reqs = JSON.parse(win.localStorage.getItem('bb_db.requests') || '[]');
+    const added = reqs.find(r => r.blood === 'B-' && (r.requester || '').indexOf('Guest') === 0);
+    check('emergency: guest submit persists to the shared store', !!added && added.status === 'Pending' && added.urgency === 'Urgent',
+      added ? JSON.stringify({ id: added.id, status: added.status }) : 'not found');
+    check('emergency: contact number captured into notes', !!added && (added.notes || '').indexOf('Contact: 9800000000') > -1,
+      added ? added.notes : 'n/a');
+    check('emergency: success state shows the ID returned by POST /api/requests',
+      !!added && !$(doc, '#em-success').hidden && $(doc, '#ok-id').textContent === added.id,
+      $(doc, '#ok-id').textContent + ' vs ' + (added ? added.id : 'no request created'));
+    check('emergency: form hidden after success', $(doc, '#em-form-wrap').hidden);
+    check('emergency: success links to the status lookup', !!added && $(doc, '.em-success a.em-track').getAttribute('href') === '#lk-id',
+      $(doc, '.em-success a.em-track').getAttribute('href'));
+
+    /* Status lookup — the just-created EM id shows a card; junk shows an error */
+    $(doc, '#lk-id').value = added.id;
+    $(doc, '#lk-btn').click();
+    await sleep(60);
+    check('emergency: lookup by EM id renders the status card',
+      !!$(doc, '#lk-result .lk-card') && $(doc, '#lk-result .lk-card').textContent.indexOf(added.id) > -1 &&
+      $(doc, '#lk-result .lk-card').textContent.indexOf('Pending') > -1,
+      $(doc, '#lk-result').textContent.slice(0, 80));
+    check('emergency: lookup card shows the request timeline', $(doc, '#lk-result .lk-tl li') !== null);
+    $(doc, '#lk-id').value = 'EM-NOPE';
+    $(doc, '#lk-btn').click();
+    await sleep(60);
+    check('emergency: unknown EM id shows a friendly not-found error',
+      $(doc, '#lk-result .lk-err') !== null, $(doc, '#lk-result').textContent.slice(0, 80));
+    /* A member request id (BB-*) must NOT be exposed through the guest lookup */
+    const memberReq = reqs.find(r => /^(BB-)/.test(r.id));
+    if (memberReq) {
+      $(doc, '#lk-id').value = memberReq.id;
+      $(doc, '#lk-btn').click();
+      await sleep(60);
+      check('emergency: guest lookup does not expose member request IDs', $(doc, '#lk-result .lk-err') !== null,
+        $(doc, '#lk-result').textContent.slice(0, 80));
+    }
+  });
+
+  /* ================= 16b. ROLE PROFILE PAGES (requester/hospital/admin) ============ */
+  /* Every role now has a dedicated profile editor (donor-profile is the
+     template). Render + chip destination + nav-active per page, then a
+     save flow (edit → save bar → persist → toast) on each. */
+  const PROFILE_PAGES = [
+    ['requester-profile.html', { role: 'requester', name: 'Ramesh Shrestha' }],
+    ['hospital-profile.html',  { role: 'hospital',  name: 'Bir Hospital' }],
+    ['admin-profile.html',     { role: 'admin',     name: 'Admin' }]
+  ];
+  for (const [page, sess] of PROFILE_PAGES) {
+    await withPage(page, { session: sess }, ({ doc }) => {
+      check(page + ': hero renders', !!$(doc, '.prof-hero .hero-title'));
+      check(page + ': profile form fields present',
+        !!$(doc, '.pf-grid') && $$(doc, '.pf-grid input, .pf-grid select').length >= 5);
+      const chip = $(doc, 'a.nav-user-chip');
+      check(page + ': chip links to the role profile', !!chip && chip.getAttribute('href') === page,
+        chip ? chip.getAttribute('href') : 'no chip');
+      const myProfile = $$(doc, '.nav-links a').find(a => a.getAttribute('href') === page);
+      check(page + ': nav My Profile link active', !!myProfile && myProfile.classList.contains('active'),
+        myProfile ? 'active=' + myProfile.classList.contains('active') : 'missing');
+    });
+    await withPage(page, { session: sess }, async ({ doc, win }) => {
+      const input = $(doc, '.pf-grid input');
+      input.value = 'QA Edited';
+      input.dispatchEvent(new win.Event('input', { bubbles: true }));
+      await sleep(80);
+      check(page + ': save bar appears after edit', $(doc, '#save-bar').classList.contains('show'));
+      $(doc, '#save-btn').click();
+      /* save goes through PUT /api/profile/{role} (mock latency) — wait for it */
+      await sleep(250);
+      let persisted = false;
+      for (let i = 0; i < win.localStorage.length; i++) {
+        const k = win.localStorage.key(i);
+        if (/^bb_.*profile/.test(k) && (win.localStorage.getItem(k) || '').indexOf('QA Edited') > -1) persisted = true;
+      }
+      check(page + ': save persists to the profile store', persisted);
+      check(page + ': toast shows after save', $(doc, '#pf-toast').classList.contains('show'));
+      check(page + ': save bar hidden after save', !$(doc, '#save-bar').classList.contains('show'));
+    });
+  }
+  /* Chip destinations for the remaining roles on a public page */
+  await withPage('about.html', { session: { role: 'hospital', name: 'Bir Hospital' } }, ({ doc }) => {
+    const chipLink = $(doc, 'a.nav-user-chip');
+    check('about: hospital chip links to the hospital profile',
+      !!chipLink && chipLink.getAttribute('href') === 'hospital-profile.html',
+      chipLink ? chipLink.getAttribute('href') : 'chip not a link');
+  });
+  await withPage('about.html', { session: { role: 'admin', name: 'Admin' } }, ({ doc }) => {
+    const chipLink = $(doc, 'a.nav-user-chip');
+    check('about: admin chip links to the admin profile',
+      !!chipLink && chipLink.getAttribute('href') === 'admin-profile.html',
+      chipLink ? chipLink.getAttribute('href') : 'chip not a link');
+  });
+
+  /* ================= 17. RBAC GUARD — role enforcement + login return ============ */
+  /* Wrong-role visitors bounce to their own dashboard... */
+  await withPage('hospital-profile.html', { session: { role: 'requester', name: 'Ramesh' } }, ({ doc }) => {
+    check('rbac: requester opening hospital profile → own dashboard',
+      /requester-search\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('admin-profile.html', { session: { role: 'hospital', name: 'Bir' } }, ({ doc }) => {
+    check('rbac: hospital opening admin profile → own dashboard',
+      /hospital-dashboard\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('admin-dashboard.html', { session: { role: 'requester', name: 'Ramesh' } }, ({ doc }) => {
+    check('rbac: requester opening admin dashboard → own dashboard',
+      /requester-search\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('hospital-requests.html', { session: { role: 'donor', name: 'Sita' } }, ({ doc }) => {
+    check('rbac: donor opening hospital queue → own dashboard',
+      /donor-dashboard\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('donor-profile.html', { session: { role: 'hospital', name: 'Bir' } }, ({ doc }) => {
+    check('rbac: hospital opening donor profile → own dashboard',
+      /hospital-dashboard\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('emergency-request.html', {}, ({ doc }) => {
+    check('rbac: emergency page stays public for guests', !!$(doc, '#em-form'), 'form missing');
+  });
+  await withPage('emergency-request.html', { session: { role: 'hospital', name: 'Bir' } }, ({ doc }) => {
+    check('rbac: emergency page stays public for members too', !!$(doc, '#em-form'), 'form missing');
+  });
+  /* ...and a bounce remembers where you wanted to be (sessionStorage
+     persists across the tab's iframes), so logging in with the RIGHT
+     role returns you there (fix #5). */
+  await withPage('/CODE/HTML/auth-login.html', {}, async ({ doc, win, f }) => {
+    const pending = win.sessionStorage.getItem('bb_return_to') || ''; /* set by the donor-profile bounce above */
+    check('rbac: bounce stashed a return URL for login', /donor-profile\.html/.test(pending), pending || 'empty');
+    $(doc, '#login-email').value = 'sita@bloodbuddy.np';
+    $(doc, '#login-pass').value = 'secret123';
+    $(doc, '#login-role').value = 'donor'; /* right role this time */
+    $(doc, '#login-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1400); /* redirect fires at 900ms */
+    check('rbac: login with right role returns you to the bounced page',
+      /donor-profile\.html/.test(f.contentWindow.location.href), f.contentWindow.location.href);
+  });
+  /* Re-stash a return URL (the login above consumed it)... */
+  await withPage('donor-profile.html', { session: { role: 'hospital', name: 'Bir' } }, ({ doc }) => {
+    check('rbac: hospital bounce re-stashes the return URL', /hospital-dashboard\.html/.test(doc.location.href),
+      doc.location.href);
+  });
+  /* ...then logging in with the WRONG role must NOT follow it (fix #5). */
+  await withPage('/CODE/HTML/auth-login.html', {}, async ({ doc, win, f }) => {
+    const pending = win.sessionStorage.getItem('bb_return_to') || '';
+    check('rbac: return URL present for the wrong-role test', /donor-profile\.html/.test(pending), pending || 'empty');
+    $(doc, '#login-email').value = 'ramesh@bloodbuddy.np';
+    $(doc, '#login-pass').value = 'secret123';
+    $(doc, '#login-role').value = 'requester';
+    $(doc, '#login-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1400);
+    check('rbac: login with wrong role ignores return URL → own dashboard',
+      /requester-search\.html/.test(f.contentWindow.location.href), f.contentWindow.location.href);
+  });
+  /* Requester portal is member-only now: guests bounce to login... */
+  await withPage('requester-tracking.html', {}, ({ doc }) => {
+    check('rbac: guest opening requester tracking → login (requester portal locked)',
+      /auth-login\.html/.test(doc.location.href), doc.location.href);
+  });
+  await withPage('requester-tracking.html', { session: { role: 'hospital', name: 'Bir' } }, ({ doc }) => {
+    check('rbac: hospital opening requester tracking → own dashboard',
+      /hospital-dashboard\.html/.test(doc.location.href), doc.location.href);
+  });
+  /* A dashboard link stays clickable for the right role... */
+  await withPage('landing.html', { session: { role: 'hospital', name: 'Bir Hospital' } }, ({ doc }) => {
+    const link = $$(doc, 'a[href="hospital-dashboard.html"]').find(a => a.textContent.indexOf('Open hospital portal') > -1);
+    check('rbac: hospital portal card link present for hospital session', !!link,
+      link ? link.getAttribute('href') : 'missing');
+  });
+  /* ...but is rewired for a logged-out visitor (portal cards → login,
+     original target kept in data-bb-return for post-login continue). */
+  await withPage('landing.html', {}, ({ doc }) => {
+    const link = $$(doc, 'a[data-bb-return="hospital-dashboard.html"]').find(a => a.textContent.indexOf('Open hospital portal') > -1);
+    check('rbac: logged-out portal card link now goes to login (return stashed)',
+      !!link && link.getAttribute('href') === 'auth-login.html', link ? link.getAttribute('href') : 'missing');
+  });
+
+  /* ================= 18. ROLE-WALK HOLES (session #9) =================
+     Regression checks for every gap found by walking each role's flow. */
+
+  /* 18a. Search filters really filter (blood group / widen / sort) */
+  await withPage('requester-search.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    $(doc, '#f-blood').value = 'O-';
+    $(doc, '#search-btn').click();
+    const oNeg = $$(doc, '.donor-card');
+    check('search: O- filter returns only O- donors', oNeg.length === 1 && oNeg[0].textContent.indexOf('Sarita Thapa') > -1,
+      oNeg.length + ' cards');
+    $(doc, '#f-blood').value = 'AB+';
+    $(doc, '#f-district').value = 'Pokhara';
+    $(doc, '#f-avail').value = 'all';
+    $(doc, '#search-btn').click();
+    check('search: group with no donors in district widens to all districts (no dead-end)',
+      $(doc, '#results-text').textContent.indexOf('all districts') > -1 && $$(doc, '.donor-card').length === 1,
+      $(doc, '#results-text').textContent.trim());
+    $(doc, '#f-blood').value = '';
+    $(doc, '#f-district').value = '';
+    /* The grid pages at 6; widen to 20 so the whole sorted list is checked. */
+    const size = $(doc, '.bb-pager-select');
+    size.value = '20';
+    size.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await sleep(40);
+    $(doc, '#sort-by').value = 'Name (A\u2013Z)';
+    $(doc, '#search-btn').click();
+    const names = $$(doc, '.donor-card .dc-name').map(e => e.textContent.trim());
+    const sorted = names.slice().sort((a, b) => a.localeCompare(b));
+    check('search: Name (A-Z) sort orders all 14 donors once the page is widened',
+      names.length === 14 && names.every((n, i) => n === sorted[i]),
+      names.length + ' names: ' + names.join(','));
+  });
+
+  /* 18b. Request form persists the chosen hospital (was thrown away as '\u2014') */
+  await withPage('requester-request.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    $(doc, '#r-blood').value = 'A-';
+    $(doc, '#r-hospital').value = 'Bir Hospital, Kathmandu';
+    $(doc, '#r-by').value = futureDate(7); /* required + future date */
+    $(doc, '#request-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(1400);
+    const reqs = JSON.parse(win.localStorage.getItem('bb_db.requests') || '[]');
+    const added = reqs.find(r => r.blood === 'A-');
+    check('requester-request: chosen hospital persisted to the request', !!added && added.hospital === 'Bir Hospital, Kathmandu',
+      added ? added.hospital : 'request missing');
+  });
+
+  /* 18c. Register writes the account into the admin's users table */
+  await withPage('auth-register.html', {}, async ({ doc, win }) => {
+    const radio = $(doc, 'input[name="role"][value="requester"]');
+    radio.checked = true;
+    radio.dispatchEvent(new win.Event('change', { bubbles: true }));
+    $(doc, '#to-step-2').click();
+    await sleep(60);
+    $(doc, '#reg-fname').value = 'Flow';
+    $(doc, '#reg-lname').value = 'Walker';
+    $(doc, '#reg-email').value = 'flow.walker@example.com';
+    $(doc, '#reg-phone').value = '9801234567';
+    $(doc, '#reg-blood').value = 'A-';
+    $(doc, '#reg-district').value = 'Lalitpur';
+    $(doc, '#reg-pass').value = 'secret123';
+    $(doc, '#reg-terms').checked = true;
+    $(doc, '#to-step-3').click();
+    await sleep(80);
+    const users = JSON.parse(win.localStorage.getItem('bb_db.users') || '[]');
+    const added = users.find(u => u.email === 'flow.walker@example.com');
+    check('auth-register: new account lands in the admin users table',
+      !!added && added.role === 'Requester' && added.status === 'Active',
+      added ? added.role + '/' + added.status : 'missing');
+  });
+
+  /* 18d. Tracking: Accepted/Fulfilled tabs, plural units, cancel hidden when done */
+  await withPage('requester-tracking.html', {
+    session: { role: 'requester', name: 'Ramesh Shrestha' },
+    seed: () => {
+      const reqs = JSON.parse(localStorage.getItem('bb_db.requests') || '[]');
+      reqs.unshift({ id: 'QA-2U', blood: 'O+', units: '2', urgency: 'Urgent', requester: 'Ramesh Shrestha', hospital: 'Bir Hospital, Kathmandu', district: 'Kathmandu', created: new Date().toISOString(), neededBy: '2026-09-30', status: 'Pending', notes: '' });
+      reqs.unshift({ id: 'QA-ACC', blood: 'B+', units: '1', urgency: 'High', requester: 'Ramesh Shrestha', hospital: 'Patan Hospital, Lalitpur', district: 'Lalitpur', created: new Date().toISOString(), neededBy: '2026-09-29', status: 'Accepted', donor: 'Arun Shrestha', donorAt: new Date().toISOString(), notes: '' });
+      reqs.unshift({ id: 'QA-FUL', blood: 'A+', units: '1', urgency: 'Normal', requester: 'Ramesh Shrestha', hospital: 'Bir Hospital, Kathmandu', district: 'Kathmandu', created: new Date().toISOString(), neededBy: '2026-09-28', status: 'Fulfilled', donor: 'Dipesh Limbu', donorAt: new Date().toISOString(), notes: '' });
+      localStorage.setItem('bb_db.requests', JSON.stringify(reqs));
+    }
+  }, async ({ doc }) => {
+    const card = $$(doc, '.req-card').find(c => c.textContent.indexOf('QA-2U') > -1);
+    check('tracking: multi-unit request pluralizes on the card',
+      !!card && card.textContent.indexOf('2 units') > -1, card ? card.querySelector('.rc-sub').textContent : 'missing');
+    $$(doc, '.trk-tab').find(t => t.dataset.filter === 'Accepted').click();
+    const acc = $$(doc, '#req-list .req-card');
+    check('tracking: Accepted tab surfaces accepted requests', acc.length === 1 && acc[0].dataset.id === 'QA-ACC',
+      acc.length + ' cards: ' + acc.map(c => c.dataset.id).join(','));
+    $$(doc, '.trk-tab').find(t => t.dataset.filter === 'Fulfilled').click();
+    const ful = $$(doc, '#req-list .req-card');
+    check('tracking: Fulfilled tab surfaces fulfilled requests', ful.length === 1 && ful[0].dataset.id === 'QA-FUL',
+      ful.length + ' cards: ' + ful.map(c => c.dataset.id).join(','));
+    const done = $$(doc, '#req-list .req-card').find(c => c.dataset.id === 'QA-FUL');
+    if (done) {
+      done.querySelector('.rc-view').click();
+      await sleep(60);
+      check('tracking: Cancel hidden for a fulfilled request', $(doc, '#modal-cancelreq').style.display === 'none',
+        'display=' + $(doc, '#modal-cancelreq').style.display);
+    }
+    const DONE = ['Completed', 'Fulfilled', 'Cancelled', 'Rejected'];
+    const all2 = JSON.parse(localStorage.getItem('bb_db.requests') || '[]');
+    const expected = all2.filter(r => DONE.indexOf(r.status) === -1).length;
+    check('tracking: open-requests pill matches live data',
+      $(doc, '#open-count').textContent.trim() === expected + ' requests',
+      $(doc, '#open-count').textContent.trim() + ' vs expected ' + expected);
+  });
+
+  /* 18e. Admin dashboard shortcut shows the real pending count */
+  await withPage('admin-dashboard.html', { session: { role: 'admin', name: 'Admin' } }, ({ doc, win }) => {
+    const shown = parseInt($(doc, '#pending-requests').textContent, 10);
+    const real = JSON.parse(win.localStorage.getItem('bb_db.requests') || '[]').filter(r => r.status === 'Pending').length;
+    check('admin-dashboard: pending-review card shows the real store count', shown === real, shown + ' vs ' + real);
+  });
+
+  /* 18f. Admin moderation hospital filter works */
+  await withPage('admin-requests.html', { session: { role: 'admin', name: 'Admin' } }, ({ doc, win }) => {
+    const filter = $(doc, '#hospital-filter');
+    filter.value = 'Bir Hospital, Kathmandu';
+    filter.dispatchEvent(new win.Event('change', { bubbles: true }));
+    const bir = $$(doc, '#queue-list .req-card');
+    check('admin-requests: hospital filter narrows the queue', bir.length >= 1 && bir.every(c => c.textContent.indexOf('Bir Hospital') > -1),
+      bir.length + ' cards');
+    filter.value = '\u2014';
+    filter.dispatchEvent(new win.Event('change', { bubbles: true }));
+    const unrouted = $$(doc, '#queue-list .req-card');
+    check('admin-requests: "Not routed yet" filter shows unrouted requests',
+      unrouted.length === 2 && unrouted.every(c => c.textContent.indexOf('BB-5MN8VX') > -1 || c.textContent.indexOf('REQ-490') > -1),
+      unrouted.length + ' cards');
+  });
+
+  /* 18g. Profile pages prefill from the session on a fresh browser */
+  await withPage('requester-profile.html', { session: { role: 'requester', name: 'Nabin Chaudhary' } }, ({ doc }) => {
+    check('requester-profile: fresh browser prefills the session name',
+      $(doc, '#p-fname').value === 'Nabin' && $(doc, '#p-lname').value === 'Chaudhary',
+      $(doc, '#p-fname').value + ' ' + $(doc, '#p-lname').value);
+  });
+  await withPage('donor-dashboard.html', { session: { role: 'donor', name: 'Sita Gurung' } }, ({ doc }) => {
+    check('donor-dashboard: greets the logged-in user when no profile is saved',
+      $(doc, '#dash-name').textContent === 'Sita', $(doc, '#dash-name').textContent);
+    const near = $$(doc, '.dash-stats .stat-box')[3];
+    check('donor-dashboard: nearby-requests stat stays inside the donor portal',
+      !!near && near.getAttribute('href') === 'donor-history.html', near ? near.getAttribute('href') : 'missing');
+  });
+
+  /* 18h. Hospital dashboard pill mirrors the blood-bank toggle */
+  await withPage('hospital-dashboard.html', {
+    session: { role: 'hospital', name: 'Bir Hospital' },
+    seed: () => localStorage.setItem('bb_hospital_profile', JSON.stringify({ open: false }))
+  }, ({ doc }) => {
+    check('hospital-dashboard: pill reflects the blood-bank-closed profile',
+      $(doc, '#hero-pill-text').textContent.indexOf('closed') > -1, $(doc, '#hero-pill-text').textContent);
+  });
+
+  /* 18i. Site-wide footer legal links */
+  await withPage('about.html', {}, ({ doc }) => {
+    const hrefs = $$(doc, '.footer a').map(a => a.getAttribute('href'));
+    check('about: footer carries Terms + Privacy links', hrefs.indexOf('terms.html') > -1 && hrefs.indexOf('privacy.html') > -1,
+      hrefs.join(','));
+  });
+  await withPage('/404.html', {}, ({ doc }) => {
+    const hrefs = $$(doc, '.footer a').map(a => a.getAttribute('href'));
+    check('404: footer carries root-absolute Terms + Privacy links',
+      hrefs.indexOf('/CODE/HTML/terms.html') > -1 && hrefs.indexOf('/CODE/HTML/privacy.html') > -1, hrefs.join(','));
+  });
+
+  /* ================= 19. SESSION #10 — validation / API layer / pagination ================= */
+
+  /* 19a. Client-side validation renders INLINE errors and blocks the request */
+  await withPage('auth-login.html', {}, async ({ doc, win }) => {
+    $(doc, '#login-email').value = 'not-an-email';
+    $(doc, '#login-pass').value = '123';
+    $(doc, '#login-form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(150);
+    const err = $(doc, '#login-form .field-error');
+    check('login: invalid email shows an inline .field-error', !!err && /valid email/i.test(err.textContent),
+      err ? err.textContent.trim() : 'no inline error');
+    check('login: the invalid field group is marked .has-error',
+      !!$(doc, '#login-email').closest('.has-error'), 'no .has-error wrapper');
+    check('login: weak password trips the length rule', !!$(doc, '#login-pass').closest('.has-error'),
+      $(doc, '#login-pass').closest('.field-group').textContent.trim());
+    let sess = null;
+    try { sess = JSON.parse(win.localStorage.getItem('bb_session') || 'null'); } catch (e) {}
+    check('login: a blocked submit creates no session', sess === null, JSON.stringify(sess));
+    check('login: stays on the login page after a blocked submit',
+      /auth-login\.html/.test(win.location.pathname), win.location.pathname);
+  });
+
+  /* 19b. Every page talks to the backend through the mock API facade */
+  await withPage('auth-login.html', {}, ({ win }) => {
+    check('api: BloodBuddyAPI.isMock() reports mock mode', win.BloodBuddyAPI.isMock() === true);
+    check('api: facade exposes the Appendix B endpoint groups',
+      ['auth', 'contact', 'donors', 'requests', 'inventory', 'users', 'profile']
+        .every(k => typeof win.BloodBuddyAPI[k] === 'object' || typeof win.BloodBuddyAPI[k] === 'function'),
+      Object.keys(win.BloodBuddyAPI).join(','));
+  });
+
+  /* 19c. Donor search pagination — 14 donors at 6/page = 3 pages */
+  await withPage('requester-search.html', { session: { role: 'requester', name: 'Ramesh Shrestha' } }, async ({ doc, win }) => {
+    /* the page ships pre-filled with B+ / Kathmandu (6 donors → a single page) */
+    check('search: pre-filled B+/Kathmandu filters render one page of 6',
+      $$(doc, '.donor-card').length === 6 && $(doc, '.bb-pager-last').textContent === '1',
+      $$(doc, '.donor-card').length + ' cards / ' + $(doc, '.bb-pager-last').textContent + ' page');
+    /* clear the filters (incl. the default "available only") so the whole
+       14-donor registry is paged */
+    $(doc, '#f-blood').value = '';
+    $(doc, '#f-district').value = '';
+    $(doc, '#f-avail').value = 'all';
+    $(doc, '#search-btn').click();
+    await sleep(60);
+    check('search: pager renders 3 pages of 6 for 14 donors',
+      !!$(doc, '#donor-pager .bb-pager') && $(doc, '.bb-pager-last').textContent === '3',
+      $(doc, '.bb-pager-last') ? $(doc, '.bb-pager-last').textContent : 'no pager');
+    check('search: Prev is disabled on page 1', $(doc, '[data-act="prev"]').disabled === true);
+    const first = $$(doc, '.donor-card .dc-name').map(e => e.textContent.trim());
+    check('search: page 1 shows 6 donors', first.length === 6, first.length + ' cards');
+    $(doc, '[data-act="next"]').click();
+    await sleep(60);
+    check('search: Next advances to page 2', $(doc, '.bb-pager-cur').textContent === '2',
+      $(doc, '.bb-pager-cur').textContent);
+    const second = $$(doc, '.donor-card .dc-name').map(e => e.textContent.trim());
+    check('search: page 2 shows a different slice of 6', second.length === 6 && second[0] !== first[0],
+      second.join(','));
+    check('search: Prev is enabled on page 2', $(doc, '[data-act="prev"]').disabled === false);
+    const sizeSel = $(doc, '.bb-pager-select');
+    sizeSel.value = '20';
+    sizeSel.dispatchEvent(new win.Event('change', { bubbles: true }));
+    await sleep(60);
+    check('search: per-page 20 re-renders all 14 donors on a single page',
+      $$(doc, '.donor-card').length === 14 && $(doc, '.bb-pager-last').textContent === '1',
+      $$(doc, '.donor-card').length + ' cards');
+  });
+
+  /* 19d. Photo upload (CPJ119 2.5) — a saved Base64 photo round-trips into the UI */
+  const PHOTO_DATA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+  await withPage('donor-profile.html', {
+    session: { role: 'donor', name: 'Sita Gurung' },
+    seed: () => localStorage.setItem('bb_donor_profile', JSON.stringify({
+      fname: 'Sita', lname: 'Gurung', email: 'sita@bloodbuddy.np', phone: '9801234567',
+      blood: 'B+', district: 'Kathmandu', address: '', available: true, photo: PHOTO_DATA
+    }))
+  }, ({ doc }) => {
+    check('donor-profile: file input accepts images only (CPJ119 2.5)',
+      $(doc, '#p-photo').getAttribute('accept') === 'image/png,image/jpeg',
+      $(doc, '#p-photo').getAttribute('accept') || 'no accept attr');
+    check('donor-profile: a saved photo renders in the preview',
+      ($(doc, '#photo-preview').getAttribute('src') || '').indexOf('data:image/png;base64,') === 0,
+      ($(doc, '#photo-preview').getAttribute('src') || 'no src').slice(0, 40));
+    check('donor-profile: the photo block is marked .has-photo',
+      $(doc, '#photo-upload').classList.contains('has-photo'));
+    check('donor-profile: Remove is offered once a photo exists', $(doc, '#photo-remove').hidden === false);
+  });
+
+  /* ================= 20. ARCHITECTURE — one way in to the backend =================
+     bb-api.js is the single place a page may reach the backend, so a profile has
+     to be READ through GET /api/profile/{role} rather than by parsing
+     bb_<role>_profile straight out of localStorage. Both routes resolve to
+     identical values, so this asserts the source contract rather than a
+     behaviour. (The SAVE path still mirrors the value into localStorage on
+     purpose — `setItem`, not `getItem` — so match the READ only.) */
+  const profileReaders = [
+    'donor-profile.html', 'requester-profile.html', 'hospital-profile.html', 'admin-profile.html',
+    'donor-dashboard.html', 'hospital-dashboard.html'
+  ];
+  const profileTexts = await Promise.all(
+    profileReaders.map(p => fetch(P + p).then(r => r.text()).then(t => ({ page: p, src: t })))
+  );
+  for (const { page, src } of profileTexts) {
+    const directRead = /localStorage\.getItem\(\s*['"]bb_\w*profile/.test(src);
+    check(page + ': reads its profile through API.profile.get, never the storage key',
+      /API\.profile\.get\(/.test(src) && !directRead,
+      directRead ? 'still reads a bb_*_profile key directly' : 'no API.profile.get call');
+  }
+
+  /* ================= 21. DONOR SIDE OF THE LIFECYCLE =================
+     The demo used to run requester → admin → hospital with no donor step, even
+     though the seeds and the tracker claimed "Arun Shrestha accepted". The donor
+     dashboard now matches open requests against the donor's OWN group using the
+     Appendix A chart (bb-compat.js) and accepts/declines through the API. */
+
+  /* 21a. Matching direction + accept/decline. Appendix A is written
+     "recipient → compatible DONOR groups", so a B+ donor may serve B+ and AB+
+     recipients but NOT an A+ one — reading the chart backwards would offer a
+     donor a patient they must not give blood to. */
+  const DONOR_NOW = new Date().toISOString();
+  const DONOR_SEED = () => {
+    localStorage.setItem('bb_donor_profile', JSON.stringify({
+      fname: 'Sita', lname: 'Gurung', email: 'sita@bloodbuddy.np', phone: '9801234567',
+      blood: 'B+', district: 'Kathmandu', available: true
+    }));
+    const base = {
+      units: '2', urgency: 'Urgent', hospital: 'Bir Hospital, Kathmandu', district: 'Kathmandu',
+      created: DONOR_NOW, neededBy: '2026-12-31', notes: '',
+      timeline: [{ when: '2026-09-15 09:00', what: 'Request submitted' }]
+    };
+    localStorage.setItem('bb_db.requests', JSON.stringify([
+      Object.assign({}, base, { id: 'DN-BPLUS', blood: 'B+', requester: 'Ramesh Shrestha', status: 'Pending' }),
+      Object.assign({}, base, { id: 'DN-ABPLUS', blood: 'AB+', requester: 'Anita Rai', status: 'Pending' }),
+      Object.assign({}, base, { id: 'DN-APLUS', blood: 'A+', requester: 'Kiran Adhikari', status: 'Pending' }),
+      /* B+ so it IS compatible — only the decline can hide it */
+      Object.assign({}, base, { id: 'DN-DECLINED', blood: 'B+', requester: 'Mina Shrestha', status: 'Pending', declinedBy: ['Sita Gurung'] })
+    ]));
+  };
+  await withPage('donor-dashboard.html', {
+    session: { role: 'donor', name: 'Sita Gurung' }, seed: DONOR_SEED
+  }, async ({ doc, win }) => {
+    const text = () => $$(doc, '#nearby-body tr').map(r => r.textContent).join(' | ');
+    check('donor: offers only blood-compatible open requests (a B+ donor gets B+ and AB+)',
+      $$(doc, '#nearby-body tr').length === 2 && text().indexOf('DN-BPLUS') > -1 && text().indexOf('DN-ABPLUS') > -1,
+      $$(doc, '#nearby-body tr').length + ' rows: ' + text());
+    check('donor: does NOT offer an incompatible recipient (A+) to a B+ donor',
+      text().indexOf('DN-APLUS') === -1, text());
+    check('donor: a compatible request this donor declined stays hidden (and open for others)',
+      text().indexOf('DN-DECLINED') === -1, text());
+    check('donor: the nearby stat and banner track the live match count',
+      $(doc, '#nearby-count').textContent === '2' && !$(doc, '#urgent-banner').hidden,
+      'count=' + $(doc, '#nearby-count').textContent + ' bannerHidden=' + $(doc, '#urgent-banner').hidden);
+    check('donor: the banner names the most urgent match',
+      $(doc, '#du-title').textContent.indexOf('B+ needed at Bir Hospital') > -1,
+      $(doc, '#du-title').textContent);
+
+    /* Accept → PATCH /api/requests/{id} commits this donor */
+    const row = $$(doc, '#nearby-body tr').find(r => r.textContent.indexOf('DN-BPLUS') > -1);
+    row.querySelector('.nb-act[data-act="accept"]').click();
+    await sleep(250);
+    let reqs = JSON.parse(win.localStorage.getItem('bb_db.requests'));
+    const accepted = reqs.find(r => r.id === 'DN-BPLUS');
+    check('donor: Accept commits them (status Matched + donor + donorAt)',
+      accepted.status === 'Matched' && accepted.donor === 'Sita Gurung' && !!accepted.donorAt,
+      JSON.stringify({ status: accepted.status, donor: accepted.donor, hasDonorAt: !!accepted.donorAt }));
+    check('donor: Accept appends a timeline entry the requester can read',
+      (accepted.timeline || []).some(t => /accepted the request/.test(t.what)),
+      JSON.stringify((accepted.timeline || []).map(t => t.what)));
+    const committed = $$(doc, '#nearby-body tr').find(r => r.textContent.indexOf('DN-BPLUS') > -1);
+    check('donor: the committed request now reads as accepted instead of re-offering',
+      !!committed && committed.textContent.indexOf('You accepted') > -1,
+      committed ? committed.textContent.replace(/\s+/g, ' ').trim() : 'row gone');
+
+    /* Decline → hidden from this donor only; the request stays open */
+    const abRow = $$(doc, '#nearby-body tr').find(r => r.textContent.indexOf('DN-ABPLUS') > -1);
+    abRow.querySelector('.nb-act[data-act="decline"]').click();
+    await sleep(250);
+    reqs = JSON.parse(win.localStorage.getItem('bb_db.requests'));
+    const declined = reqs.find(r => r.id === 'DN-ABPLUS');
+    check('donor: Decline records declinedBy WITHOUT closing the request',
+      declined.status === 'Pending' && (declined.declinedBy || []).indexOf('Sita Gurung') > -1,
+      JSON.stringify({ status: declined.status, declinedBy: declined.declinedBy }));
+    check('donor: the declined request leaves this donor list',
+      $$(doc, '#nearby-body tr').filter(r => r.textContent.indexOf('DN-ABPLUS') > -1).length === 0, text());
+  });
+
+  /* 21b. The requester can SEE the donor's commitment on the tracker */
+  await withPage('requester-tracking.html', {
+    session: { role: 'requester', name: 'Ramesh Shrestha' },
+    seed: () => localStorage.setItem('bb_db.requests', JSON.stringify([{
+      id: 'DN-MATCHED', blood: 'B+', units: '2', urgency: 'Urgent', requester: 'Ramesh Shrestha',
+      hospital: 'Bir Hospital, Kathmandu', district: 'Kathmandu', created: new Date().toISOString(),
+      neededBy: '2026-12-31', status: 'Matched', donor: 'Sita Gurung', donorAt: new Date().toISOString(), notes: '',
+      timeline: [
+        { when: '2026-09-15 09:00', what: 'Request submitted' },
+        { when: '2026-09-15 10:00', what: 'Sita Gurung accepted the request — hospital notified' }
+      ]
+    }]))
+  }, async ({ doc }) => {
+    const tab = $$(doc, '.trk-tab').find(t => t.dataset.filter === 'Matched');
+    check('tracking: a Matched tab exists (a donor committing is a visible state)', !!tab);
+    if (!tab) return;
+    check('tracking: the Matched tab counts the committed request',
+      $(doc, '#cnt-matched').textContent === '1', $(doc, '#cnt-matched').textContent);
+    tab.click();
+    await sleep(80);
+    const cards = $$(doc, '#req-list .req-card');
+    check('tracking: the Matched tab surfaces the donor-committed request',
+      cards.length === 1 && cards[0].textContent.indexOf('DN-MATCHED') > -1, cards.length + ' cards');
+  });
+
+  /* 21c. The hospital fulfils a donor-matched request → stock is deducted */
+  await withPage('hospital-requests.html', {
+    session: { role: 'hospital', name: 'Bir Hospital' },
+    seed: () => localStorage.setItem('bb_db.requests', JSON.stringify([{
+      id: 'DN-FULFIL', blood: 'O-', units: '2', urgency: 'Urgent', requester: 'Ramesh Shrestha',
+      hospital: 'Bir Hospital, Kathmandu', district: 'Kathmandu', created: new Date().toISOString(),
+      neededBy: '2026-12-31', status: 'Matched', donor: 'Sita Gurung', donorAt: new Date().toISOString(), notes: '',
+      timeline: [{ when: '2026-09-15 09:00', what: 'Request submitted' }]
+    }]))
+  }, async ({ doc, win }) => {
+    const card = $$(doc, '.req-card').find(c => c.textContent.indexOf('DN-FULFIL') > -1);
+    check('hospital: a donor-matched request is labelled for the blood bank',
+      !!card && card.textContent.indexOf('Donor matched') > -1,
+      card ? card.querySelector('.rc-status').textContent.trim() : 'card missing');
+    const fulfil = card && card.querySelector('.qa.accept');
+    check('hospital: a matched request offers "Mark fulfilled"',
+      !!fulfil && /fulfilled/i.test(fulfil.textContent), fulfil ? fulfil.textContent : 'no button');
+    if (!fulfil) return;
+    const before = JSON.parse(win.localStorage.getItem('bb_db.inventory'))['O-'];
+    fulfil.click();
+    await sleep(250);
+    const after = JSON.parse(win.localStorage.getItem('bb_db.inventory'))['O-'];
+    const r = JSON.parse(win.localStorage.getItem('bb_db.requests')).find(x => x.id === 'DN-FULFIL');
+    check('hospital: fulfilling a matched request closes it and deducts 2 units of stock',
+      r.status === 'Fulfilled' && after === before - 2, 'status=' + r.status + ' inv ' + before + '→' + after);
+  });
+
+  /* ================= 22. REAL-MODE TRANSPORT CONTRACT =================
+     Real mode (MOCK = false) cannot be exercised here — this harness runs on the
+     plain static server, which answers /api/ with 404. resptest/real-mode-check.html
+     covers the behaviour against tools/mock_api_server.py. What this section can do
+     is assert the invariants that made that run fail the first time:
+
+       bb-api.js shipped MOCK = true but BASE = '/api', while every path passed to
+       request() ALREADY begins '/api/'. Real mode therefore asked for
+       /api/api/donors/search and every call 404'd — an empty UI with no
+       JavaScript error, invisible to this harness because mock mode never
+       reaches the concatenation. */
+  {
+    /* Root-relative: this document lives at /resptest/, so a '../js/...' path
+       escapes the project root and the fetch quietly returns ''. */
+    const apiSrc = await fetch('/CODE/js/bb-api.js').then(r => r.text()).catch(() => '');
+    check('bb-api.js is readable for the transport contract checks', apiSrc.length > 0,
+      apiSrc.length + ' bytes');
+    const baseMatch = apiSrc.match(/var\s+BASE\s*=\s*['"]([^'"]*)['"]/);
+    const base = baseMatch ? baseMatch[1] : null;
+
+    check('bb-api.js: BASE does not repeat the /api/ prefix already in every path',
+      base !== null && !/\/api\/?$/.test(base),
+      base === null ? 'could not read BASE as a string literal' : "BASE = '" + base + "'");
+
+    /* The real invariant, tested by doing the concatenation the transport does.
+       BASE is either empty (same-origin) or an absolute origin like
+       'http://host:8322' — never a path prefix. Counting '/api/' occurrences
+       does NOT work here: the regex scans non-overlapping, so
+       '/api/api/donors/search' still reports a single match. Look for the
+       doubled segment explicitly. */
+    const isOrigin = base === '' || (base !== null && /^https?:\/\//.test(base));
+    const sample = (base === null ? '!' : base) + '/api/donors/search';
+    const doubled = /\/api\/api\//.test(sample);
+    check('real-mode URL builder never produces a doubled /api/api/ path',
+      base !== null && !doubled && isOrigin,
+      sample + (doubled ? '  <- DOUBLED' : ''));
+
+    /* Every declared endpoint must already be origin-relative under /api/. */
+    const paths = (apiSrc.match(/request\(\s*'(?:GET|POST|PUT|PATCH|DELETE)'\s*,\s*'([^']+)'/g) || [])
+      .map(s => s.replace(/.*'\s*,\s*'/, '').replace(/'$/, ''));
+    const offenders = paths.filter(p => p.indexOf('/api/') !== 0);
+    check('bb-api.js: every request() path begins /api/ (' + paths.length + ' endpoints)',
+      paths.length > 0 && offenders.length === 0,
+      offenders.length ? 'not under /api/: ' + offenders.join(', ') : 'all origin-relative');
+
+    /* The shipped default is the demo, not the unimplemented Spring backend. */
+    check('bb-api.js: ships with MOCK = true (real mode is opt-in)',
+      /var\s+MOCK\s*=\s*true\s*;/.test(apiSrc));
+  }
+
+  /* ================= REPORT ================= */
+  document.title = 'QA-DONE ' + pass + '/' + (pass + fail);
+  dumpPartial();
+})().catch(err => {
+  results.push({ name: 'HARNESS CRASHED', ok: false, detail: (err && err.stack) || String(err) });
+  document.title = 'QA-CRASHED';
+  try {
+    const lines = results.map(r => (r.ok ? 'PASS ' : 'FAIL ') + r.name + ' — ' + r.detail);
+    document.getElementById('out').textContent = lines.join('\n');
+  } catch (e2) { document.title = 'QA-CRASHED-HARD'; }
+});
+</script>
+</body>
+</html>

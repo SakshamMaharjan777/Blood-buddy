@@ -145,6 +145,15 @@ input.filter-select { background-image: none; padding-right: 12px; }
 .rc-name { font-size: 14px; font-weight: 500; color: #1A1A1A; }
 .rc-id { color: #9B9B9B; font-weight: 400; font-size: 12px; }
 .rc-sub { font-size: 12px; color: #6B6B6B; margin-top: 2px; }
+/* Emergency badge — guest EM-* requests from the public emergency form */
+.em-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  background: #FCEBEB; box-shadow: inset 0 0 0 1px #F7C1C1;
+  font-size: 11px; font-weight: 500; color: #C0202A;
+  white-space: nowrap;
+}
+.em-tag .dot { width: 6px; height: 6px; border-radius: 50%; background: #C0202A; }
 .rc-notes {
   padding: 10px 14px;
   background: #F7F6F4; border-radius: 8px;

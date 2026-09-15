@@ -1,0 +1,73 @@
+/* =============================================
+   BLOODBUDY — 404.css
+   Branded 404 page. Uses ABSOLUTE paths (/CSS,
+   /CODE) because 404 can be served at any URL
+   depth — relative paths would break.
+   ============================================= */
+
+.nf-page {
+  min-height: calc(100vh - 60px);
+  background: #F7F6F4;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 16px;
+}
+.nf-card {
+  background: #fff; border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10), 0 12px 32px rgba(35,21,18,0.07);
+  max-width: 460px; width: 100%;
+  padding: 40px 36px;
+  text-align: center;
+}
+.nf-code {
+  font-family: var(--serif); font-size: 76px; line-height: 1;
+  color: #C0202A; letter-spacing: 0.01em;
+}
+.nf-code em { color: #A32D2D; font-style: italic; }
+.nf-title { font-family: var(--serif); font-size: 22px; color: #1A1A1A; margin: 10px 0 6px; }
+.nf-sub { font-size: 13.5px; line-height: 22px; color: #6B6B6B; margin: 0 0 22px; }
+.nf-btns { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.nf-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 13.5px; font-weight: 500; text-decoration: none;
+  border-radius: 10px; padding: 10px 16px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.nf-btn-red { background: #C0202A; color: #fff; border: 1px solid #C0202A; }
+.nf-btn-red:hover { background: #A32D2D; border-color: #A32D2D; }
+.nf-btn-ghost { background: #fff; color: #231512; border: 1px solid #ECE3E1; }
+.nf-btn-ghost:hover { border-color: #C0202A; color: #C0202A; }
+
+/* Blood-drop fingerprint behind the code */
+.nf-drop { margin-bottom: 6px; }
+
+/* =============================================
+   RESPONSIVE
+   This page deliberately does NOT load
+   landingresponsive.css (it is self-contained
+   with root-absolute paths), so it has to carry
+   its own footer stacking. Without it the four
+   footer links stay on one row and make the page
+   ~91px wider than a 360px viewport, which breaks
+   the mandatory responsive requirement on the one
+   page a visitor can land on from ANY bad URL.
+   Mirrors the .footer-inner treatment in
+   landingresponsive.css so the two agree.
+   ============================================= */
+@media (max-width: 768px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-links {
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .nf-card { padding: 32px 22px; }
+  .nf-code { font-size: 62px; }
+}

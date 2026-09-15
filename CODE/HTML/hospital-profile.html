@@ -3,17 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Donor Profile — BloodBuddy</title>
+  <title>My Hospital Profile — BloodBuddy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
-  <link rel="stylesheet" href="../../CSS/donor-dashboard.css" />
+  <link rel="stylesheet" href="../../CSS/profile.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
   <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
-  <!-- NAVBAR (matches donor pages) -->
+  <!-- NAVBAR (matches hospital pages) -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
       <a class="logo" href="landing.html">
@@ -25,8 +26,9 @@
       </button>
       <div class="nav-links" id="nav-links">
         <a href="landing.html">Home</a>
-        <a href="donor-dashboard.html">Donor Portal</a>
-        <a href="donor-profile.html" class="active">My Profile</a>
+        <a href="hospital-dashboard.html">Hospital Portal</a>
+        <a href="hospital-requests.html">Requests</a>
+        <a href="hospital-profile.html" class="active">My Profile</a>
         <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
@@ -36,29 +38,29 @@
     </div>
   </nav>
 
-  <main class="dash-page">
-    <div class="dash-wrap">
+  <main class="prof-page">
+    <div class="prof-wrap">
 
-      <!-- HERO (same image rotation as donor pages: faezeh-eslami) -->
-      <section class="dash-hero">
-        <div class="dash-hero-inner">
+      <!-- HERO (image rotation: tim-marshall = hospital pages) -->
+      <section class="prof-hero">
+        <div class="prof-hero-inner">
           <div class="hero-crumb">
             <a href="landing.html">Home</a>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            <a href="donor-dashboard.html">Donor Dashboard</a>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="hospital-dashboard.html">Hospital Portal</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             <span>My Profile</span>
           </div>
-          <h1 class="dash-title">Your donor <em>profile</em></h1>
-          <p class="dash-sub">Keep your availability, blood group and contact details up to date so requesters always find accurate information.</p>
+          <h1 class="hero-title">Your hospital <em>profile</em></h1>
+          <p class="hero-sub">Keep your blood bank's contact and staffing details up to date so requesters and admins always reach the right desk.</p>
         </div>
         <div class="hero-pill" id="hero-pill">
           <span class="pill-dot green"></span>
-          <span id="hero-pill-text">Available to Donate</span>
+          <span id="hero-pill-text">Blood bank <strong>open</strong></span>
         </div>
       </section>
 
-      <!-- PROFILE FORM (values loaded through GET /api/profile/donor) -->
+      <!-- PROFILE FORM (values loaded through GET /api/profile/hospital) -->
       <section class="profile-card">
         <div class="profile-legend">
           <div>
@@ -68,44 +70,39 @@
           <span class="profile-saved" id="profile-saved-chip" hidden>All changes saved</span>
         </div>
 
-        <!-- Availability toggle -->
-        <div class="pf-toggle-row" id="avail-row">
-          <label class="pf-toggle-label" for="p-avail" style="cursor:pointer;">
-            <span class="pf-toggle-title" id="avail-title">Available to donate</span>
-            <span class="pf-toggle-desc" id="avail-desc">You appear in donor searches and can receive urgent request alerts.</span>
+        <!-- Blood bank status toggle -->
+        <div class="pf-toggle-row" id="bank-row">
+          <label class="pf-toggle-label" for="p-open" style="cursor:pointer;">
+            <span class="pf-toggle-title" id="bank-title">Blood bank open</span>
+            <span class="pf-toggle-desc" id="bank-desc">Requesters see your stock as live and can route urgent requests to you.</span>
           </label>
           <span class="toggle">
-            <input type="checkbox" id="p-avail" checked />
+            <input type="checkbox" id="p-open" checked />
             <span class="toggle-slider"></span>
           </span>
         </div>
 
         <div class="pf-grid">
           <div class="pf-field">
-            <label class="pf-label" for="p-fname">First name</label>
-            <input class="pf-input" type="text" id="p-fname" placeholder="e.g. Saksham" />
+            <label class="pf-label" for="p-hname">Hospital name</label>
+            <input class="pf-input" type="text" id="p-hname" placeholder="e.g. Bir Hospital" />
           </div>
           <div class="pf-field">
-            <label class="pf-label" for="p-lname">Last name</label>
-            <input class="pf-input" type="text" id="p-lname" placeholder="e.g. Maharjan" />
-          </div>
-          <div class="pf-field">
-            <label class="pf-label" for="p-email">Email address</label>
-            <input class="pf-input" type="email" id="p-email" placeholder="you@example.com" />
-          </div>
-          <div class="pf-field">
-            <label class="pf-label" for="p-phone">Phone number</label>
-            <input class="pf-input" type="tel" id="p-phone" placeholder="10-digit mobile" maxlength="10" />
-          </div>
-          <div class="pf-field">
-            <label class="pf-label" for="p-blood">Blood group</label>
-            <select class="pf-select" id="p-blood">
-              <option value="">Select blood group</option>
-              <option>A+</option><option>A-</option>
-              <option>B+</option><option>B-</option>
-              <option>AB+</option><option>AB-</option>
-              <option>O+</option><option>O-</option>
+            <label class="pf-label" for="p-type">Facility type</label>
+            <select class="pf-select" id="p-type">
+              <option>Teaching hospital</option>
+              <option>Public hospital</option>
+              <option>Community hospital</option>
+              <option>Private hospital</option>
             </select>
+          </div>
+          <div class="pf-field">
+            <label class="pf-label" for="p-email">Official email</label>
+            <input class="pf-input" type="email" id="p-email" placeholder="bloodbank@hospital.np" />
+          </div>
+          <div class="pf-field">
+            <label class="pf-label" for="p-phone">Blood bank phone</label>
+            <input class="pf-input" type="tel" id="p-phone" placeholder="10-digit mobile" maxlength="10" />
           </div>
           <div class="pf-field">
             <label class="pf-label" for="p-district">District / City</label>
@@ -119,6 +116,10 @@
               <option>Butwal</option>
               <option>Biratnagar</option>
             </select>
+          </div>
+          <div class="pf-field">
+            <label class="pf-label" for="p-hours">Blood bank hours</label>
+            <input class="pf-input" type="text" id="p-hours" placeholder="e.g. 24/7 or Sun–Fri, 9am–5pm" />
           </div>
           <div class="pf-field full">
             <label class="pf-label" for="p-address">Address <span style="color:#9B9B9B;font-weight:400;">(optional)</span></label>
@@ -191,41 +192,29 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Donor profile (persisted through the API layer: GET/PUT
-       /api/profile/donor — mocked over bb_donor_profile in localStorage;
-       CPP401 swaps in GET /api/auth/me + a role-scoped PUT) ---- */
+    /* ---- Hospital profile (persisted through the API layer: GET/PUT
+       /api/profile/hospital — mocked over bb_hospital_profile in
+       localStorage; CPP401 swaps in GET /api/auth/me + PUT /api/hospitals/{id}) ---- */
     const API = window.BloodBuddyAPI;
     const V = window.BloodBuddyValidate;
-    const STORAGE_KEY = 'bb_donor_profile';
+    const STORAGE_KEY = 'bb_hospital_profile';
     const DEFAULTS = {
-      fname: 'Saksham', lname: 'Maharjan',
-      email: 'saksham@bloodbuddy.np', phone: '98XXXXXXXX',
-      blood: 'B+', district: 'Kathmandu', address: '',
-      available: true
+      hname: 'Bir Hospital', type: 'Public hospital',
+      email: 'bloodbank@birhospital.np', phone: '',
+      district: 'Kathmandu', hours: '24/7', address: '',
+      open: true
     };
 
-    /* Painted immediately, and what a fresh browser keeps — GET /api/profile/donor
-       returns null when nothing is saved yet, so the logged-in name replaces the
-       template's instead of showing someone else's. */
-    function defaults() {
-      const p = { ...DEFAULTS };
-      const sess = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
-      if (sess && sess.name && sess.name.trim().indexOf(' ') > -1) {
-        const parts = sess.name.trim().split(/\s+/);
-        p.fname = parts[0];
-        p.lname = parts.slice(1).join(' ');
-      }
-      return p;
-    }
-
+    /* Painted immediately — replaced by the GET /api/profile/hospital response. */
+    function defaults() { return { ...DEFAULTS }; }
     function saveProfile(p) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
     }
 
-    const FIELDS = ['fname','lname','email','phone','blood','district','address'];
+    const FIELDS = ['hname','type','email','phone','district','hours','address'];
     const els = {};
     FIELDS.forEach(f => els[f] = document.getElementById('p-' + f));
-    const availEl = document.getElementById('p-avail');
+    const openEl = document.getElementById('p-open');
     const saveBar = document.getElementById('save-bar');
     const savedChip = document.getElementById('profile-saved-chip');
 
@@ -233,29 +222,28 @@
     let profile = defaults(); /* replaced by the API response below */
     function fillForm(p) {
       FIELDS.forEach(f => els[f].value = p[f] || '');
-      availEl.checked = !!p.available;
-      reflectAvailability();
+      openEl.checked = !!p.open;
+      reflectOpen();
     }
-    function reflectAvailability() {
-      const row = document.getElementById('avail-row');
-      row.classList.toggle('unavailable', !availEl.checked);
-      document.getElementById('avail-title').textContent =
-        availEl.checked ? 'Available to donate' : 'Not available';
-      document.getElementById('avail-desc').textContent = availEl.checked
-        ? 'You appear in donor searches and can receive urgent request alerts.'
-        : "You're hidden from donor searches and won't receive alerts.";
+    function reflectOpen() {
+      const row = document.getElementById('bank-row');
+      row.classList.toggle('unavailable', !openEl.checked);
+      document.getElementById('bank-title').textContent =
+        openEl.checked ? 'Blood bank open' : 'Blood bank closed';
+      document.getElementById('bank-desc').textContent = openEl.checked
+        ? 'Requesters see your stock as live and can route urgent requests to you.'
+        : "Requesters can't route urgent requests to you while the bank is closed.";
       // Hero pill mirrors the toggle
       document.getElementById('hero-pill-text').textContent =
-        availEl.checked ? 'Available to Donate' : 'Not Available';
+        openEl.checked ? 'Blood bank open' : 'Blood bank closed';
       document.querySelector('#hero-pill .pill-dot').style.background =
-        availEl.checked ? '#4ADE80' : '#9B9B9B';
+        openEl.checked ? '#8FD460' : '#9B9B9B';
     }
     fillForm(profile);
 
     /* ---- Profile photo (stubbed upload — CPJ119 §2.5 image handling).
-       FileReader reads the picked file as a Base64 data URL; the save
-       path carries it in the profile payload through the API layer, so
-       the backend swap replaces Base64 with BLOB storage (same UI). ---- */
+       FileReader → Base64 data URL, carried in the profile payload through
+       the API layer; the backend swap replaces Base64 with BLOB storage. ---- */
     function renderPhoto(src) {
       const wrap = document.getElementById('photo-upload');
       const img = document.getElementById('photo-preview');
@@ -295,7 +283,7 @@
       return JSON.stringify({ ...readForm(), _v: 1 });
     }
     function readForm() {
-      const p = { available: availEl.checked, photo: profile.photo || '' };
+      const p = { open: openEl.checked, photo: profile.photo || '' };
       FIELDS.forEach(f => p[f] = els[f].value.trim());
       return p;
     }
@@ -304,14 +292,14 @@
       const dirty = snapshot() !== baseline;
       saveBar.classList.toggle('show', dirty);
       savedChip.hidden = dirty;
-      reflectAvailability();
+      reflectOpen();
     }
-    [...FIELDS.map(f => els[f]), availEl].forEach(el => {
+    [...FIELDS.map(f => els[f]), openEl].forEach(el => {
       el.addEventListener('input', checkDirty);
       el.addEventListener('change', checkDirty);
     });
 
-    /* ---- Save (PUT /api/profile/donor, plus a localStorage hedge for the
+    /* ---- Save (PUT /api/profile/hospital, plus a localStorage hedge for the
        demo pages that still read the key directly) ---- */
     const toast = document.getElementById('pf-toast');
     let toastTimer;
@@ -326,18 +314,16 @@
       const p = readForm();
       /* Shared validation (bb-validate.js) — inline errors under each field */
       const failed = V.checkAll([
-        { input: els.fname, rules: { required: true } },
-        { input: els.lname, rules: { required: true } },
+        { input: els.hname, rules: { required: true } },
         { input: els.email, rules: { required: true, email: true } },
         { input: els.phone, rules: { phone: true } },
-        { input: els.blood, rules: { required: true, blood: true } },
         { input: els.district, rules: { required: true } }
       ]);
       if (failed.length) return showToast('Please fix the highlighted fields');
 
-      /* PUT /api/profile/donor (mocked) — also kept in localStorage so the
-         session prefill and other demo pages keep working offline */
-      API.profile.save('donor', p).then(() => {
+      /* PUT /api/profile/hospital (mocked) — also kept in localStorage so
+         the dashboard's blood-bank toggle keeps working offline */
+      API.profile.save('hospital', p).then(() => {
         profile = p;
         saveProfile(profile);
         baseline = snapshot();
@@ -358,11 +344,11 @@
     });
 
     /* ---- Initial load through the API layer ----
-       GET /api/profile/donor (mocked over bb_donor_profile; CPP401 swaps in
-       GET /api/auth/me). Runs once the editor is wired so the saved values land
-       in a ready form, and re-baselines the dirty check so a load never looks
-       like an unsaved edit. */
-    API.profile.get('donor').then(saved => {
+       GET /api/profile/hospital (mocked over bb_hospital_profile; CPP401 swaps
+       in GET /api/auth/me + GET /api/hospitals/{id}). Runs once the editor is
+       wired so the saved values land in a ready form, and re-baselines the
+       dirty check so a load never looks like an unsaved edit. */
+    API.profile.get('hospital').then(saved => {
       profile = saved ? { ...defaults(), ...saved } : defaults();
       fillForm(profile);
       renderPhoto(profile.photo);

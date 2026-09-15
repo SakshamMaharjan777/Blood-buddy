@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/auth.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -25,7 +26,7 @@
       <div class="nav-links" id="nav-links">
         <a href="landing.html#how-it-works">How it works</a>
         <a href="landing.html#roles">Find donors</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -108,13 +109,17 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="landing.html#about">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
+  <script src="../js/bb-validate.js"></script>
+  <script src="../js/bb-api.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -142,11 +147,20 @@
       alertBox.hidden = false;
     }
 
-    document.getElementById('forgot-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('forgot-email').value.trim();
+    const V = window.BloodBuddyValidate;
+    const API = window.BloodBuddyAPI;
+    V.bindLive(document.querySelectorAll('#forgot-form input'));
 
-      if (!/^\S+@\S+\.\S+$/.test(email)) return showAlert('error', 'Please enter a valid email address.');
+    document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const emailEl = document.getElementById('forgot-email');
+      const failed = V.checkAll([{ input: emailEl, rules: { required: true, email: true } }]);
+      if (failed.length) return;
+      const email = emailEl.value.trim();
+
+      /* POST /api/auth/forgot — mocked; SMTP delivery arrives in CPP401 */
+      try { await API.auth.forgot({ email: email }); }
+      catch (err) { return showAlert('error', 'Could not send the reset link — please try again.'); }
 
       // Demo: show the "email sent" confirmation state
       document.getElementById('forgot-fields').innerHTML = `

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/hospital.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -26,7 +27,7 @@
         <a href="landing.html">Home</a>
         <a href="hospital-dashboard.html">Hospital Portal</a>
         <a href="hospital-requests.html" class="active">Requests</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -66,6 +67,7 @@
       <div class="trk-tabs" id="trk-tabs">
         <button class="trk-tab active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
         <button class="trk-tab" data-filter="Pending">Pending <span class="tab-count" id="cnt-pending">0</span></button>
+        <button class="trk-tab" data-filter="Matched">Matched <span class="tab-count" id="cnt-matched">0</span></button>
         <button class="trk-tab" data-filter="Accepted">Accepted <span class="tab-count" id="cnt-accepted">0</span></button>
         <button class="trk-tab" data-filter="Fulfilled">Fulfilled <span class="tab-count" id="cnt-fulfilled">0</span></button>
         <button class="trk-tab" data-filter="Rejected">Rejected <span class="tab-count" id="cnt-rejected">0</span></button>
@@ -73,6 +75,7 @@
 
       <!-- REQUEST QUEUE LIST (rendered by JS) -->
       <section class="queue-list" id="queue-list"></section>
+      <nav id="queue-pager"></nav>
 
       <!-- EMPTY STATE -->
       <section class="trk-empty" id="trk-empty" hidden>
@@ -95,14 +98,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-paginate.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -125,7 +132,10 @@
        plus the seeded hospital queue. Persists across pages/reloads.
        Later backend: GET /api/hospitals/{id}/requests */
     const store = window.BloodBuddyStore;
-    const HOSPITAL = 'Bir Hospital, Kathmandu'; // demo: this hospital's login
+    /* Demo: every hospital login sees Bir Hospital's queue (single demo
+       hospital identity). normalizeHospital keeps the label canonical so
+       requests forwarded with variant names still land in this filter. */
+    const HOSPITAL = 'Bir Hospital, Kathmandu';
     const LEGACY_SEED = [
       { id:'REQ-501', blood:'O-', units:'2', urgency:'Urgent', requester:'Sita Gurung', hospital:HOSPITAL, created:'2026-09-13T07:45:00', neededBy:'2026-09-14', status:'Pending', notes:'Surgery ward, contact 98XXXXXXXX' },
       { id:'REQ-498', blood:'B+', units:'1', urgency:'Normal', requester:'Ramesh Shrestha', hospital:HOSPITAL, created:'2026-09-12T15:20:00', neededBy:'2026-09-19', status:'Accepted', notes:'Maternity ward' },
@@ -142,14 +152,31 @@
         });
       }
     })();
-    const all = store.requests.all().filter(r =>
-      r.hospital === HOSPITAL && r.status !== 'Cancelled');
+    /* Queue fetched through the API layer (GET /api/requests?hospital=…,
+       mocked over the shared store). Mutations go through PATCH calls.
+       The store objects stay in sync so direct localStorage reads (QA)
+       see the same data. */
+    const API = window.BloodBuddyAPI;
+    let all = [];
+    API.requests.list({ hospital: HOSPITAL }).then(list => {
+      /* keep the in-page legacy seeds flowing into the queue as before */
+      all = list.filter(r => r.status !== 'Cancelled');
+      render();
+    });
 
     const list = document.getElementById('queue-list');
     const emptyBox = document.getElementById('trk-empty');
     let currentFilter = 'all';
 
-    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    /* ---- Pagination (proposal §1.4) — the pager slices the filtered
+       queue client-side today; CPP401 swaps it for ?page=&size= params. ---- */
+    const pager = window.BloodBuddyPaginate.create({
+      mount: document.getElementById('queue-pager'),
+      pageSize: 5,
+      onChange: () => render()
+    });
+
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : '—';
     const timeAgo = iso => {
       const mins = Math.round((Date.now() - new Date(iso)) / 60000);
       if (mins < 60) return `${mins} min ago`;
@@ -161,6 +188,10 @@
 
     const STATUS_META = {
       Pending:   { cls:'st-pending',   label:'Pending' },
+      /* A donor committed to this request — the blood is arranged, the
+         hospital only has to issue it (st-accepted: hospital.css has no
+         st-matched swatch). */
+      Matched:   { cls:'st-accepted',  label:'Donor matched' },
       Accepted:  { cls:'st-accepted',  label:'Accepted' },
       Fulfilled: { cls:'st-fulfilled', label:'Fulfilled' },
       Rejected:  { cls:'st-rejected',  label:'Rejected' }
@@ -169,14 +200,17 @@
     function render() {
       const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
 
-      ['all','Pending','Accepted','Fulfilled','Rejected'].forEach(f => {
+      ['all','Pending','Matched','Accepted','Fulfilled','Rejected'].forEach(f => {
         document.getElementById('cnt-' + f.toLowerCase()).textContent =
           f === 'all' ? all.length : all.filter(r => r.status === f).length;
       });
       document.getElementById('queue-count').textContent =
         all.filter(r => r.status === 'Pending').length;
 
-      if (!items.length) {
+      pager.setTotal(items.length);
+      const pageItems = pager.slice(items);
+
+      if (!pageItems.length) {
         list.innerHTML = '';
         emptyBox.hidden = false;
         emptyBox.querySelector('.empty-title').textContent =
@@ -185,12 +219,14 @@
       }
       emptyBox.hidden = true;
 
-      list.innerHTML = items.map(r => {
-        const meta = STATUS_META[r.status];
+      list.innerHTML = pageItems.map(r => {
+        const meta = STATUS_META[r.status] || { cls: 'st-pending', label: r.status };
+        /* Matched (a donor committed) is fulfillable here too: the blood is
+           arranged, so the hospital only has to issue it and deduct stock. */
         const actions = r.status === 'Pending'
           ? `<button class="qa accept" data-id="${r.id}" data-act="Accepted">Accept</button>
              <button class="qa reject" data-id="${r.id}" data-act="Rejected">Reject</button>`
-          : r.status === 'Accepted'
+          : (r.status === 'Accepted' || r.status === 'Matched')
           ? `<button class="qa accept" data-id="${r.id}" data-act="Fulfilled">Mark fulfilled</button>`
           : '';
         return `
@@ -198,8 +234,8 @@
           <div class="rc-head">
             <span class="rc-badge">${r.blood}</span>
             <div class="rc-title">
-              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span></div>
-              <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.urgency} · needed by ${fmtDate(r.neededBy)} · ${timeAgo(r.created)}</div>
+              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span>${/^(EM-)/.test(r.id) ? ' <span class="em-tag" title="Submitted from the public emergency form (guest)"><span class="dot"></span>Emergency</span>' : ''}</div>
+              <div class="rc-sub">${r.units} unit${parseInt(r.units, 10) > 1 ? 's' : ''} · ${r.urgency} · needed by ${fmtDate(r.neededBy)} · ${timeAgo(r.created)}</div>
             </div>
             <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
           </div>
@@ -222,7 +258,7 @@
       render();
     });
 
-    /* ---- Accept / Reject / Fulfil (persists to the shared store) ---- */
+    /* ---- Accept / Reject / Fulfil (through the API layer: PATCH /api/requests/{id}) ---- */
     list.addEventListener('click', e => {
       const btn = e.target.closest('.qa');
       if (!btn) return;
@@ -237,11 +273,12 @@
         store.inventory.save(inv);
         patch.timeline = (r.timeline || []).concat([{ when: new Date().toISOString().slice(0, 16).replace('T', ' '), what: 'Blood issued from hospital inventory' }]);
       }
-      store.requests.update(r.id, patch);
-      const idx = all.findIndex(x => x.id === r.id);
-      if (idx > -1) all[idx] = store.requests.find(r.id);
-      document.getElementById('queue-updated').textContent = 'Updated just now';
-      render();
+      API.requests.update(r.id, patch).then(updated => {
+        const idx = all.findIndex(x => x.id === r.id);
+        if (idx > -1) all[idx] = updated;
+        document.getElementById('queue-updated').textContent = 'Updated just now';
+        render();
+      });
     });
 
     render();

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/legal.css" />
+</head>
+<body>
+
+  <!-- NAVBAR (public) -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html#how-it-works">How it works</a>
+        <a href="landing.html#roles">Find donors</a>
+        <a href="about.html">About</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="legal-page">
+
+    <!-- HERO -->
+    <section class="trk-hero legal-hero">
+      <div class="trk-hero-inner">
+        <div class="hero-crumb">
+          <a href="landing.html">Home</a>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          <span>Privacy Policy</span>
+        </div>
+        <h1 class="hero-title">Privacy <em>Policy</em></h1>
+        <p class="hero-sub">What BloodBuddy collects, why it's needed to run a blood donor network, and the control you keep over your own data.</p>
+      </div>
+      <div class="hero-pill">
+        <span class="pill-dot green"></span>
+        <span><strong>Demo</strong> document for an academic project</span>
+      </div>
+    </section>
+
+    <div class="legal-wrap">
+      <div class="legal-updated">Last updated: September 14, 2026</div>
+
+      <div class="legal-card">
+
+        <div class="legal-section">
+          <h2>1. Data we collect</h2>
+          <table class="legal-table">
+            <tr><th>Data</th><th>Why</th><th>Visible to</th></tr>
+            <tr><td>Name, email, phone</td><td>Account identity &amp; urgent request contact</td><td>Hospitals &amp; requesters you match with</td></tr>
+            <tr><td>Blood group, district</td><td>Filtering compatible donors near a hospital</td><td>All logged-in members</td></tr>
+            <tr><td>Availability status</td><td>Only shown to requesters while you're available</td><td>Requesters (while available)</td></tr>
+            <tr><td>Donation history</td><td>Your dashboard &amp; eligibility spacing</td><td>Only you and administrators</td></tr>
+            <tr><td>Blood bank inventory</td><td>Real-time stock across the 5 partner hospitals</td><td>All logged-in members</td></tr>
+          </table>
+        </div>
+
+        <div class="legal-section">
+          <h2>2. How your data is used</h2>
+          <ul>
+            <li>To match blood requests with compatible, nearby donors and notify you by email (SMTP) when your group is urgently needed.</li>
+            <li>To let hospitals fulfil and verify donations and keep inventory levels accurate.</li>
+            <li>To let administrators keep the platform safe — suspending accounts that violate the Terms of Service.</li>
+          </ul>
+          <p><strong>We never sell your data, and there are no advertisers on BloodBuddy.</strong></p>
+        </div>
+
+        <div class="legal-section">
+          <h2>3. What is public on your profile</h2>
+          <p>Requesters can see your first name, blood group, district, and availability while you're marked available. Your email, phone number, and full donation history are never shown publicly — they are only shared when you accept a specific request, so the hospital can reach you.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>4. Images</h2>
+          <p>Profile and event photos you upload are stored securely in the database as binary data and served only to logged-in members. You can remove an uploaded photo at any time from your profile page.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>5. Cookies &amp; local storage</h2>
+          <p>This demo stores your session and demo data (requests, inventory, users) in your browser's local storage under the <code>bb_</code> prefix — nothing is sent to a server. In the live system, session cookies would be http-only and expire with your login.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>6. Data retention &amp; deletion</h2>
+          <p>You can request account deletion at any time via the <a href="contact.html">contact page</a>. Donations already completed are kept as anonymised statistical records (blood group and month only) so hospitals can plan blood drives.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>7. Children's data</h2>
+          <p>BloodBuddy is not directed at children under 18. Donor registration requires users to confirm they are 18 or older, in line with Nepal's blood-transfusion guidelines.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>8. Security</h2>
+          <p>Passwords are stored only as salted hashes, never in plain text. Access to medical-adjacent data is restricted by role — donors see their own history, hospitals see inventory and requests routed to them, and administrators see only what moderation requires.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>9. Changes to this policy</h2>
+          <p>If the way we handle data changes, this page will be updated and the "Last updated" date revised. Continued use after a change means you accept the updated policy.</p>
+        </div>
+
+        <div class="legal-section">
+          <h2>10. Contact</h2>
+          <p>Privacy questions? Use the <a href="contact.html">contact page</a> or email <a href="mailto:privacy@bloodbuddy.np">privacy@bloodbuddy.np</a>.</p>
+        </div>
+
+      </div>
+
+      <div class="legal-foot">
+        Also read our <a href="terms.html">Terms of Service</a> · Back to <a href="landing.html">Home</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+  </script>
+</body>
+</html>

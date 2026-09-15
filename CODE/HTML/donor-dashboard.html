@@ -26,7 +26,7 @@
         <a href="landing.html">Home</a>
         <a href="donor-dashboard.html">Donor Portal</a>
         <a href="donor-profile.html">My Profile</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -61,8 +61,10 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
         </div>
         <div class="du-text">
-          <div class="du-title">Urgent Request — B+ needed at Bir Hospital, Kathmandu</div>
-          <div class="du-desc">A requester within 5 km needs B+ blood. You're a match. Posted 18 minutes ago.</div>
+          <!-- Filled from GET /api/requests by the donor-response block below;
+               the banner is hidden outright when nothing matches. -->
+          <div class="du-title" id="du-title">Checking for matching requests…</div>
+          <div class="du-desc" id="du-desc">Loading open requests compatible with your blood group.</div>
         </div>
         <div class="du-actions">
           <button class="du-respond" id="respond-btn">Respond Now</button>
@@ -106,17 +108,53 @@
           <div class="sb-label">Last Donation</div>
         </a>
 
-        <a class="stat-box" href="requester-search.html" aria-label="See active requests nearby">
+        <a class="stat-box" href="donor-history.html" aria-label="See active requests nearby">
           <div class="sb-top">
             <div class="sb-icon amber">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
-            <span class="sb-chip gray">2 new</span>
+            <span class="sb-chip gray" id="nearby-new">—</span>
           </div>
-          <div class="sb-num">3</div>
+          <div class="sb-num" id="nearby-count">0</div>
           <div class="sb-label">Active Requests Nearby</div>
         </a>
 
+      </section>
+
+      <!-- REQUESTS NEEDING YOUR BLOOD GROUP (live — GET /api/requests).
+           The donor side of the lifecycle: accept → status Matched, so the
+           requester/hospital see the commitment; decline → hidden for this
+           donor only. -->
+      <section class="history-card" id="nearby-card">
+        <div class="hc-head">
+          <div>
+            <div class="hc-title">Requests needing your blood group</div>
+            <div class="hc-sub" id="nearby-sub">Open requests you can respond to</div>
+          </div>
+          <a class="hc-viewall" href="donor-history.html">
+            My history
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+        <div class="hc-tablewrap" id="nearby-tablewrap" hidden>
+          <table class="hc-table">
+            <thead>
+              <tr>
+                <th>Request</th>
+                <th>Blood</th>
+                <th>Units</th>
+                <th>Hospital</th>
+                <th>Needed by</th>
+                <th>Respond</th>
+              </tr>
+            </thead>
+            <tbody id="nearby-body"></tbody>
+          </table>
+        </div>
+
+        <p class="nb-empty" id="nearby-empty" hidden>Nothing open for your blood group right now.</p>
+        <div class="nb-flash" id="nb-flash" hidden></div>
       </section>
 
       <!-- DONATION HISTORY (export: white card, uppercase col headers, badges) -->
@@ -182,13 +220,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-compat.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as landing/requester-search) ---
@@ -211,28 +254,197 @@
     document.getElementById('greeting').textContent =
       h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 
-    /* ---- Reflect the saved donor profile (from donor-profile.html localStorage) ---- */
-    let profile = {};
-    try { profile = JSON.parse(localStorage.getItem('bb_donor_profile') || '{}'); } catch (e) { profile = {}; }
-    if (profile.fname) {
-      document.getElementById('dash-name').textContent = profile.fname;
-      document.getElementById('dash-sub').textContent =
-        `You're registered as a ${profile.blood || ''} blood donor in ${profile.district || 'Kathmandu'}. Your next eligible donation date is 14 Aug 2025.`.replace('a  blood', 'a blood');
-    }
-    if (profile.available === false) {
-      document.getElementById('hero-pill-text').textContent = 'Not Available';
-      document.querySelector('#hero-pill .pill-dot').style.background = '#9B9B9B';
+    /* ---- Reflect the saved donor profile through the API layer
+       (GET /api/profile/donor, mocked over bb_donor_profile) so the greeting
+       reads the same source as the profile editor; the session name is the
+       fallback so a fresh login isn't greeted as "Saksham". ---- */
+    const session = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
+    let donorProfile = {}; /* also drives the blood-group matching further down */
+
+    function applyProfile(profile) {
+      donorProfile = profile || {};
+      if (profile.fname) {
+        document.getElementById('dash-name').textContent = profile.fname;
+      } else if (session && session.name) {
+        document.getElementById('dash-name').textContent = session.name.split(' ')[0];
+      }
+      if (profile.blood || profile.district) {
+        document.getElementById('dash-sub').textContent =
+          `You're registered as a ${profile.blood || ''} blood donor in ${profile.district || 'Kathmandu'}. Your next eligible donation date is 14 Aug 2025.`.replace('a  blood', 'a blood');
+      }
+      if (profile.available === false) {
+        document.getElementById('hero-pill-text').textContent = 'Not Available';
+        document.querySelector('#hero-pill .pill-dot').style.background = '#9B9B9B';
+      }
     }
 
-    // Urgent alert actions
-    document.getElementById('dismiss-btn').addEventListener('click', () => {
-      document.getElementById('urgent-banner').style.display = 'none';
+    /* Paint the session fallback first, then let the saved profile land and
+       re-render the request list with the donor's real blood group. */
+    applyProfile({});
+    window.BloodBuddyAPI.profile.get('donor').then(saved => {
+      applyProfile(saved || {});
+      renderNearby();
     });
+
+    /* ================= DONOR SIDE OF THE REQUEST LIFECYCLE =================
+       Objective 2 of the proposal is that matching donors get alerted when a
+       request is submitted. This is that alert, made actionable instead of
+       the old "You responded ✓ (demo)" button.
+
+         Accept  → PATCH /api/requests/{id} → status "Matched" + donor +
+                   donorAt, so the requester's tracker and the hospital queue
+                   both see the commitment (the hospital then fulfils it).
+         Decline → the donor's name is appended to the request's declinedBy,
+                   which hides it from THIS donor only — other matching donors
+                   still see it and the request stays open.
+
+       MATCHING DIRECTION: Appendix A is written "recipient → compatible donor
+       groups", so a donor may serve a request only when their own group is one
+       of that recipient's donor groups. O- can serve everyone; AB+ can only
+       serve AB+. Asking the question backwards would show donors requests they
+       must not fulfil, which is why the lookup lives in bb-compat.js. ---- */
+    const COMPAT = window.BloodBuddyCompat;
+    const API = window.BloodBuddyAPI;
+    const OPEN = ['Pending'];                        /* still needs a donor */
+    const COMMITTED = ['Matched', 'Accepted', 'Fulfilled'];
+    const URGENCY_RANK = { Urgent: 0, High: 1, Normal: 2 };
+
+    const banner = document.getElementById('urgent-banner');
+    const nearbyBody = document.getElementById('nearby-body');
+    const nearbySub = document.getElementById('nearby-sub');
+    const flashBox = document.getElementById('nb-flash');
+    let requests = [];
+
+    function myName() {
+      if (session && session.name) return session.name;
+      return [donorProfile.fname, donorProfile.lname].filter(Boolean).join(' ') || 'A donor';
+    }
+    /* No blood group saved yet? Don't hide every request behind a filter the
+       donor hasn't filled in — show all of them and say so in the subtitle. */
+    function myGroup() {
+      const g = donorProfile.blood;
+      return COMPAT.isValidGroup(g) ? g : null;
+    }
+    function isMine(r) { return !!r.donor && r.donor === myName() && COMMITTED.indexOf(r.status) > -1; }
+    function isDeclined (r) { return (r.declinedBy || []).indexOf(myName()) > -1; }
+    function isActionable(r) {
+      if (OPEN.indexOf(r.status) === -1) return false;
+      if (isDeclined(r)) return false;
+      const g = myGroup();
+      return !g || COMPAT.isCompatible(g, r.blood); /* donor group → recipient group */
+    }
+
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
+    const timeAgo = iso => {
+      const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (mins < 60) return mins + ' min ago';
+      const hrs = Math.round(mins / 60);
+      if (hrs < 24) return hrs + ' hr' + (hrs > 1 ? 's' : '') + ' ago';
+      const days = Math.round(hrs / 24);
+      return days + ' day' + (days > 1 ? 's' : '') + ' ago';
+    };
+    const hospitalLabel = r => (r.hospital && r.hospital !== '—') ? r.hospital : 'Awaiting routing';
+    let flashTimer;
+    function flash(msg) {
+      flashBox.textContent = msg;
+      flashBox.hidden = false;
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => { flashBox.hidden = true; }, 3600);
+    }
+
+    function renderNearby() {
+      const actionable = requests.filter(isActionable)
+        .sort((a, b) => (URGENCY_RANK[a.urgency] === undefined ? 3 : URGENCY_RANK[a.urgency]) -
+                        (URGENCY_RANK[b.urgency] === undefined ? 3 : URGENCY_RANK[b.urgency]));
+      const mine = requests.filter(isMine).filter(r => actionable.indexOf(r) === -1);
+
+      document.getElementById('nearby-count').textContent = actionable.length;
+      document.getElementById('nearby-new').textContent = actionable.length + ' new';
+
+      /* Banner = the single most urgent match (the "you were alerted" view) */
+      const top = actionable[0];
+      banner.hidden = !top;
+      document.getElementById('respond-btn').dataset.id = top ? top.id : '';
+      document.getElementById('dismiss-btn').dataset.id = top ? top.id : '';
+      if (top) {
+        const near = donorProfile.district && top.district === donorProfile.district;
+        document.getElementById('du-title').textContent = top.blood + ' needed at ' + hospitalLabel(top);
+        document.getElementById('du-desc').textContent =
+          top.units + ' unit' + (parseInt(top.units, 10) > 1 ? 's' : '') + ' · ' + top.urgency +
+          ' · needed by ' + fmtDate(top.neededBy) + ' · posted ' + timeAgo(top.created) +
+          (near ? ' · in your district' : '');
+      }
+
+      /* Table = every match, so the donor can browse, accept or decline */
+      const rows = actionable.concat(mine);
+      document.getElementById('nearby-tablewrap').hidden = rows.length === 0;
+      document.getElementById('nearby-empty').hidden = rows.length > 0;
+      nearbySub.textContent = myGroup()
+        ? (rows.length + ' request' + (rows.length === 1 ? '' : 's') + ' compatible with ' + myGroup())
+        : 'Showing every open request — save a blood group in My Profile for exact matches';
+
+      nearbyBody.innerHTML = rows.map(r => {
+        const actions = isMine(r)
+          ? '<span class="status-chip">You accepted</span>'
+          : '<button class="du-respond nb-act" data-id="' + r.id + '" data-act="accept">Accept</button>' +
+            '<button class="du-dismiss nb-act" data-id="' + r.id + '" data-act="decline">Decline</button>';
+        const near = donorProfile.district && r.district === donorProfile.district;
+        return '<tr>' +
+          '<td class="td-strong">' + r.requester + ' <span class="td-date">· ' + r.id + '</span>' +
+            (near ? ' <span class="nb-near">near you</span>' : '') + '</td>' +
+          '<td><span class="blood-badge">' + r.blood + '</span></td>' +
+          '<td class="td-strong">' + r.units + '</td>' +
+          '<td class="td-strong">' + hospitalLabel(r) + '</td>' +
+          '<td class="td-date">' + fmtDate(r.neededBy) + '</td>' +
+          '<td class="nb-actions">' + actions + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function act(id, what) {
+      const r = requests.find(x => x.id === id);
+      if (!r) return;
+      const when = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      const patch = what === 'accept'
+        ? {
+            status: 'Matched',
+            donor: myName(),
+            donorAt: new Date().toISOString(),
+            timeline: (r.timeline || []).concat([
+              { when: when, what: myName() + ' accepted the request — hospital notified' }
+            ])
+          }
+        : { declinedBy: (r.declinedBy || []).concat([myName()]) };
+      API.requests.update(id, patch).then(() => {
+        flash(what === 'accept'
+          ? 'Thank you ' + myName() + ' — the requester and hospital have been notified.'
+          : 'Declined — this request is hidden from your list.');
+        load();
+      }).catch(() => flash('Could not save that response — please try again.'));
+    }
+
+    /* Objects fetched through the API layer (GET /api/requests, mocked over the
+       shared store). CPP401: the real match runs server-side per user id. */
+    function load() {
+      return API.requests.list({}).then(items => {
+        requests = items;
+        renderNearby();
+      });
+    }
+
     document.getElementById('respond-btn').addEventListener('click', function () {
-      this.textContent = 'Noted ✓ Check your email';
-      this.disabled = true;
-      setTimeout(() => { this.textContent = 'Respond Now'; this.disabled = false; }, 1800);
+      if (this.dataset.id) act(this.dataset.id, 'accept');
     });
+    document.getElementById('dismiss-btn').addEventListener('click', function () {
+      if (this.dataset.id) act(this.dataset.id, 'decline');
+    });
+    nearbyBody.addEventListener('click', e => {
+      const btn = e.target.closest('.nb-act');
+      if (btn) act(btn.dataset.id, btn.dataset.act);
+    });
+
+    renderNearby(); /* empty state before the fetch lands */
+    load();
   </script>
 </body>
 </html>

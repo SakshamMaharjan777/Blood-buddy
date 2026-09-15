@@ -1,0 +1,190 @@
+/* =============================================
+   BLOODBUDY — profile.css
+   Shared styles for the requester / hospital /
+   admin profile pages. Mirrors the donor profile
+   pattern (donor-dashboard.css) so all four role
+   profiles look identical; only the hero photo
+   differs (same image rotation as each role's
+   own pages).
+   ============================================= */
+
+/* --- PAGE SHELL (same geometry as hosp-wrap/adm-wrap) --- */
+.prof-page { background: #F7F6F4; padding: 32px 0 56px; min-height: calc(100vh - 60px); }
+.prof-wrap { max-width: 1100px; margin: 0 auto; padding: 0 32px; display: flex; flex-direction: column; gap: 24px; }
+
+/* --- HERO (radius 14, photo + red gradient, hover zoom) ---
+   Image per role, matching the rotation already on that role's pages:
+   requester → tim-marshall, hospital → tim-marshall, admin → adrian-sulyok */
+.prof-hero {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 300px;
+  background: #7A1520;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 36px 40px;
+}
+.prof-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(192,32,42,0.72) 0%, rgba(163,45,45,0.40) 45%, rgba(0,0,0,0.10) 100%),
+    url('../images/tim-marshall-cAtzHUz7Z8g-unsplash.jpg') center/cover no-repeat;
+  transform: scale(1);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.prof-hero.admin-hero::before {
+  background:
+    linear-gradient(90deg, rgba(192,32,42,0.78) 0%, rgba(163,45,45,0.45) 45%, rgba(0,0,0,0.12) 100%),
+    url('../images/adrian-sulyok-sZO8ILzGKcg-unsplash.jpg') center/cover no-repeat;
+}
+.prof-hero:hover::before { transform: scale(1.05); }
+.prof-hero-inner { position: relative; z-index: 1; }
+.prof-hero .hero-crumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.70); margin-bottom: 12px; }
+.prof-hero .hero-crumb a { color: rgba(255,255,255,0.70); }
+.prof-hero .hero-crumb a:hover { color: #fff; }
+.prof-hero .hero-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 40px; font-weight: 400; line-height: 48px; color: #fff; }
+.prof-hero .hero-title em { color: #FFC8C8; }
+.prof-hero .hero-sub { max-width: 520px; font-size: 14px; line-height: 23.8px; color: rgba(255,255,255,0.82); margin-top: 9px; }
+.prof-hero .hero-pill {
+  position: absolute; top: 28px; right: 40px; z-index: 1;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.14);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30);
+  backdrop-filter: blur(4px);
+  color: #fff; font-size: 13px; font-weight: 500; line-height: 22.1px;
+}
+.prof-hero .pill-dot { width: 7px; height: 7px; background: #C0202A; border-radius: 3.5px; }
+.prof-hero .pill-dot.green { background: #8FD460; }
+
+/* --- PROFILE CARD (same shell as donor profile) --- */
+.profile-card {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 28px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.profile-legend {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.profile-legend-title { font-family: 'DM Serif Display', Georgia, serif; font-size: 20px; color: #1A1A1A; }
+.profile-legend-sub { font-size: 12px; color: #9B9B9B; margin-top: 3px; }
+.profile-saved {
+  font-size: 11px; font-weight: 500; color: #3B6D11;
+  background: #EAF3DE; border-radius: 20px;
+  box-shadow: inset 0 0 0 1px #C0DD97;
+  padding: 4px 12px; white-space: nowrap;
+}
+
+.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pf-grid .full { grid-column: 1 / -1; }
+.pf-field { display: flex; flex-direction: column; gap: 6px; }
+.pf-label { font-size: 12px; font-weight: 500; color: #6B6B6B; }
+.pf-input, .pf-select {
+  padding: 10px 12px;
+  background: #F7F6F4;
+  border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif; font-size: 13px; color: #1A1A1A;
+  width: 100%;
+}
+.pf-select {
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6B6B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.pf-input:focus, .pf-select:focus { outline: none; box-shadow: inset 0 0 0 1px #C0202A; }
+.pf-input::placeholder { color: #9B9B9B; }
+.pf-input:disabled, .pf-select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* --- STATUS TOGGLE (hospital/admin profiles; same pattern as donor availability) --- */
+.pf-toggle-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 14px 16px;
+  background: #EAF3DE;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px #C0DD97;
+}
+.pf-toggle-row.unavailable {
+  background: #F1F0EE;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+}
+.pf-toggle-title { display: block; font-size: 13px; font-weight: 500; color: #3B6D11; }
+.pf-toggle-row.unavailable .pf-toggle-title { color: #6B6B6B; }
+.pf-toggle-desc { display: block; font-size: 12px; color: #6B6B6B; margin-top: 2px; }
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: #ccc; border-radius: 11px;
+  transition: 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 3px; top: 3px;
+  background: #fff; border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle input:checked + .toggle-slider { background: #3B6D11; }
+.toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+/* --- Unsaved-changes save bar + toast (same as donor profile) --- */
+.save-bar {
+  display: none;
+  justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  background: #FBF3E4;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #EFD9AC;
+}
+.save-bar.show { display: flex; }
+.save-bar-text { font-size: 13px; color: #854F0B; }
+.save-bar-actions { display: flex; gap: 8px; }
+.pf-save {
+  padding: 8px 18px; background: #C0202A; border: none; border-radius: 8px;
+  color: #fff; font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.pf-save:hover { opacity: 0.9; }
+.pf-cancel {
+  padding: 7px 14px; background: #fff; border: none; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
+  color: #6B6B6B; font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; cursor: pointer;
+}
+.pf-cancel:hover { color: #C0202A; box-shadow: inset 0 0 0 1px #C0202A; }
+
+.pf-toast {
+  position: fixed; left: 50%; bottom: 28px; z-index: 300;
+  transform: translate(-50%, 16px);
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px;
+  background: #1A1A1A; color: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.pf-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.pf-toast .tick { color: #8FD460; font-weight: 700; }
+
+/* --- MOTION GUARD --- */
+@media (prefers-reduced-motion: reduce) {
+  .prof-hero::before { transition: none; }
+  .prof-hero:hover::before { transform: none; }
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 900px) {
+  .prof-hero { min-height: 240px; }
+  .prof-hero .hero-title { font-size: 30px; line-height: 38px; }
+  .pf-grid { grid-template-columns: 1fr; }
+  .profile-legend { flex-direction: column; align-items: flex-start; }
+}

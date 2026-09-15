@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../CSS/landing.css" />
+  <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
+  <link rel="stylesheet" href="../../CSS/contact.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <a href="landing.html">Home</a>
+        <a href="landing.html#how-it-works">How it works</a>
+        <a href="landing.html#roles">For hospitals</a>
+        <a href="about.html">About</a>
+        <a href="contact.html" class="active">Contact</a>
+      </div>
+      <div class="nav-actions" id="nav-actions">
+        <a class="btn-outline-nav" href="auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="contact-page">
+    <div class="contact-wrap">
+
+      <!-- HERO -->
+      <section class="contact-hero">
+        <div class="contact-hero-inner">
+          <div class="hero-crumb">
+            <a href="landing.html">Home</a>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <span>Contact</span>
+          </div>
+          <h1 class="contact-title">Get in <em>touch</em></h1>
+          <p class="contact-sub">Questions about donating, requesting, or partnering your hospital with BloodBuddy? We usually reply within one working day.</p>
+        </div>
+      </section>
+
+      <!-- INFO CARDS -->
+      <div class="ct-info-grid">
+        <div class="ct-info">
+          <div class="ct-info-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div class="ct-info-label">Email</div>
+          <div class="ct-info-value">hello@bloodbuddy.np</div>
+          <div class="ct-info-hint">General questions &amp; support</div>
+        </div>
+        <div class="ct-info">
+          <div class="ct-info-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div class="ct-info-label">Phone</div>
+          <div class="ct-info-value">+977 1-0000000</div>
+          <div class="ct-info-hint">Sun–Fri, 9:00–17:00 NPT</div>
+        </div>
+        <div class="ct-info">
+          <div class="ct-info-icon">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="ct-info-label">Office</div>
+          <div class="ct-info-value">Kathmandu, Nepal</div>
+          <div class="ct-info-hint">Visits by appointment</div>
+        </div>
+      </div>
+
+      <!-- FORM + MAP -->
+      <div class="ct-split">
+        <section class="ct-form-card">
+          <h2 class="ct-form-title">Send us a message</h2>
+          <p class="ct-form-sub">Demo form — messages are not sent yet. The backend (CPP401) will deliver these by SMTP email.</p>
+          <form id="contact-form" class="ct-form-grid" novalidate>
+            <div class="ct-field">
+              <label class="ct-label" for="ct-name">Your name</label>
+              <input class="ct-input" id="ct-name" type="text" placeholder="e.g. Sita Gurung" />
+            </div>
+            <div class="ct-field">
+              <label class="ct-label" for="ct-email">Email address</label>
+              <input class="ct-input" id="ct-email" type="email" placeholder="you@example.com" />
+            </div>
+            <div class="ct-field full">
+              <label class="ct-label" for="ct-subject">Subject</label>
+              <select class="ct-input" id="ct-subject">
+                <option>General question</option>
+                <option>Donor registration help</option>
+                <option>Blood request help</option>
+                <option>Hospital partnership</option>
+                <option>Report a problem</option>
+              </select>
+            </div>
+            <div class="ct-field full">
+              <label class="ct-label" for="ct-message">Message</label>
+              <textarea class="ct-input" id="ct-message" placeholder="How can we help?"></textarea>
+            </div>
+            <button class="ct-send" id="ct-send" type="submit">Send message</button>
+          </form>
+          <div class="ct-success" id="ct-success" hidden>
+            <div class="ct-success-icon">✓</div>
+            <h3 class="ct-success-title">Message received</h3>
+            <p class="ct-success-sub">Thanks for reaching out — we'll get back to you within one working day.</p>
+          </div>
+        </section>
+
+        <section class="ct-map-card">
+          <h2 class="ct-map-title">Where we are</h2>
+          <p class="ct-map-sub">BloodBuddy serves all 77 districts, with partner hospitals across the Kathmandu Valley.</p>
+          <div class="ct-map-frame">
+            <iframe
+              title="Map of Kathmandu, Nepal"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=85.2417%2C27.6244%2C85.4008%2C27.7744&amp;layer=mapnik"
+              loading="lazy"></iframe>
+          </div>
+          <div class="ct-map-note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Map embed requires an internet connection. Offline, the frame stays blank but the page still works.</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- FAQ -->
+      <section class="ct-faq-card">
+        <h2 class="ct-form-title" style="margin-bottom: 8px;">Frequently asked questions</h2>
+        <p class="ct-form-sub" style="margin-bottom: 4px;">Quick answers before you write to us.</p>
+
+        <div class="ct-faq-item open">
+          <button class="ct-faq-q" type="button">How do I register as a blood donor?
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="ct-faq-a">Use the Register button and pick "Blood Donor". You'll enter your blood group, district, and availability — the whole form takes about two minutes.</div>
+        </div>
+
+        <div class="ct-faq-item">
+          <button class="ct-faq-q" type="button">How soon will I be contacted after a request matches me?
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="ct-faq-a">As soon as a requester submits a matching urgent request, an email alert goes out to available donors with that blood group in the district. How quickly you respond is up to you — most matches happen within the hour.</div>
+        </div>
+
+        <div class="ct-faq-item">
+          <button class="ct-faq-q" type="button">Is my personal information public?
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="ct-faq-a">Only your first name, blood group, and general area are shown to logged-in requesters searching for donors. Your phone number and email are never shared publicly.</div>
+        </div>
+
+        <div class="ct-faq-item">
+          <button class="ct-faq-q" type="button">How can my hospital join BloodBuddy?
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="ct-faq-a">Choose "Hospital partnership" in the form above, or email hello@bloodbuddy.np. Partner hospitals get a dedicated portal for inventory management and a private API for their blood bank systems.</div>
+        </div>
+
+        <div class="ct-faq-item">
+          <button class="ct-faq-q" type="button">How often can I donate blood?
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <div class="ct-faq-a">For whole blood, Nepal follows the standard 90-day interval between donations. BloodBuddy tracks your last donation and shows your next eligible date on your dashboard.</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/nav.js"></script>
+  <script src="../js/bb-validate.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    // --- Navbar scroll shadow + hamburger (same as other pages) ---
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const navActions = document.getElementById('nav-actions');
+    hamburger.addEventListener('click', () => {
+      const open = hamburger.classList.toggle('open');
+      navLinks.classList.toggle('open', open);
+      navActions.classList.toggle('open', open);
+    });
+
+    // --- Contact form (validated via bb-validate.js; sent through the API
+    //     layer — later backend: SMTP contact handler in CPP401) ---
+    const V = window.BloodBuddyValidate;
+    const API = window.BloodBuddyAPI;
+    V.bindLive(document.querySelectorAll('#contact-form input, #contact-form textarea'));
+
+    document.getElementById('contact-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const nameEl = document.getElementById('ct-name');
+      const emailEl = document.getElementById('ct-email');
+      const msgEl = document.getElementById('ct-message');
+      const sendBtn = document.getElementById('ct-send');
+
+      const failed = V.checkAll([
+        { input: nameEl, rules: { required: true } },
+        { input: emailEl, rules: { required: true, email: true } },
+        { input: msgEl, rules: { required: true } }
+      ]);
+      if (failed.length) return;
+
+      sendBtn.textContent = 'Sending…';
+      sendBtn.disabled = true;
+
+      try {
+        await API.contact({
+          name: nameEl.value.trim(),
+          email: emailEl.value.trim(),
+          subject: document.getElementById('ct-subject').value,
+          message: msgEl.value.trim()
+        });
+      } catch (err) {
+        sendBtn.textContent = 'Send message';
+        sendBtn.disabled = false;
+        return;
+      }
+
+      this.hidden = true;
+      document.getElementById('ct-success').hidden = false;
+    });
+
+    // --- FAQ accordion ---
+    document.querySelectorAll('.ct-faq-q').forEach(q => {
+      q.addEventListener('click', () => q.closest('.ct-faq-item').classList.toggle('open'));
+    });
+  </script>
+</body>
+</html>

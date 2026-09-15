@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>REAL-MODE-CHECK</title>
+<style>body{margin:0;font:12px monospace}#w{position:absolute;left:-10000px;top:0}pre{white-space:pre-wrap;padding:10px}</style>
+</head>
+<body>
+<div id="w"></div>
+<pre id="out">running…</pre>
+<script>
+/* ===================================================================
+   REAL-MODE CHECK — proves the AJAX/Fetch layer actually talks to an API.
+
+   qa-harness.html runs in MOCK mode, so it can never show that fetch()
+   works: every call is served from localStorage and DevTools stays empty.
+   This page runs the opposite way.
+
+   HOW TO RUN
+     terminal 1:  python tools/mock_api_server.py -p 8322
+     terminal 2:  set MOCK = false in CODE/js/bb-api.js
+     browser:     http://localhost:8322/resptest/real-mode-check.html
+   (Do NOT test this on the plain python http.server — it answers every
+   /api/ request with 404 and there is no fallback in real mode.)
+
+   THE PROOF
+   localStorage is cleared before each page loads and, in real mode, the
+   app never writes the shared bb_db.* keys (those are the mock's storage).
+   So if a page renders donor cards / user rows / inventory with an EMPTY
+   bb_db.* and isMock() === false, that data can only have arrived over
+   HTTP. The mock server's console logs the matching GET lines.
+   =================================================================== */
+(async function () {
+  'use strict';
+  const P = '/CODE/HTML/';
+  const SESSION = {
+    donor: { role: 'donor', name: 'Sita Gurung' },
+    requester: { role: 'requester', name: 'Ramesh Shrestha' },
+    hospital: { role: 'hospital', name: 'Bir Hospital' },
+    admin: { role: 'admin', name: 'Admin' }
+  };
+  /* page, role, selector to count, expected minimum */
+  const PAGES = [
+    ['requester-search.html', 'requester', '.donor-card', 6],
+    ['admin-dashboard.html', 'admin', '#users-tbody tr', 5],
+    ['hospital-dashboard.html', 'hospital', '.inv-card', 8],
+    ['donor-dashboard.html', 'donor', '#nearby-body tr', 1],
+    ['requester-tracking.html', 'requester', '#req-list .req-card', 1]
+  ];
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const lines = [];
+  let pass = 0, fail = 0;
+  const check = (name, ok, detail) => {
+    (ok ? pass++ : fail++);
+    lines.push((ok ? 'PASS ' : 'FAIL ') + name + (detail ? ' — ' + detail : ''));
+    document.getElementById('out').textContent = lines.join('\n');
+  };
+
+  /* Are we actually in real mode? If not, every check below is meaningless.
+     Probe a page that actually loads bb-api.js — landing.html does not, which
+     made this line read "API not loaded" and look like a failure. */
+  const probe = await new Promise(resolve => {
+    const f = document.createElement('iframe');
+    f.width = 400; f.height = 300; f.src = P + 'auth-login.html';
+    f.onload = () => resolve(f);
+    setTimeout(() => resolve(f), 4000);
+    document.getElementById('w').appendChild(f);
+  }).catch(() => null);
+  const probeWin = probe && probe.contentWindow;
+  const mockMode = probeWin && probeWin.BloodBuddyAPI ? probeWin.BloodBuddyAPI.isMock() : null;
+  if (probe) probe.remove();
+  lines.push('API mode: ' + (mockMode === null ? 'API not loaded' : (mockMode ? 'MOCK (not testing what you think)' : 'REAL')));
+  lines.push('');
+  check('probe page loaded the API facade', mockMode !== null, 'isMock=' + mockMode);
+
+  for (const [page, role, sel, min] of PAGES) {
+    try { localStorage.clear(); } catch (e) {}
+    /* bb-store.js seeds bb_db.* on EVERY page load (it cannot know the API
+       mode), so "no keys" proves nothing. Pin the collections to EMPTY
+       sentinel arrays instead: ensureSeeded() only fills a key that is null,
+       so anything a page renders from the store stays empty — which means any
+       rendered rows can only have come over HTTP. */
+    ['bb_db.donors', 'bb_db.requests', 'bb_db.users'].forEach(k => localStorage.setItem(k, '[]'));
+    localStorage.setItem('bb_session', JSON.stringify(SESSION[role]));
+    let n = 0, mock = null, storeKeys = [];
+    const f = await new Promise(resolve => {
+      const el = document.createElement('iframe');
+      el.width = 1280; el.height = 900; el.src = P + page;
+      el.onload = () => resolve(el);
+      setTimeout(() => resolve(el), 4000);
+      document.getElementById('w').appendChild(el);
+    });
+    await sleep(900); /* let the real HTTP round-trips finish */
+    try {
+      const doc = f.contentDocument;
+      n = doc.querySelectorAll(sel).length;
+      mock = f.contentWindow.BloodBuddyAPI.isMock();
+      storeKeys = ['bb_db.donors', 'bb_db.requests', 'bb_db.users']
+        .filter(k => (localStorage.getItem(k) || '[]') !== '[]');
+    } catch (e) { /* leave defaults; the check below reports it */ }
+    f.remove();
+
+    check(page + ': served by the API, not the store (isMock() === false)', mock === false, 'isMock=' + mock);
+    check(page + ': store collections stayed EMPTY (so the rows came from HTTP)', storeKeys.length === 0,
+      storeKeys.length ? 'store was written: ' + storeKeys.join(',') : 'store untouched');
+    check(page + ': rendered at least ' + min + ' ' + sel + ' over the network', n >= min, n + ' found');
+    await sleep(40);
+  }
+
+  lines.push('');
+  lines.push(pass + ' passed, ' + fail + ' failed');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'REAL-DONE ' + pass + '/' + (pass + fail);
+})().catch(e => {
+  document.getElementById('out').textContent = 'ERR ' + (e && e.stack);
+  document.title = 'REAL-ERR';
+});
+</script>
+</body>
+</html>

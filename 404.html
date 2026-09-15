@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page not found — BloodBuddy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/CSS/landing.css" />
+  <link rel="stylesheet" href="/CSS/404.css" />
+  <!--
+    404 page — lives at the project ROOT because static hosts
+    (nginx error_page, Netlify, GitHub Pages) look for /404.html.
+    Paths are root-absolute on purpose: a 404 can be served at any
+    URL depth, so relative paths would break. Serve the project
+    root to preview: http://localhost:8000/404.html
+  -->
+</head>
+<body>
+
+  <!-- MINIMAL HEADER (no nav.js here — its relative links would
+       break at arbitrary depths; the 404 stays self-contained) -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="logo" href="/CODE/HTML/landing.html">
+        <span class="logo-dot"></span>
+        <span class="logo-text">Blood<span class="logo-accent">Buddy</span></span>
+      </a>
+      <div class="nav-actions">
+        <a class="btn-outline-nav" href="/CODE/HTML/auth-login.html">Log in</a>
+        <a class="btn-filled-nav" href="/CODE/HTML/auth-register.html">Register</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="nf-page">
+    <div class="nf-card">
+      <div class="nf-drop">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#C0202A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/></svg>
+      </div>
+      <div class="nf-code">4<em>0</em>4</div>
+      <h1 class="nf-title">This page has no pulse</h1>
+      <p class="nf-sub">The page you're looking for was moved, renamed, or never existed. Your blood request can still find its match — head back to safety.</p>
+      <div class="nf-btns">
+        <a class="nf-btn nf-btn-red" href="/CODE/HTML/landing.html">Back to home</a>
+        <a class="nf-btn nf-btn-ghost" href="/CODE/HTML/requester-search.html">Find donors</a>
+        <a class="nf-btn nf-btn-ghost" href="#" id="nf-back" hidden>Go back</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-logo">
+        <span class="logo-dot"></span>
+        <span class="footer-logo-text">BloodBuddy</span>
+      </div>
+      <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
+      <div class="footer-links">
+        <a href="/CODE/HTML/about.html">About</a>
+        <a href="/CODE/HTML/contact.html">Contact</a>
+        <a href="/CODE/HTML/terms.html">Terms</a>
+        <a href="/CODE/HTML/privacy.html">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Offer "go back" only when there's a same-origin page to return to
+    (function () {
+      try {
+        if (document.referrer && new URL(document.referrer).origin === location.origin) {
+          var back = document.getElementById('nf-back');
+          back.hidden = false;
+          back.addEventListener('click', function (e) {
+            e.preventDefault();
+            history.back();
+          });
+        }
+      } catch (err) { /* referrer unavailable — keep the link hidden */ }
+    })();
+  </script>
+</body>
+</html>

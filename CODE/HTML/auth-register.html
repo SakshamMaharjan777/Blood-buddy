@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/auth.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -25,7 +26,7 @@
       <div class="nav-links" id="nav-links">
         <a href="landing.html#how-it-works">How it works</a>
         <a href="landing.html#roles">Find donors</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -246,7 +247,7 @@
             <div class="field-group full">
               <label class="auth-check terms-check">
                 <input type="checkbox" id="reg-terms" />
-                <span>I agree to the <a class="link" href="#">Terms of Service</a> and <a class="link" href="#">Privacy Policy</a>. I understand my account may be reviewed for verification.</span>
+                <span>I agree to the <a class="link" href="terms.html">Terms of Service</a> and <a class="link" href="privacy.html">Privacy Policy</a>. I understand my account may be reviewed for verification.</span>
               </label>
             </div>
           </div>
@@ -284,13 +285,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
+  <script src="../js/bb-validate.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow (same as landing) ---
@@ -418,34 +424,67 @@
 
     document.getElementById('back-to-1').addEventListener('click', () => showStep(1));
 
+    const V = window.BloodBuddyValidate;
+    const API = window.BloodBuddyAPI;
+    V.bindLive(document.querySelectorAll('#reg-form input, #reg-form select'));
+
     document.getElementById('to-step-3').addEventListener('click', () => {
       const role = document.querySelector('input[name="role"]:checked').value;
-      const fname = document.getElementById('reg-fname').value.trim();
-      const lname = document.getElementById('reg-lname').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const phone = document.getElementById('reg-phone').value.trim();
-      const district = document.getElementById('reg-district').value;
-      const pass = document.getElementById('reg-pass').value;
-      const terms = document.getElementById('reg-terms').checked;
-      const blood = document.getElementById('reg-blood').value;
-      const hname = document.getElementById('reg-hname').value.trim();
-      const staffId = document.getElementById('reg-staffid').value.trim();
+      const els = {
+        fname: document.getElementById('reg-fname'),
+        lname: document.getElementById('reg-lname'),
+        email: document.getElementById('reg-email'),
+        phone: document.getElementById('reg-phone'),
+        hname: document.getElementById('reg-hname'),
+        staffId: document.getElementById('reg-staffid'),
+        blood: document.getElementById('reg-blood'),
+        district: document.getElementById('reg-district'),
+        pass: document.getElementById('reg-pass'),
+        terms: document.getElementById('reg-terms')
+      };
 
-      if (!fname || !lname) return showAlert('error', 'Please enter your first and last name.');
-      if (!/^\S+@\S+\.\S+$/.test(email)) return showAlert('error', 'Please enter a valid email address.');
-      if (!/^\d{10}$/.test(phone)) return showAlert('error', 'Please enter a valid 10-digit phone number.');
+      /* Client-side validation (bb-validate.js) — role-conditional fields.
+         Proposal §1.4: required fields, email format, blood group, phone. */
+      const pairs = [
+        { input: els.fname, rules: { required: true } },
+        { input: els.lname, rules: { required: true } },
+        { input: els.email, rules: { required: true, email: true } },
+        { input: els.phone, rules: { required: true, phone: true } }
+      ];
       if (role === 'hospital') {
-        if (!hname) return showAlert('error', 'Please enter your hospital name.');
-        if (!staffId) return showAlert('error', 'Please enter your staff ID.');
+        pairs.push(
+          { input: els.hname, rules: { required: 'Please enter your hospital name.' } },
+          { input: els.staffId, rules: { required: 'Please enter your staff ID.' } }
+        );
       }
-      if ((role === 'donor' || role === 'requester') && !blood) {
-        return showAlert('error', role === 'requester' ? 'Please select the blood group needed.' : 'Please select your blood group.');
+      if (role === 'donor' || role === 'requester') {
+        pairs.push({ input: els.blood, rules: { required: role === 'requester'
+          ? 'Please select the blood group needed.'
+          : 'Please select your blood group.' } });
       }
-      if (!district) return showAlert('error', 'Please select your district.');
-      if (pass.length < 6) return showAlert('error', 'Password must be at least 6 characters.');
-      if (!terms) return showAlert('error', 'Please agree to the Terms of Service to continue.');
+      pairs.push(
+        { input: els.district, rules: { required: 'Please select your district.' } },
+        { input: els.pass, rules: { required: true, password: true } },
+        { input: els.terms, rules: { required: true, terms: true } }
+      );
 
-      // Role-aware profile summary
+      const failed = V.checkAll(pairs);
+      if (failed.length) {
+        return showAlert('error', 'Please fix the highlighted fields to continue.');
+      }
+
+      const fname = els.fname.value.trim();
+      const lname = els.lname.value.trim();
+      const email = els.email.value.trim();
+      const phone = els.phone.value.trim();
+      const district = els.district.value;
+      const pass = els.pass.value;
+      const terms = els.terms.checked;
+      const blood = els.blood.value;
+      const hname = els.hname.value.trim();
+      const staffId = els.staffId.value.trim();
+
+      /* Role-aware profile summary */
       const fullName = fname + ' ' + lname;
       const rows = {
         donor:     [['Name', fullName], ['Blood group', blood], ['District', district], ['Availability', document.getElementById('reg-available').checked ? '● Available' : '○ Unavailable', 'green']],
@@ -477,6 +516,18 @@
       if (window.BloodBuddyNav) {
         window.BloodBuddyNav.setSession({ role: role, name: fullName });
       }
+
+      // Register the account through the API layer (POST /api/auth/register —
+      // mocked over the shared store; the real endpoint arrives in CPP401).
+      // The mock lands the row in the same bb_db.users collection, so the
+      // admin's user-management table keeps working unchanged.
+      API.auth.register({
+        name: fullName,
+        email: email,
+        role: role,
+        blood: role === 'hospital' ? '—' : blood,
+        district: district
+      }).catch(() => { /* demo: registration failures surface in CPP401 */ });
 
       showStep(3);
     });

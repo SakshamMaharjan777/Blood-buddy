@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Donor Profile — BloodBuddy</title>
+  <title>My Requester Profile — BloodBuddy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
-  <link rel="stylesheet" href="../../CSS/donor-dashboard.css" />
+  <link rel="stylesheet" href="../../CSS/profile.css" />
   <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
-  <!-- NAVBAR (matches donor pages) -->
+  <!-- NAVBAR (matches requester pages) -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
       <a class="logo" href="landing.html">
@@ -25,8 +25,9 @@
       </button>
       <div class="nav-links" id="nav-links">
         <a href="landing.html">Home</a>
-        <a href="donor-dashboard.html">Donor Portal</a>
-        <a href="donor-profile.html" class="active">My Profile</a>
+        <a href="requester-search.html">Find Donors</a>
+        <a href="requester-tracking.html">My Requests</a>
+        <a href="requester-profile.html" class="active">My Profile</a>
         <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
@@ -36,29 +37,29 @@
     </div>
   </nav>
 
-  <main class="dash-page">
-    <div class="dash-wrap">
+  <main class="prof-page">
+    <div class="prof-wrap">
 
-      <!-- HERO (same image rotation as donor pages: faezeh-eslami) -->
-      <section class="dash-hero">
-        <div class="dash-hero-inner">
+      <!-- HERO (image rotation: tim-marshall = requester pages) -->
+      <section class="prof-hero">
+        <div class="prof-hero-inner">
           <div class="hero-crumb">
             <a href="landing.html">Home</a>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            <a href="donor-dashboard.html">Donor Dashboard</a>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <a href="requester-search.html">Find Donors</a>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             <span>My Profile</span>
           </div>
-          <h1 class="dash-title">Your donor <em>profile</em></h1>
-          <p class="dash-sub">Keep your availability, blood group and contact details up to date so requesters always find accurate information.</p>
+          <h1 class="hero-title">Your requester <em>profile</em></h1>
+          <p class="hero-sub">Keep your contact details current so hospitals and admins can reach you fast when your blood requests are matched.</p>
         </div>
         <div class="hero-pill" id="hero-pill">
           <span class="pill-dot green"></span>
-          <span id="hero-pill-text">Available to Donate</span>
+          <span id="hero-pill-text">Urgent alerts on</span>
         </div>
       </section>
 
-      <!-- PROFILE FORM (values loaded through GET /api/profile/donor) -->
+      <!-- PROFILE FORM (values loaded through GET /api/profile/requester) -->
       <section class="profile-card">
         <div class="profile-legend">
           <div>
@@ -68,14 +69,14 @@
           <span class="profile-saved" id="profile-saved-chip" hidden>All changes saved</span>
         </div>
 
-        <!-- Availability toggle -->
-        <div class="pf-toggle-row" id="avail-row">
-          <label class="pf-toggle-label" for="p-avail" style="cursor:pointer;">
-            <span class="pf-toggle-title" id="avail-title">Available to donate</span>
-            <span class="pf-toggle-desc" id="avail-desc">You appear in donor searches and can receive urgent request alerts.</span>
+        <!-- Urgent alerts toggle -->
+        <div class="pf-toggle-row" id="alerts-row">
+          <label class="pf-toggle-label" for="p-alerts" style="cursor:pointer;">
+            <span class="pf-toggle-title" id="alerts-title">Urgent request alerts</span>
+            <span class="pf-toggle-desc" id="alerts-desc">You get an email when a compatible urgent request is posted nearby.</span>
           </label>
           <span class="toggle">
-            <input type="checkbox" id="p-avail" checked />
+            <input type="checkbox" id="p-alerts" checked />
             <span class="toggle-slider"></span>
           </span>
         </div>
@@ -83,11 +84,11 @@
         <div class="pf-grid">
           <div class="pf-field">
             <label class="pf-label" for="p-fname">First name</label>
-            <input class="pf-input" type="text" id="p-fname" placeholder="e.g. Saksham" />
+            <input class="pf-input" type="text" id="p-fname" placeholder="e.g. Ramesh" />
           </div>
           <div class="pf-field">
             <label class="pf-label" for="p-lname">Last name</label>
-            <input class="pf-input" type="text" id="p-lname" placeholder="e.g. Maharjan" />
+            <input class="pf-input" type="text" id="p-lname" placeholder="e.g. Shrestha" />
           </div>
           <div class="pf-field">
             <label class="pf-label" for="p-email">Email address</label>
@@ -98,17 +99,11 @@
             <input class="pf-input" type="tel" id="p-phone" placeholder="10-digit mobile" maxlength="10" />
           </div>
           <div class="pf-field">
-            <label class="pf-label" for="p-blood">Blood group</label>
-            <select class="pf-select" id="p-blood">
-              <option value="">Select blood group</option>
-              <option>A+</option><option>A-</option>
-              <option>B+</option><option>B-</option>
-              <option>AB+</option><option>AB-</option>
-              <option>O+</option><option>O-</option>
-            </select>
+            <label class="pf-label" for="p-hospital">Hospital / clinic <span style="color:#9B9B9B;font-weight:400;">(used on your requests)</span></label>
+            <input class="pf-input" type="text" id="p-hospital" placeholder="e.g. Patan Hospital" />
           </div>
           <div class="pf-field">
-            <label class="pf-label" for="p-district">District / City</label>
+            <label class="pf-label" for="p-district">Default district / City</label>
             <select class="pf-select" id="p-district">
               <option value="">Select location</option>
               <option>Kathmandu</option>
@@ -191,20 +186,20 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Donor profile (persisted through the API layer: GET/PUT
-       /api/profile/donor — mocked over bb_donor_profile in localStorage;
-       CPP401 swaps in GET /api/auth/me + a role-scoped PUT) ---- */
+    /* ---- Requester profile (persisted through the API layer: GET/PUT
+       /api/profile/requester — mocked over bb_requester_profile in
+       localStorage; CPP401 swaps in GET /api/auth/me + a role-scoped PUT) ---- */
     const API = window.BloodBuddyAPI;
     const V = window.BloodBuddyValidate;
-    const STORAGE_KEY = 'bb_donor_profile';
+    const STORAGE_KEY = 'bb_requester_profile';
     const DEFAULTS = {
-      fname: 'Saksham', lname: 'Maharjan',
-      email: 'saksham@bloodbuddy.np', phone: '98XXXXXXXX',
-      blood: 'B+', district: 'Kathmandu', address: '',
-      available: true
+      fname: 'Ramesh', lname: 'Shrestha',
+      email: 'ramesh@bloodbuddy.np', phone: '',
+      hospital: '', district: 'Kathmandu', address: '',
+      alerts: true
     };
 
-    /* Painted immediately, and what a fresh browser keeps — GET /api/profile/donor
+    /* Painted immediately, and what a fresh browser keeps — GET /api/profile/requester
        returns null when nothing is saved yet, so the logged-in name replaces the
        template's instead of showing someone else's. */
     function defaults() {
@@ -217,15 +212,14 @@
       }
       return p;
     }
-
     function saveProfile(p) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
     }
 
-    const FIELDS = ['fname','lname','email','phone','blood','district','address'];
+    const FIELDS = ['fname','lname','email','phone','hospital','district','address'];
     const els = {};
     FIELDS.forEach(f => els[f] = document.getElementById('p-' + f));
-    const availEl = document.getElementById('p-avail');
+    const alertsEl = document.getElementById('p-alerts');
     const saveBar = document.getElementById('save-bar');
     const savedChip = document.getElementById('profile-saved-chip');
 
@@ -233,29 +227,28 @@
     let profile = defaults(); /* replaced by the API response below */
     function fillForm(p) {
       FIELDS.forEach(f => els[f].value = p[f] || '');
-      availEl.checked = !!p.available;
-      reflectAvailability();
+      alertsEl.checked = !!p.alerts;
+      reflectAlerts();
     }
-    function reflectAvailability() {
-      const row = document.getElementById('avail-row');
-      row.classList.toggle('unavailable', !availEl.checked);
-      document.getElementById('avail-title').textContent =
-        availEl.checked ? 'Available to donate' : 'Not available';
-      document.getElementById('avail-desc').textContent = availEl.checked
-        ? 'You appear in donor searches and can receive urgent request alerts.'
-        : "You're hidden from donor searches and won't receive alerts.";
+    function reflectAlerts() {
+      const row = document.getElementById('alerts-row');
+      row.classList.toggle('unavailable', !alertsEl.checked);
+      document.getElementById('alerts-title').textContent =
+        alertsEl.checked ? 'Urgent request alerts' : 'Alerts off';
+      document.getElementById('alerts-desc').textContent = alertsEl.checked
+        ? 'You get an email when a compatible urgent request is posted nearby.'
+        : "You won't be notified about urgent requests.";
       // Hero pill mirrors the toggle
       document.getElementById('hero-pill-text').textContent =
-        availEl.checked ? 'Available to Donate' : 'Not Available';
+        alertsEl.checked ? 'Urgent alerts on' : 'Alerts off';
       document.querySelector('#hero-pill .pill-dot').style.background =
-        availEl.checked ? '#4ADE80' : '#9B9B9B';
+        alertsEl.checked ? '#8FD460' : '#9B9B9B';
     }
     fillForm(profile);
 
     /* ---- Profile photo (stubbed upload — CPJ119 §2.5 image handling).
-       FileReader reads the picked file as a Base64 data URL; the save
-       path carries it in the profile payload through the API layer, so
-       the backend swap replaces Base64 with BLOB storage (same UI). ---- */
+       FileReader → Base64 data URL, carried in the profile payload through
+       the API layer; the backend swap replaces Base64 with BLOB storage. ---- */
     function renderPhoto(src) {
       const wrap = document.getElementById('photo-upload');
       const img = document.getElementById('photo-preview');
@@ -295,7 +288,7 @@
       return JSON.stringify({ ...readForm(), _v: 1 });
     }
     function readForm() {
-      const p = { available: availEl.checked, photo: profile.photo || '' };
+      const p = { alerts: alertsEl.checked, photo: profile.photo || '' };
       FIELDS.forEach(f => p[f] = els[f].value.trim());
       return p;
     }
@@ -304,14 +297,14 @@
       const dirty = snapshot() !== baseline;
       saveBar.classList.toggle('show', dirty);
       savedChip.hidden = dirty;
-      reflectAvailability();
+      reflectAlerts();
     }
-    [...FIELDS.map(f => els[f]), availEl].forEach(el => {
+    [...FIELDS.map(f => els[f]), alertsEl].forEach(el => {
       el.addEventListener('input', checkDirty);
       el.addEventListener('change', checkDirty);
     });
 
-    /* ---- Save (PUT /api/profile/donor, plus a localStorage hedge for the
+    /* ---- Save (PUT /api/profile/requester, plus a localStorage hedge for the
        demo pages that still read the key directly) ---- */
     const toast = document.getElementById('pf-toast');
     let toastTimer;
@@ -330,14 +323,13 @@
         { input: els.lname, rules: { required: true } },
         { input: els.email, rules: { required: true, email: true } },
         { input: els.phone, rules: { phone: true } },
-        { input: els.blood, rules: { required: true, blood: true } },
         { input: els.district, rules: { required: true } }
       ]);
       if (failed.length) return showToast('Please fix the highlighted fields');
 
-      /* PUT /api/profile/donor (mocked) — also kept in localStorage so the
-         session prefill and other demo pages keep working offline */
-      API.profile.save('donor', p).then(() => {
+      /* PUT /api/profile/requester (mocked) — also kept in localStorage so
+         other demo pages keep working offline */
+      API.profile.save('requester', p).then(() => {
         profile = p;
         saveProfile(profile);
         baseline = snapshot();
@@ -358,11 +350,11 @@
     });
 
     /* ---- Initial load through the API layer ----
-       GET /api/profile/donor (mocked over bb_donor_profile; CPP401 swaps in
-       GET /api/auth/me). Runs once the editor is wired so the saved values land
-       in a ready form, and re-baselines the dirty check so a load never looks
-       like an unsaved edit. */
-    API.profile.get('donor').then(saved => {
+       GET /api/profile/requester (mocked over bb_requester_profile; CPP401
+       swaps in GET /api/auth/me). Runs once the editor is wired so the saved
+       values land in a ready form, and re-baselines the dirty check so a load
+       never looks like an unsaved edit. */
+    API.profile.get('requester').then(saved => {
       profile = saved ? { ...defaults(), ...saved } : defaults();
       fillForm(profile);
       renderPhoto(profile.photo);

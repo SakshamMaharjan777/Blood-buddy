@@ -1,0 +1,146 @@
+/* =============================================
+   BLOODBUDY — bb-ui.css
+   Shared widgets for the session #10 scope:
+   pagination (bb-paginate.js), inline form
+   validation errors (bb-validate.js), and the
+   stubbed profile photo upload. Brand-consistent:
+   DM Sans, inset-ring shadows, #C0202A accent.
+   ============================================= */
+
+/* ---- Pagination (bb-paginate.js) ---- */
+.bb-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.bb-pager-btn {
+  font: 500 0.82rem 'DM Sans', sans-serif;
+  color: #3B3B3B;
+  background: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  box-shadow: inset 0 0 0 1px #E7E3DD;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.bb-pager-btn:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px #C0202A;
+  color: #C0202A;
+  transform: translateY(-1px);
+}
+.bb-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.bb-pager-info {
+  font: 400 0.8rem 'DM Sans', sans-serif;
+  color: #6E6E6E;
+}
+.bb-pager-info b {
+  color: #1E1E1E;
+  font-weight: 600;
+}
+.bb-pager-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 400 0.8rem 'DM Sans', sans-serif;
+  color: #6E6E6E;
+}
+.bb-pager-select {
+  font: 500 0.8rem 'DM Sans', sans-serif;
+  color: #1E1E1E;
+  background: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  box-shadow: inset 0 0 0 1px #E7E3DD;
+  cursor: pointer;
+}
+
+/* ---- Inline field validation (bb-validate.js) ----
+   Works for every field wrapper in the project:
+   .field-group (auth) / .form-field (request forms) /
+   .pf-field (profiles) / .ct-field (contact) */
+.field-error,
+.form-field .field-error,
+.pf-field .field-error,
+.ct-field .field-error {
+  display: none;
+  margin-top: 5px;
+  font: 400 0.74rem 'DM Sans', sans-serif;
+  color: #C0202A;
+}
+.has-error .field-error { display: block; }
+.has-error .field-input,
+.has-error .filter-select,
+.has-error .pf-input,
+.has-error .pf-select,
+.has-error .ct-input,
+.has-error .modal-textarea,
+.has-error input,
+.has-error select,
+.has-error textarea {
+  box-shadow: inset 0 0 0 1px #C0202A;
+}
+
+/* ---- Profile photo upload (stubbed — Base64 in the profile record,
+        CPJ119 §2.5 sanctions Base64; the backend swaps in BLOB storage) ---- */
+.photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.photo-upload .photo-preview {
+  display: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px #E7E3DD;
+}
+.photo-upload .photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #C0202A;
+  color: #fff;
+  font: 600 0.95rem 'DM Sans', sans-serif;
+  letter-spacing: 0.02em;
+}
+.photo-upload.has-photo .photo-preview { display: block; }
+.photo-upload.has-photo .photo-fallback { display: none; }
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.photo-btn,
+.photo-remove {
+  font: 500 0.8rem 'DM Sans', sans-serif;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.photo-btn { color: #C0202A; }
+.photo-btn:hover { text-decoration: underline; }
+.photo-remove { color: #9B9B9B; }
+.photo-remove:hover { color: #C0202A; }
+.photo-hint {
+  font: 400 0.72rem 'DM Sans', sans-serif;
+  color: #9B9B9B;
+}
+
+@media (max-width: 640px) {
+  .bb-pager { gap: 10px; }
+  .bb-pager-size { margin-left: auto; }
+}

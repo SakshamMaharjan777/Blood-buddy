@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>RESPONSIVE-CHECK</title>
+<style>body{font:12px monospace;margin:0} #w{position:absolute;left:-10000px;top:0} pre{white-space:pre-wrap;padding:10px}</style>
+</head>
+<body>
+<div id="w"></div>
+<pre id="out">running…</pre>
+<script>
+/* ===================================================================
+   RESPONSIVE OVERFLOW CHECK
+   CPJ119 2.1 makes a "fully responsive layout ... across mobile, tablet
+   and desktop" MANDATORY, and qa-harness.html cannot see it (its iframes
+   are a fixed 1280px). This loads every page at four widths inside an
+   iframe — media queries resolve against the IFRAME viewport, so a 360px
+   iframe lays out exactly like a 360px phone — and reports any page whose
+   content is wider than the viewport (horizontal scroll = the classic
+   "not responsive" failure), naming the widest offenders.
+   =================================================================== */
+(async function () {
+  'use strict';
+  const P = '/CODE/HTML/';
+  const WIDTHS = [360, 430, 768, 1280];
+  const SESSION = { donor: { role: 'donor', name: 'Sita Gurung' }, requester: { role: 'requester', name: 'Ramesh Shrestha' }, hospital: { role: 'hospital', name: 'Bir Hospital' }, admin: { role: 'admin', name: 'Admin' } };
+  const PAGES = [
+    ['landing.html', null], ['auth-login.html', null], ['auth-register.html', null],
+    ['auth-forgot.html', null], ['emergency-request.html', null], ['about.html', null],
+    ['contact.html', null], ['terms.html', null], ['privacy.html', null],
+    ['/' + '404.html', null],
+    ['donor-dashboard.html', 'donor'], ['donor-history.html', 'donor'], ['donor-profile.html', 'donor'],
+    ['requester-search.html', 'requester'], ['requester-request.html', 'requester'],
+    ['requester-tracking.html', 'requester'], ['requester-profile.html', 'requester'],
+    ['hospital-dashboard.html', 'hospital'], ['hospital-requests.html', 'hospital'], ['hospital-profile.html', 'hospital'],
+    ['admin-dashboard.html', 'admin'], ['admin-requests.html', 'admin'], ['admin-profile.html', 'admin']
+  ];
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const lines = [];
+  let bad = 0, checked = 0;
+
+  function prime(role) {
+    try {
+      localStorage.clear();
+      if (role) localStorage.setItem('bb_session', JSON.stringify(SESSION[role]));
+    } catch (e) {}
+  }
+
+  function load(path, width) {
+    return new Promise(resolve => {
+      const f = document.createElement('iframe');
+      f.width = width; f.height = 900;
+      f.src = path.charAt(0) === '/' ? path : P + path;
+      let done = false;
+      const fin = () => { if (!done) { done = true; resolve(f); } };
+      f.onload = fin;
+      setTimeout(fin, 4000);
+      document.getElementById('w').appendChild(f);
+    });
+  }
+
+  for (const [page, role] of PAGES) {
+    let row = page + '  ';
+    for (const width of WIDTHS) {
+      prime(role);
+      const f = await load(page, width);
+      await sleep(260); /* let the mocked API settle before measuring */
+      const win = f.contentWindow, doc = f.contentDocument;
+      const overflow = doc.documentElement.scrollWidth - win.innerWidth;
+      checked++;
+      if (overflow > 1) {
+        bad++;
+        /* name the widest offenders so the report is actionable */
+        const guilty = [].slice.call(doc.querySelectorAll('body *'))
+          .map(el => ({ el: el, right: Math.round(el.getBoundingClientRect().right) }))
+          .filter(x => x.right > win.innerWidth + 1)
+          .sort((a, b) => b.right - a.right)
+          .slice(0, 3)
+          .map(x => (x.el.tagName.toLowerCase() + (x.el.className && typeof x.el.className === 'string' ? '.' + x.el.className.trim().split(/\s+/).join('.') : '')) + '@' + x.right);
+        row += '\n    ' + width + 'px  OVERFLOW +' + overflow + 'px   ' + guilty.join('  ');
+      } else {
+        row += width + ':ok ';
+      }
+      f.remove();
+      await sleep(20);
+    }
+    lines.push(row);
+    document.getElementById('out').textContent = lines.join('\n');
+  }
+
+  lines.push('');
+  lines.push(bad === 0
+    ? 'RESULT: ' + checked + '/' + checked + ' page x width combos fit their viewport'
+    : 'RESULT: ' + bad + ' of ' + checked + ' combos overflow horizontally');
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'RESP-DONE ' + (checked - bad) + '/' + checked;
+})().catch(e => {
+  document.getElementById('out').textContent = 'ERR ' + (e && e.stack);
+  document.title = 'RESP-ERR';
+});
+</script>
+</body>
+</html>

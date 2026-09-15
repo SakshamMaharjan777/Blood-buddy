@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; font: 12px monospace; }
+  #wrap { width: 1280px; height: 1100px; border: 1px solid #ccc; }
+  pre { padding: 10px; white-space: pre-wrap; }
+</style>
+<title>VISUAL</title>
+</head>
+<!-- ===================================================================
+     VISUAL FORM CHECK — checks the inline-validation ERROR state on a
+     form page, which the pass/fail harness cannot see (bb-validate.js
+     replaced the old one-off inline `boxShadow` error styling, so the
+     red ring and message now come from CSS/bb-ui.css).
+
+     Loads a page in an iframe, submits the form empty to trigger the
+     rules, then reports for every error: the message's computed colour
+     and the contrast ratio against its real background, plus the ring
+     colour actually applied to each control. It also scrolls the first
+     error into view so a --screenshot run captures the state.
+
+     Usage:
+       ?page=requester-request.html&form=%23request-form&role=requester
+       ?page=emergency-request.html&form=%23em-form          (guest)
+     The form selector must be URL-encoded (%23 = #), or the browser
+     treats it as a fragment and the lookup fails.
+
+     Screenshot (relative paths resolve against Chrome's own cwd — pass
+     an absolute Windows path via `pwd -W`):
+       chrome --headless=new --window-size=1300,1200 --screenshot=... \
+         "http://localhost:8321/resptest/visual-forms.html?page=..."
+     =================================================================== -->
+<body>
+<div id="wrap"></div>
+<pre id="out">running…</pre>
+<script>
+(async function () {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const params = new URLSearchParams(location.search);
+  const page = params.get('page') || 'requester-request.html';
+  const formSel = params.get('form') || '#request-form';
+  const role = params.get('role') || '';
+  const lines = [];
+
+  localStorage.clear();
+  if (role) localStorage.setItem('bb_session', JSON.stringify({ role: role, name: 'Ramesh Shrestha' }));
+
+  const f = document.createElement('iframe');
+  f.width = 1280; f.height = 1100;
+  f.src = '/CODE/HTML/' + page;
+  document.getElementById('wrap').appendChild(f);
+  await new Promise(r => { f.onload = r; setTimeout(r, 4000); });
+  await sleep(700);
+
+  const win = f.contentWindow, doc = f.contentDocument;
+
+  /* trigger the inline validation by submitting the form empty */
+  doc.querySelector(formSel).dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+  await sleep(300);
+
+  function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function lum(rgbStr) {
+    const n = rgbStr.match(/\d+/g).map(Number);
+    return 0.2126 * lin(n[0]) + 0.7152 * lin(n[1]) + 0.0722 * lin(n[2]);
+  }
+  function contrast(a, b) {
+    const l1 = lum(a), l2 = lum(b);
+    const hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+    return ((hi + 0.05) / (lo + 0.05)).toFixed(2);
+  }
+  function effectiveBg(el) {
+    let n = el;
+    while (n && n.nodeType === 1) {
+      const bg = win.getComputedStyle(n).backgroundColor;
+      const m = bg.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)(?:,\s*([\d.]+))?\)/);
+      if (m && (m[4] === undefined || parseFloat(m[4]) > 0.5)) return 'rgb(' + m[1] + ', ' + m[2] + ', ' + m[3] + ')';
+      n = n.parentElement;
+    }
+    return 'rgb(255, 255, 255)';
+  }
+
+  lines.push('page: ' + page + '   role: ' + (role || 'guest'));
+  lines.push('');
+
+  const errs = [].slice.call(doc.querySelectorAll('.field-error'));
+  lines.push('inline .field-error nodes: ' + errs.length);
+  errs.forEach(e => {
+    const cs = win.getComputedStyle(e);
+    const r = e.getBoundingClientRect();
+    const bg = effectiveBg(e);
+    lines.push('  text="' + e.textContent.trim() + '"'
+      + '\n     display=' + cs.display + '  box=' + Math.round(r.width) + 'x' + Math.round(r.height)
+      + '  color=' + cs.color + '  bg=' + bg + '  contrast=' + contrast(cs.color, bg) + ':1'
+      + '  font=' + cs.fontSize);
+  });
+
+  lines.push('');
+  const bad = [].slice.call(doc.querySelectorAll('.has-error'));
+  lines.push('.has-error wrappers: ' + bad.length);
+  bad.forEach(w => {
+    const ctl = w.querySelector('input, select, textarea');
+    if (!ctl) return;
+    const cs = win.getComputedStyle(ctl);
+    lines.push('  #' + (ctl.id || '(no id)') + '  ring=' + cs.boxShadow + '  border=' + cs.borderColor);
+  });
+
+  /* scroll the first error into the iframe viewport so the screenshot shows it */
+  if (bad.length) {
+    const r = bad[0].getBoundingClientRect();
+    win.scrollTo(0, Math.max(0, r.top + win.scrollY - 90));
+    await sleep(200);
+  }
+
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'VISUAL-DONE';
+})().catch(e => {
+  document.getElementById('out').textContent = 'ERR ' + (e && e.message);
+  document.title = 'VISUAL-DONE';
+});
+</script>
+</body>
+</html>

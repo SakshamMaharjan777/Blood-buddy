@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/requester-search.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -27,7 +28,7 @@
         <a href="requester-search.html" class="active">Find Donors</a>
         <a href="requester-tracking.html">My Requests</a>
         <a href="landing.html#roles">Hospitals</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -110,6 +111,7 @@
 
       <!-- DONOR GRID (rendered by JS) -->
       <section class="donor-grid" id="donor-grid"></section>
+      <nav id="donor-pager"></nav>
 
       <!-- URGENT REQUEST BANNER (from screenshot) -->
       <section class="urgent-banner">
@@ -134,7 +136,7 @@
       <div class="modal-head">
         <div>
           <div class="modal-title">Request <em id="m-donor-name">Arun Shrestha</em></div>
-          <div class="modal-sub">An email notification will be sent to this donor.</div>
+          <div class="modal-sub" id="m-donor-note">An email notification will be sent to this donor.</div>
         </div>
         <button class="modal-x" id="modal-close" aria-label="Close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -190,13 +192,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
+  <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-paginate.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as landing) ---
@@ -214,23 +221,24 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Donor data (matches your Figma screenshot) ---- */
-    const DONORS = [
-      { name:'Arun Shrestha',  blood:'B+', area:'Baneshwor, Kathmandu',  avail:true,  compat:true,  last:'4 months ago' },
-      { name:'Sunita Maharjan',blood:'B+', area:'Thamel, Kathmandu',     avail:true,  compat:false, last:'6 months ago' },
-      { name:'Bikash Tamang',  blood:'B-', area:'Koteshwor, Kathmandu',  avail:false, compat:false, last:'2 months ago' },
-      { name:'Priya Karki',    blood:'B+', area:'Baluwatar, Kathmandu',  avail:true,  compat:true,  last:'5 months ago' },
-      { name:'Rajan Thapa',    blood:'B+', area:'Chabahil, Kathmandu',   avail:true,  compat:false, last:'8 months ago' },
-      { name:'Deepa Rana',     blood:'B+', area:'Lazimpat, Kathmandu',   avail:true,  compat:false, last:'1 year ago' },
-      { name:'Kiran Gurung',   blood:'B-', area:'Gongabu, Kathmandu',    avail:false, compat:false, last:'3 months ago' },
-      { name:'Mina Shrestha',  blood:'B+', area:'Maharajgunj, Kathmandu',avail:true,  compat:false, last:'7 months ago' }
-    ];
+    /* ---- Donor data — fetched through the API layer (GET
+       /api/donors/search?blood=&district=&available=, mocked over the
+       shared bb_db.donors collection in bb-store.js). The donor list no
+       longer lives in this markup. Real endpoint: proposal Appendix B. ---- */
+    const API = window.BloodBuddyAPI;
+    let DONORS = [];
+    API.donors.search({}).then(list => {
+      DONORS = list;
+      document.getElementById('search-btn').click(); /* apply URL params + render */
+    });
 
     const grid = document.getElementById('donor-grid');
     const initials = n => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 
     function renderDonors(list) {
-      grid.innerHTML = list.map((d, i) => `
+      pager.setTotal(list.length);
+      const pageItems = pager.slice(list);
+      grid.innerHTML = pageItems.map((d, i) => `
         <article class="donor-card ${d.compat ? 'is-compat' : ''}">
           <div class="dc-head">
             <div class="dc-avatar">${initials(d.name)}</div>
@@ -252,25 +260,50 @@
           <div class="dc-divider"></div>
           <div class="dc-foot">
             <div><span class="dc-lastlbl">Last donated</span><span class="dc-lastval">${d.last}</span></div>
-            ${d.avail
-              ? `<button class="dc-request" data-i="${i}">✉ Request</button>`
-              : `<button class="dc-profile">📊 View profile</button>`}
+            <button class="dc-request ${d.avail ? '' : 'is-unavail'}" data-name="${d.name}">✉ Request</button>
           </div>
         </article>`).join('');
       document.getElementById('results-num').textContent = list.length;
     }
 
-    renderDonors(DONORS);    /* ---- Search filter (demo) ---- */
-    document.getElementById('search-btn').addEventListener('click', () => {
+
+    /* ---- Pagination (proposal §1.4: pagination for donor search results) —
+       slices the filtered results client-side today; CPP401 moves it into
+       GET /api/donors/search?page=&size= server-side. ---- */
+    const pager = window.BloodBuddyPaginate.create({
+      mount: document.getElementById('donor-pager'),
+      pageSize: 6,
+      onChange: () => document.getElementById('search-btn').click()
+    });
+
+    /* ---- Search filter (demo) — blood group + district + availability
+       actually filter the list. If a group has no donors registered
+       in the chosen district, fall back to that group in ALL districts
+       (a hopeless "0 results" page helps nobody in an emergency). ---- */
+    function runSearch() {
       const bg = document.getElementById('f-blood').value;
       const dist = document.getElementById('f-district').value;
       const onlyAvail = document.getElementById('f-avail').value === 'available';
-      let list = DONORS;
+
+      let list = DONORS.filter(d => !bg || d.blood === bg);
+      const inDistrict = dist
+        ? list.filter(d => d.area.toLowerCase().indexOf(dist.toLowerCase()) > -1)
+        : list;
+      const widened = !!dist && inDistrict.length === 0;
+      if (dist) list = widened ? list.slice() : inDistrict;
       if (onlyAvail) list = list.filter(d => d.avail);
+
+      const sort = document.getElementById('sort-by').value;
+      if (sort === 'Availability') list.sort((a, b) => (b.avail === true) - (a.avail === true));
+      if (sort === 'Name (A–Z)') list.sort((a, b) => a.name.localeCompare(b.name));
+
       renderDonors(list);
-      document.getElementById('results-text').textContent =
-        `donors found for ${bg || 'any group'} in ${dist || 'all districts'}`;
-    });
+      document.getElementById('results-text').textContent = widened
+        ? `no ${bg || 'donor'} profiles in ${dist} yet — showing ${bg || 'all'} donors in all districts`
+        : `donors found for ${bg || 'any group'} in ${dist || 'all districts'}`;
+    }
+    document.getElementById('search-btn').addEventListener('click', runSearch);
+    document.getElementById('sort-by').addEventListener('change', runSearch);
 
     /* ---- Chips mirror the selects ---- */
     const syncChips = () => {
@@ -288,25 +321,29 @@
     if (urlParams.get('district')) document.getElementById('f-district').value = urlParams.get('district');
     syncChips();
 
-    // Apply filters once on load so URL params take effect immediately
-    document.getElementById('search-btn').click();
+    // Filters are applied once the donor list arrives from the API (see
+    // API.donors.search above) so URL params take effect immediately.
 
     /* ---- Request modal (from your export) ---- */
     const overlay = document.getElementById('modal-overlay');
-    function openModal(i) {
-      const d = DONORS[i];
+    function openModal(name) {
+      const d = DONORS.find(x => x.name === name);
+      if (!d) return;
       document.getElementById('m-donor-name').textContent = d.name;
       document.getElementById('m-donor-full').textContent = d.name;
       document.getElementById('m-donor-initials').textContent = initials(d.name);
       document.getElementById('m-donor-meta').textContent = `${d.blood} · ${d.area}`;
       document.getElementById('m-donor-blood').textContent = d.blood;
+      document.getElementById('m-donor-note').textContent = d.avail
+        ? 'An email notification will be sent to this donor.'
+        : 'This donor is unavailable right now — the request reaches them as soon as they toggle back.';
       overlay.classList.add('open');
     }
     const closeModal = () => overlay.classList.remove('open');
 
     grid.addEventListener('click', e => {
       const btn = e.target.closest('.dc-request');
-      if (btn) openModal(+btn.dataset.i);
+      if (btn) openModal(btn.dataset.name);
     });
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('modal-cancel').addEventListener('click', closeModal);
@@ -314,9 +351,38 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('modal-send').addEventListener('click', function () {
-      this.textContent = 'Request sent ✓';
-      this.disabled = true;
-      setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 1200);
+      const btn = this;
+      btn.textContent = 'Request sent ✓';
+      btn.disabled = true;
+      /* POST /api/requests through the API layer (was a direct store write) so
+         the request shows up on requester-tracking.html for this requester.
+         The mock normalizes the hospital label and stamps status/created. */
+      const d = DONORS.find(x => x.name === document.getElementById('m-donor-name').textContent);
+      const session = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
+      const hospital = document.getElementById('m-hospital').value;
+      const hospitalDistrict = hospital.startsWith('Tribhuvan') ? 'Kathmandu'
+        : hospital.startsWith('Bir') ? 'Kathmandu'
+        : hospital.startsWith('Patan') ? 'Lalitpur'
+        : (d ? (d.area.split(',').pop() || '').trim() : '');
+      const notes = document.getElementById('m-notes').value.trim();
+      API.requests.create({
+        blood: d ? d.blood : '',
+        units: '1',
+        urgency: document.getElementById('m-urgency').value.split(' — ')[0],
+        neededBy: '',
+        hospital: hospital,
+        district: hospitalDistrict,
+        notes: notes || (d ? 'Direct request to donor: ' + d.name : ''),
+        compatOk: true,
+        requester: (session && session.name) || 'You',
+        timeline: [{ when: new Date().toISOString().slice(0, 16).replace('T', ' '), what: 'Request sent to ' + (d ? d.name : 'donor') + ' — notified' }]
+      }).then(() => {
+        setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 600);
+      }).catch(() => {
+        /* Keep the guest on the modal so a failed send is retryable */
+        btn.textContent = 'Retry send';
+        btn.disabled = false;
+      });
     });
 
     /* ---- Urgent request CTA → request form ---- */

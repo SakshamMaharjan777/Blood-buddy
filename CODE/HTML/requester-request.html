@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/requester-search.css" />
   <link rel="stylesheet" href="../../CSS/requester-request.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -27,7 +28,7 @@
         <a href="landing.html">Home</a>
         <a href="requester-search.html">Find Donors</a>
         <a href="requester-tracking.html" class="active">My Requests</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -158,14 +159,19 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
+  <script src="../js/bb-validate.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-compat.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -183,17 +189,8 @@
       navActions.classList.toggle('open', open);
     });
 
-    /* ---- Compatibility map (proposal Appendix A) ---- */
-    const COMPAT = {
-      'A+': ['A+', 'A-', 'O+', 'O-'],
-      'A-': ['A-', 'O-'],
-      'B+': ['B+', 'B-', 'O+', 'O-'],
-      'B-': ['B-', 'O-'],
-      'AB+': ['AB+', 'AB-', 'A+', 'A-', 'B+', 'B-', 'O+', 'O-'],
-      'AB-': ['AB-', 'A-', 'B-', 'O-'],
-      'O+': ['O+', 'O-'],
-      'O-': ['O-']
-    };
+    /* ---- Compatibility chart (proposal Appendix A) — shared, see bb-compat.js ---- */
+    const COMPAT = window.BloodBuddyCompat.groups;
 
     const bloodSel = document.getElementById('r-blood');
     const hint = document.getElementById('compat-hint');
@@ -216,36 +213,43 @@
       toggle.setAttribute('aria-checked', on);
     });
 
-    /* ---- Submit (persists to the shared demo store, then goes to tracking) ----
-       Later backend: POST /api/requests */
-    document.getElementById('request-form').addEventListener('submit', function (e) {
+    /* ---- Submit (validated client-side, then POST /api/requests via the
+       API layer — mocked over the shared store, then goes to tracking) ---- */
+    const V = window.BloodBuddyValidate;
+    const API = window.BloodBuddyAPI;
+    V.bindLive(document.querySelectorAll('#request-form select, #request-form input, #request-form textarea'));
+
+    document.getElementById('request-form').addEventListener('submit', async function (e) {
       e.preventDefault();
       const submit = document.getElementById('r-submit');
-      if (!bloodSel.value) {
-        bloodSel.focus();
-        bloodSel.style.boxShadow = 'inset 0 0 0 1px #C0202A';
-        return;
-      }
+
+      const failed = V.checkAll([
+        { input: bloodSel, rules: { required: true, blood: true } },
+        { input: document.getElementById('r-by'), rules: { required: true, future: true } }
+      ]);
+      if (failed.length) return;
+
       submit.textContent = 'Submitting…';
       submit.disabled = true;
 
       const session = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
-      const id = 'BB-' + Date.now().toString(36).toUpperCase();
-      window.BloodBuddyStore.requests.add({
-        id,
-        blood: bloodSel.value,
-        units: document.getElementById('r-units').value,
-        urgency: document.getElementById('r-urgency').value.split(' — ')[0],
-        neededBy: document.getElementById('r-by').value,
-        hospital: '—',
-        district: document.getElementById('r-district').value,
-        notes: document.getElementById('r-notes').value,
-        compatOk: toggle.classList.contains('on'),
-        status: 'Pending',
-        requester: (session && session.name) || 'You',
-        created: new Date().toISOString(),
-        timeline: [{ when: new Date().toISOString().slice(0, 16).replace('T', ' '), what: 'Request submitted — compatible donors notified' }]
-      });
+      try {
+        await API.requests.create({
+          blood: bloodSel.value,
+          units: document.getElementById('r-units').value,
+          urgency: document.getElementById('r-urgency').value.split(' — ')[0],
+          neededBy: document.getElementById('r-by').value,
+          hospital: document.getElementById('r-hospital').value,
+          district: document.getElementById('r-district').value,
+          notes: document.getElementById('r-notes').value,
+          compatOk: toggle.classList.contains('on'),
+          requester: (session && session.name) || 'You'
+        });
+      } catch (err) {
+        submit.textContent = 'Submit blood request';
+        submit.disabled = false;
+        return;
+      }
 
       submit.textContent = 'Request submitted ✓';
       setTimeout(() => { window.location.href = 'requester-tracking.html'; }, 900);

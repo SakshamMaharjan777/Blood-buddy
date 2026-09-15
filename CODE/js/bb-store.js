@@ -22,6 +22,7 @@
      bb_db.requests    — all blood requests
      bb_db.inventory   — hospital stock levels
      bb_db.users       — platform users (admin)
+     bb_db.donors      — searchable donor registry (search page)
    ============================================= */
 
 (function () {
@@ -42,6 +43,29 @@
     try {
       localStorage.setItem(PREFIX + key, JSON.stringify(value));
     } catch (e) { /* storage full/blocked — demo keeps working in-memory */ }
+  }
+
+  /* ---------------- Hospital name normalization ----------------
+     The demo has several writers (requester form, emergency form,
+     admin forward modal, seeds) using slightly different hospital
+     labels. One alias table keeps the hospital queue's equality
+     filter working. Backend swap: hospitals become rows with ids. */
+  var HOSPITAL_ALIASES = [
+    ['Tribhuvan University Teaching Hospital', 'TUTH, Maharajgunj'],
+    ['TUTH', 'TUTH, Maharajgunj'],
+    ['Bir Hospital', 'Bir Hospital, Kathmandu'],
+    ['Patan Hospital', 'Patan Hospital, Lalitpur'],
+    ['Manmohan', 'Manmohan Memorial, Kathmandu'],
+    ['Nepal Medical College', 'Nepal Medical College, Kathmandu']
+  ];
+
+  function normalizeHospital(name) {
+    var n = String(name || '').trim();
+    if (!n || n === '—' || n === 'Other') return n;
+    for (var i = 0; i < HOSPITAL_ALIASES.length; i++) {
+      if (n.indexOf(HOSPITAL_ALIASES[i][0]) === 0) return HOSPITAL_ALIASES[i][1];
+    }
+    return n;
   }
 
   /* ---------------- SEEDS (first visit only) ---------------- */
@@ -109,6 +133,27 @@
     { id: 'USR-1015', name: 'Admin · Saksham', email: 'saksham@bloodbuddy.np',    role: 'Admin',     blood: '—',    district: 'Lalitpur',  joined: '2025-08-01', status: 'Active' }
   ];
 
+  /* Donor registry (requester-search.html). Moved from that page's inline
+     DONORS array (session #10) so the search page fetches it through
+     bb-api.js instead of hardcoding data in markup.
+     Backend swap: GET /api/donors/search?blood=&district=&available= */
+  var SEED_DONORS = [
+    { id: 'DNR-1001', name: 'Arun Shrestha',   blood: 'B+',  area: 'Baneshwor, Kathmandu',   avail: true,  compat: true,  last: '4 months ago' },
+    { id: 'DNR-1002', name: 'Sunita Maharjan', blood: 'B+',  area: 'Thamel, Kathmandu',      avail: true,  compat: false, last: '6 months ago' },
+    { id: 'DNR-1003', name: 'Bikash Tamang',   blood: 'B-',  area: 'Koteshwor, Kathmandu',   avail: false, compat: false, last: '2 months ago' },
+    { id: 'DNR-1004', name: 'Priya Karki',     blood: 'B+',  area: 'Baluwatar, Kathmandu',   avail: true,  compat: true,  last: '5 months ago' },
+    { id: 'DNR-1005', name: 'Rajan Thapa',     blood: 'B+',  area: 'Chabahil, Kathmandu',    avail: true,  compat: false, last: '8 months ago' },
+    { id: 'DNR-1006', name: 'Deepa Rana',      blood: 'B+',  area: 'Lazimpat, Kathmandu',    avail: true,  compat: false, last: '1 year ago' },
+    { id: 'DNR-1007', name: 'Kiran Gurung',    blood: 'B-',  area: 'Gongabu, Kathmandu',     avail: false, compat: false, last: '3 months ago' },
+    { id: 'DNR-1008', name: 'Mina Shrestha',   blood: 'B+',  area: 'Maharajgunj, Kathmandu', avail: true,  compat: false, last: '7 months ago' },
+    { id: 'DNR-1009', name: 'Dipesh Limbu',    blood: 'A+',  area: 'Sorakhutte, Kathmandu',  avail: true,  compat: false, last: '1 month ago' },
+    { id: 'DNR-1010', name: 'Anjali Karki',    blood: 'AB+', area: 'Swayambhu, Kathmandu',   avail: false, compat: false, last: '7 months ago' },
+    { id: 'DNR-1011', name: 'Kabita Gurung',   blood: 'B-',  area: 'Kupondole, Lalitpur',    avail: true,  compat: false, last: '3 months ago' },
+    { id: 'DNR-1012', name: 'Nabin Chaudhary', blood: 'O+',  area: 'Pulchowk, Lalitpur',     avail: true,  compat: false, last: '2 months ago' },
+    { id: 'DNR-1013', name: 'Sarita Thapa',    blood: 'O-',  area: 'Lakeside, Pokhara',      avail: true,  compat: false, last: '5 months ago' },
+    { id: 'DNR-1014', name: 'Roshan Bhattarai',blood: 'O+',  area: 'Zero KM, Chitwan',       avail: true,  compat: false, last: '4 months ago' }
+  ];
+
   /* Migrate: seeds used per-page before bb-store existed */
   function migrate() {
     var oldRequests = readKey('bb_requests_migrated', null);
@@ -119,6 +164,7 @@
           var reqs = readKey('requests', SEED_REQUESTS.slice());
           legacy.forEach(function (r) {
             if (!r.requester) r.requester = 'You';
+            r.hospital = normalizeHospital(r.hospital);
             if (r.status === 'Cancelled') return; // keep terminal legacy states out
             reqs.unshift(r);
           });
@@ -130,15 +176,24 @@
   }
 
   function ensureSeeded() {
-    if (readKey('requests', null) === null) writeKey('requests', SEED_REQUESTS.slice());
+    if (readKey('requests', null) === null) {
+      writeKey('requests', SEED_REQUESTS.map(function (r) {
+        r.hospital = normalizeHospital(r.hospital);
+        return r;
+      }));
+    }
     if (readKey('inventory', null) === null) writeKey('inventory', SEED_INVENTORY);
     if (readKey('users', null) === null) writeKey('users', SEED_USERS.slice());
+    if (readKey('donors', null) === null) writeKey('donors', SEED_DONORS.slice());
     migrate();
   }
 
   /* ---------------- PUBLIC API ---------------- */
 
   var Store = {
+    /* Canonical hospital label for a raw name (see alias table above). */
+    normalizeHospital: normalizeHospital,
+
     /* Returns the array/object for a collection (a fresh copy). */
     get: function (key) { return readKey(key, null); },
 
@@ -172,6 +227,14 @@
       }
     },
 
+    /* ---- Donors helpers (requester-search; backend swap: GET /api/donors/search) ---- */
+    donors: {
+      all: function () { return readKey('donors', []); },
+      find: function (name) {
+        return this.all().filter(function (d) { return d.name === name; })[0] || null;
+      }
+    },
+
     /* ---- Inventory helpers ---- */
     inventory: {
       all: function () { return readKey('inventory', {}); },
@@ -199,7 +262,7 @@
 
     /* ---- Demo reset (used by a "reset demo data" control if you add one) ---- */
     reset: function () {
-      ['requests', 'inventory', 'users', 'bb_requests_migrated'].forEach(function (k) {
+      ['requests', 'inventory', 'users', 'donors', 'bb_requests_migrated'].forEach(function (k) {
         localStorage.removeItem(PREFIX + k);
       });
       localStorage.removeItem('bb_requests'); // legacy key

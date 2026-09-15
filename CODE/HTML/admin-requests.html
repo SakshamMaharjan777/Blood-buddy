@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/admin.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -26,7 +27,7 @@
         <a href="landing.html">Home</a>
         <a href="admin-dashboard.html">Admin Portal</a>
         <a href="admin-requests.html" class="active">Moderation</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -81,11 +82,13 @@
           <option>Patan Hospital, Lalitpur</option>
           <option>Manmohan Memorial, Kathmandu</option>
           <option>Nepal Medical College, Kathmandu</option>
+          <option value="—">Not routed yet</option>
         </select>
       </div>
 
       <!-- REQUEST LIST (rendered by JS) -->
       <section class="queue-list" id="queue-list"></section>
+      <nav id="queue-pager"></nav>
 
       <!-- EMPTY STATE -->
       <section class="trk-empty" id="trk-empty" hidden>
@@ -127,6 +130,9 @@
           <option>Manmohan Memorial, Kathmandu</option>
           <option>Nepal Medical College, Kathmandu</option>
         </select>
+        <!-- Labels below are the canonical store labels; the queue filter
+             matches on them, so forwarded requests always land in the
+             hospital's queue. -->
       </div>
 
       <div class="m-note" id="m-note">Forwarded requests appear in the hospital's queue (<a class="link" href="hospital-requests.html">hospital-requests.html</a>) for Accept / Fulfil.</div>
@@ -147,14 +153,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="landing.html#about">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-paginate.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -177,6 +187,13 @@
        seeded forwarded/flagged ones for context. Persists across
        pages/reloads. Later backend: GET /api/requests + PATCH /api/requests/{id} */
     const store = window.BloodBuddyStore;
+    const API = window.BloodBuddyAPI;
+    document.getElementById('hospital-filter').addEventListener('change', () => {
+      currentFilter = 'all';
+      document.querySelectorAll('.trk-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === 'all'));
+      render();
+    });
+
     const LEGACY_SEED = [
       { id:'REQ-494', blood:'A-',  units:'3', urgency:'High',   requester:'Kiran Adhikari',  hospital:'Patan Hospital, Lalitpur', created:'2026-09-12T09:05:00', neededBy:'2026-09-15', status:'Fulfilled', notes:'' },
       { id:'REQ-490', blood:'O+',  units:'9', urgency:'Normal', requester:'xx_spam_user',    hospital:'—', created:'2026-09-11T22:47:00', neededBy:'2026-09-12', status:'Rejected', notes:'Suspicious volume — flagged for review' }
@@ -185,13 +202,28 @@
       const ids = store.requests.all().map(r => r.id);
       LEGACY_SEED.forEach(r => { if (ids.indexOf(r.id) === -1) store.requests.add(r); });
     })();
-    const all = store.requests.all().slice();
+
+    /* Queue fetched through the API layer (GET /api/requests, mocked over
+       the shared store); actions go through PATCH /api/requests/{id}. */
+    let all = [];
+    API.requests.list().then(list => {
+      all = list;
+      render();
+    });
 
     const list = document.getElementById('queue-list');
     const emptyBox = document.getElementById('trk-empty');
     let currentFilter = 'all';
 
-    const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    /* ---- Pagination (proposal §1.4) — slices the filtered queue
+       client-side today; CPP401 swaps it for ?page=&size= params. ---- */
+    const pager = window.BloodBuddyPaginate.create({
+      mount: document.getElementById('queue-pager'),
+      pageSize: 5,
+      onChange: () => render()
+    });
+
+    const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('en-GB', { day:'numeric', month:'short' }) : '—';
     const timeAgo = iso => {
       const mins = Math.round((Date.now() - new Date(iso)) / 60000);
       if (mins < 60) return `${mins} min ago`;
@@ -203,6 +235,7 @@
 
     const STATUS_META = {
       Pending:   { cls:'st-pending',   label:'Pending review' },
+      Matched:   { cls:'st-matched',   label:'Donor matched' },
       Accepted:  { cls:'st-accepted',  label:'Forwarded' },
       Fulfilled: { cls:'st-fulfilled', label:'Fulfilled' },
       Rejected:  { cls:'st-rejected',  label:'Flagged' }
@@ -216,9 +249,14 @@
       document.getElementById('queue-count').textContent =
         all.filter(r => r.status === 'Pending').length;
 
-      const items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
+      let items = currentFilter === 'all' ? all : all.filter(r => r.status === currentFilter);
+      const hosp = document.getElementById('hospital-filter').value;
+      if (hosp) items = items.filter(r => r.hospital === hosp);
 
-      if (!items.length) {
+      pager.setTotal(items.length);
+      const pageItems = pager.slice(items);
+
+      if (!pageItems.length) {
         list.innerHTML = '';
         emptyBox.hidden = false;
         document.getElementById('empty-title').textContent =
@@ -227,8 +265,8 @@
       }
       emptyBox.hidden = true;
 
-      list.innerHTML = items.map(r => {
-        const meta = STATUS_META[r.status];
+      list.innerHTML = pageItems.map(r => {
+        const meta = STATUS_META[r.status] || { cls: 'st-pending', label: r.status };
         const actions = r.status === 'Pending'
           ? `<button class="qa accept" data-id="${r.id}" data-act="forward">Forward to hospital</button>
              <button class="qa reject" data-id="${r.id}" data-act="Rejected">Flag as spam</button>`
@@ -238,7 +276,7 @@
           <div class="rc-head">
             <span class="rc-badge">${r.blood}</span>
             <div class="rc-title">
-              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span></div>
+              <div class="rc-name">${r.requester} <span class="rc-id">· ${r.id}</span>${/^(EM-)/.test(r.id) ? ' <span class="em-tag" title="Submitted from the public emergency form (guest)"><span class="dot"></span>Emergency</span>' : ''}</div>
               <div class="rc-sub">${r.units} unit${r.units > 1 ? 's' : ''} · ${r.urgency} · needed by ${fmtDate(r.neededBy)} · ${timeAgo(r.created)}</div>
             </div>
             <span class="rc-status ${meta.cls}"><span class="dot"></span>${meta.label}</span>
@@ -296,30 +334,33 @@
 
     document.getElementById('m-confirm').addEventListener('click', () => {
       if (!pending) return;
+      let patch;
       if (pending.act === 'forward') {
         const hospital = document.getElementById('m-hospital').value;
-        store.requests.update(pending.req.id, {
+        patch = {
           status: 'Accepted',
           hospital: hospital,
           timeline: (pending.req.timeline || []).concat([{
             when: new Date().toISOString().slice(0, 16).replace('T', ' '),
             what: 'Forwarded to ' + hospital + ' by platform admin'
           }])
-        });
+        };
       } else {
-        store.requests.update(pending.req.id, {
+        patch = {
           status: 'Rejected',
           timeline: (pending.req.timeline || []).concat([{
             when: new Date().toISOString().slice(0, 16).replace('T', ' '),
             what: 'Flagged as spam by platform admin'
           }])
-        });
+        };
       }
-      const idx = all.findIndex(x => x.id === pending.req.id);
-      if (idx > -1) all[idx] = store.requests.find(pending.req.id);
-      document.getElementById('queue-updated').textContent = 'Updated just now';
-      closeModal();
-      render();
+      API.requests.update(pending.req.id, patch).then(updated => {
+        const idx = all.findIndex(x => x.id === pending.req.id);
+        if (idx > -1) all[idx] = updated;
+        document.getElementById('queue-updated').textContent = 'Updated just now';
+        closeModal();
+        render();
+      });
     });
 
     document.getElementById('modal-close').addEventListener('click', closeModal);

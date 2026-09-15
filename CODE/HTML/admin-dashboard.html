@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../../CSS/landing.css" />
   <link rel="stylesheet" href="../../CSS/landingresponsive.css" />
   <link rel="stylesheet" href="../../CSS/admin.css" />
+  <link rel="stylesheet" href="../../CSS/bb-ui.css" />
 </head>
 <body>
 
@@ -26,7 +27,7 @@
         <a href="landing.html">Home</a>
         <a href="admin-dashboard.html" class="active">Admin Portal</a>
         <a href="admin-requests.html">Moderation</a>
-        <a href="landing.html#about">About</a>
+        <a href="about.html">About</a>
       </div>
       <div class="nav-actions" id="nav-actions">
         <a class="btn-outline-nav" href="auth-login.html">Log in</a>
@@ -118,6 +119,7 @@
         <input class="filter-select users-search" type="search" id="users-search" placeholder="Search name, email, or ID…" />
         <span class="adm-updated" id="users-shown">—</span>
         <button class="hosp-secondary-btn" id="view-suspended-btn">View suspended only</button>
+        <button class="hosp-secondary-btn" id="reset-demo-btn" title="Restore the demo database to its seed state">Reset demo data</button>
       </div>
 
       <!-- USERS TABLE (rendered by JS) -->
@@ -140,6 +142,7 @@
           <div class="ut-empty-title">No users found</div>
           <div class="ut-empty-sub">Try clearing the search or switching tabs.</div>
         </div>
+        <nav id="users-pager"></nav>
       </div>
 
     </div>
@@ -182,14 +185,18 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
 
   <script src="../js/nav.js"></script>
   <script src="../js/bb-store.js"></script>
+  <script src="../js/bb-api.js"></script>
+  <script src="../js/bb-paginate.js"></script>
   <script src="../js/main.js"></script>
   <script>
     // --- Navbar scroll shadow + hamburger (same as other pages) ---
@@ -233,10 +240,17 @@
       { name: 'Admins',     n: 22,   color: '#D99A22' }
     ];
 
-    /* ---- Users data — shared store (bb-store.js), persists across pages/reloads.
-       Later backend: GET /api/admin/users + PATCH /api/admin/users/{id} ---- */
+    /* ---- Users data — fetched through the API layer (GET /api/admin/users,
+       mocked over the shared store; persists across pages/reloads).
+       Status changes go through PATCH /api/admin/users/{id}. ---- */
     const store = window.BloodBuddyStore;
-    const USERS = store.users.all();
+    const API = window.BloodBuddyAPI;
+    let USERS = store.users.all(); /* sync mirror for render math */
+
+    /* Pending-review shortcut card shows the REAL store count, not a
+       hardcoded number that drifts as requests flow through. */
+    document.getElementById('pending-requests').textContent =
+      store.requests.all().filter(r => r.status === 'Pending').length;
 
     const initials = n => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -295,6 +309,15 @@
     let currentFilter = 'all';
     let suspendedOnly = false;
 
+    /* ---- Pagination (proposal §1.4: pagination for administrative user
+       listings) — slices the filtered table client-side today; CPP401
+       swaps it for GET /api/admin/users?page=&size= ---- */
+    const pager = window.BloodBuddyPaginate.create({
+      mount: document.getElementById('users-pager'),
+      pageSize: 5,
+      onChange: () => render()
+    });
+
     function render() {
       ['all', 'Donor', 'Requester', 'Hospital', 'Admin'].forEach(f => {
         document.getElementById('cnt-' + f.toLowerCase()).textContent =
@@ -309,14 +332,17 @@
 
       document.getElementById('users-shown').textContent = `${items.length} of ${USERS.length} shown`;
 
-      if (!items.length) {
+      pager.setTotal(items.length);
+      const pageItems = pager.slice(items);
+
+      if (!pageItems.length) {
         tbody.innerHTML = '';
         emptyBox.hidden = false;
         return;
       }
       emptyBox.hidden = true;
 
-      tbody.innerHTML = items.map(u => {
+      tbody.innerHTML = pageItems.map(u => {
         const meta = STATUS_META[u.status];
         const actions = u.status === 'Active'
           ? `<button class="ut-btn danger" data-id="${u.id}" data-act="Suspended">Suspend</button>`
@@ -395,10 +421,13 @@
 
     document.getElementById('m-confirm').addEventListener('click', () => {
       if (!pending) return;
-      store.users.setStatus(pending.user.id, pending.act);
-      document.getElementById('users-updated').textContent = 'Updated just now';
-      closeModal();
-      render();
+      API.users.setStatus(pending.user.id, pending.act).then(updated => {
+        const idx = USERS.findIndex(x => x.id === updated.id);
+        if (idx > -1) USERS[idx] = updated;
+        document.getElementById('users-updated').textContent = 'Updated just now';
+        closeModal();
+        render();
+      });
     });
 
     document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -406,7 +435,18 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    render();
+    /* ---- Reset demo data (BloodBuddyStore.reset re-seeds everything) ---- */
+    document.getElementById('reset-demo-btn').addEventListener('click', () => {
+      if (!window.confirm('Reset ALL demo data? Requests, inventory and users go back to their seed state.')) return;
+      store.reset();
+      window.location.reload();
+    });
+
+    /* ---- Initial load via the API layer ---- */
+    API.users.list().then(list => {
+      USERS = list;
+      render();
+    });
   </script>
 </body>
 </html>

@@ -1,0 +1,132 @@
+/* =============================================
+   BLOODBUDY — about.css
+   About page (reuses landing.css tokens +
+   .section/.steps-grid/.cta-* components)
+   ============================================= */
+
+.about-page { background: #F7F6F4; }
+.about-wrap {
+  max-width: 1100px; margin: 0 auto;
+  padding: 36px 32px 80px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+
+/* --- HERO (same treatment as donor-history) --- */
+.about-hero {
+  position: relative; height: 260px;
+  border-radius: 14px; overflow: hidden;
+  background: #7A1520;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 40px;
+}
+.about-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(192,32,42,0.80) 0%, rgba(163,45,45,0.48) 45%, rgba(0,0,0,0.18) 100%),
+    url('../images/faezeh-eslami-Btja3lr5ldk-unsplash.jpg') center/cover no-repeat;
+  transform: scale(1);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.about-hero:hover::before { transform: scale(1.06); }
+.about-hero-inner { position: relative; z-index: 1; }
+
+.about-title { font-family: var(--serif); font-size: 40px; font-weight: 400; line-height: 48px; color: #fff; margin: 0; }
+.about-title em { color: #FFC8C8; }
+.about-sub { max-width: 560px; font-size: 14px; line-height: 23.8px; color: rgba(255,255,255,0.82); margin-top: 8px; }
+
+/* --- CARD SECTIONS --- */
+.about-section {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 28px 32px;
+}
+.about-section-title {
+  font-family: var(--serif); font-size: 24px; font-weight: 400;
+  color: #1A1A1A; margin: 0 0 6px;
+}
+.about-section-sub { font-size: 13.5px; color: #6B6B6B; margin: 0 0 20px; }
+
+/* --- Mission & vision (2-up) --- */
+.ab-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ab-duo .about-section { margin: 0; }
+.ab-body { font-size: 14px; line-height: 24px; color: #4A4340; margin: 0; }
+.ab-body b { color: #1A1A1A; }
+
+/* --- Values (4-up) --- */
+.ab-values { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.ab-value {
+  background: #fff; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 22px 18px; text-align: center;
+}
+.ab-value-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: #FCEBEB;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px;
+}
+.ab-value-name { font-family: var(--serif); font-size: 17px; color: #1A1A1A; }
+.ab-value-desc { font-size: 12.5px; line-height: 20px; color: #6B6B6B; margin-top: 6px; }
+
+/* --- Problem / solution split --- */
+.ab-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ab-split-col { border-radius: 12px; padding: 24px 26px; }
+.ab-split-col.problem { background: #FCEBEB; box-shadow: inset 0 0 0 1px #F3D7D8; }
+.ab-split-col.solution { background: #EAF3DE; box-shadow: inset 0 0 0 1px #C0DD97; }
+.ab-split-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ab-split-col.problem .ab-split-kicker { color: #A32D2D; }
+.ab-split-col.solution .ab-split-kicker { color: #3B6D11; }
+.ab-split-col ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.ab-split-col li { font-size: 13.5px; line-height: 21px; color: #4A4340; padding-left: 18px; position: relative; }
+.ab-split-col li::before { content: '•'; position: absolute; left: 2px; top: -1px; }
+.ab-split-col.problem li::before { color: #A32D2D; }
+.ab-split-col.solution li::before { color: #3B6D11; }
+
+/* --- Partner hospitals (5 chips) --- */
+.ab-hosp-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.ab-hosp {
+  background: #FDFBF9; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+  padding: 18px 14px; text-align: center;
+}
+.ab-hosp-icon { margin-bottom: 8px; }
+.ab-hosp-name { font-size: 13px; font-weight: 500; color: #1A1A1A; line-height: 19px; }
+.ab-hosp-city { font-size: 11.5px; color: #6B6B6B; margin-top: 3px; }
+
+/* --- Project info (academic card) --- */
+.ab-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ab-fact { background: #FDFBF9; border-radius: 12px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10); padding: 16px 18px; }
+.ab-fact-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #A32D2D; }
+.ab-fact-value { font-size: 13.5px; color: #1A1A1A; margin-top: 4px; line-height: 20px; }
+
+/* --- Tech stack rows --- */
+.ab-tech { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+.ab-tech-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 0.5px solid #ECE3E1; }
+.ab-tech-row:last-child { border-bottom: none; }
+.ab-tech-name { font-size: 13.5px; color: #1A1A1A; font-weight: 500; }
+.ab-tech-tag { font-size: 11.5px; color: #6B6B6B; background: #F7F6F4; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+  .ab-values { grid-template-columns: 1fr 1fr; }
+  .ab-hosp-grid { grid-template-columns: repeat(3, 1fr); }
+  .ab-facts { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .about-wrap { padding: 24px 16px 64px; }
+  .about-hero { height: auto; min-height: 190px; padding: 26px 22px; }
+  .about-title { font-size: 28px; line-height: 36px; }
+  .ab-duo, .ab-split, .ab-tech { grid-template-columns: 1fr; }
+  .about-section { padding: 22px 18px; }
+}
+@media (max-width: 480px) {
+  .ab-hosp-grid { grid-template-columns: 1fr 1fr; }
+  .ab-values { grid-template-columns: 1fr; }
+  .ab-facts { grid-template-columns: 1fr; }
+}

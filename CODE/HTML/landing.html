@@ -45,7 +45,7 @@
       <p class="hero-sub">BloodBuddy connects blood donors, requesters, and hospitals across Nepal — so the right blood reaches the right person, fast.</p>
       <div class="hero-btns">
         <a class="btn-primary" href="auth-register.html?role=donor">Register as donor</a>
-        <a class="btn-ghost" href="auth-register.html?role=requester">
+        <a class="btn-ghost" href="emergency-request.html" data-em="find">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Find blood now
         </a>
@@ -261,7 +261,7 @@
         <p class="cta-sub">Join thousands of Nepali donors who have already made a difference. Registration is free and takes 2 minutes.</p>
         <div class="cta-btns">
           <a class="cta-btn-white" href="auth-register.html?role=donor">Register as donor</a>
-          <a class="cta-btn-outline" href="auth-register.html?role=requester">Request blood</a>
+          <a class="cta-btn-outline" href="emergency-request.html">Request blood</a>
         </div>
       </div>
     </div>
@@ -276,8 +276,10 @@
       </div>
       <p class="footer-copy">Built for Nepal · Academic project · CPP400 · Asia e University</p>
       <div class="footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="terms.html">Terms</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     </div>
   </footer>
@@ -344,7 +346,10 @@
         return;
       }
       const params = `blood=${encodeURIComponent(bg)}&district=${encodeURIComponent(dist)}`;
-      resultText.innerHTML = `Searching for ${bg} donors in ${dist}... <a class="link" href="requester-search.html?${params}">View matching donors</a> — <a class="link" href="auth-login.html">log in</a> or <a class="link" href="auth-register.html?role=requester">register</a> for full results.`;
+      const sess = window.BloodBuddyNav && window.BloodBuddyNav.getSession();
+      resultText.innerHTML = sess
+        ? `Searching for ${bg} donors in ${dist}... <a class="link" href="requester-search.html?${params}">View matching donors</a> — your session is active, so results are unrestricted.`
+        : `Searching for ${bg} donors in ${dist}... <a class="link" href="requester-search.html?${params}">View matching donors</a> — <a class="link" href="auth-login.html">log in</a> or <a class="link" href="auth-register.html?role=requester">register</a> for full results.`;
       result.style.borderColor = '#C0DD97';
       result.style.background = '#EAF3DE';
       resultText.style.color = '#3B6D11';
