@@ -2,7 +2,7 @@
 
 > Read this file first in any new session. It summarizes the proposal, what's built, and what's next.
 > **Update this file at the end of every session** (status, new files, next steps).
-> Last updated: 2026-09-15 (session #11 — **the FRONTEND IS CLOSED**: every CPJ119 §2.1 requirement is implemented and verified (266/266 harness checks, 92/92 responsive page×width combos, 16/16 real-HTTP). The donor accept/decline loop landed and the AJAX path is now provable, not just written. **Everything mandatory still outstanding is BACKEND / submission artifact** — audit in "Session #11", ordered list in "Next steps")
+> Last updated: 2026-09-16 (session #13 — **backend started (B0 done)**: Spring Boot 3.5.16 skeleton in `backend/` (Java 17, Web+JPA+Validation+Mail+MySQL→**TiDB Cloud**), compiles via IntelliJ's bundled Maven 3.9.11; frontend synced into `backend/src/main/resources/static/` by `tools/sync_frontend_to_backend.py` (94 files; static/ is gitignored, re-run after frontend edits). Open `backend/` in IntelliJ → run `BloodBuddyApplication` → app serves frontend at `http://localhost:8080/CODE/HTML/landing.html`. **Class reference project `SpringWebVir` copied to gitignored `reference/` — see its addendum for adopt/avoid patterns; CREDENTIAL-EXPOSURE addendum has the account setup the user must finish before first boot (new Gmail → TiDB cluster → env vars). Plan: B1 entities → B2 service layer → B3 controllers → B4 MailHog email → B5 BLOB photos → B6 security → B7 MOCK=false + harness → B8 Postman. Previous: session #12 — **CPJ119 written report generated**: `tools/report/` builds `BloodBuddy_Final_Report.docx/.pdf` from the reference template with all BloodBuddy content; v2 with cover logo + 4 diagrams is in TEMP — copy out or rebuild. Session #11 — **the FRONTEND IS CLOSED**: every CPJ119 §2.1 requirement is implemented and verified (266/266 harness checks, 92/92 responsive page×width combos, 16/16 real-HTTP). The donor accept/decline loop landed and the AJAX path is now provable, not just written. **Everything mandatory still outstanding is BACKEND / submission artifact** — audit in "Session #11", ordered list in "Next steps")
 
 ## Project
 
@@ -82,6 +82,51 @@ CSS added: `requester-request.css`, `requester-tracking.css`, `hospital.css`, `a
   3. `"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --user-data-dir=$TMP/chrome-real --virtual-time-budget=25000 --dump-dom "http://127.0.0.1:8322/resptest/real-mode-check.html"` → title `REAL-DONE 16/16`
   4. **set `MOCK = true` again** — that is the shipped default, and §22 of the harness now fails if it is not.
   The proof does not rely on the page merely rendering: `localStorage` is cleared per page and the `bb_db.*` collections are pinned to empty sentinel arrays, so any rendered rows can only have arrived over HTTP. The stub's stdout logs each matching `GET /api/... -> 200`.
+
+## Session #13 (2026-09-16) — backend started: Spring Boot skeleton (B0) ✅
+
+User decisions: backend lives **in this repo** (`backend/` folder, IntelliJ opens just it) · dev email via **MailHog** fake SMTP. Environment findings: JDK 17.0.12 ✅, no Maven CLI (IntelliJ's bundled 3.9.11 used instead — `"C:\Program Files\JetBrains\IntelliJ IDEA 2026.1\plugins\maven\lib\maven3\bin\mvn.cmd"`), XAMPP **MariaDB 10.4** server + MySQL Workbench client (fine via `mysql-connector-j`), Spring Boot **3.5.16** chosen over 4.x (mature, tutorial-compatible).
+
+- **`backend/pom.xml`** — spring-boot-starter-{web,data-jpa,validation,mail,test} + mysql-connector-j, Java 17. **Verified: `mvn compile` exit 0.**
+- **`backend/src/main/java/com/bloodbuddy/BloodBuddyApplication.java`** — entry point.
+- **`backend/src/main/resources/application.properties`** — **TiDB Cloud** datasource (user's choice, replaces XAMPP plan): `jdbc:mysql://${BB_DB_HOST}:${BB_DB_PORT:4000}/bloodbuddy` with **`sslMode=VERIFY_IDENTITY`** (TiDB Cloud mandates TLS), `enabledTLSProtocols=TLSv1.2,TLSv1.3`, Hikari pool capped at 5 (serverless connection limits), explicit **`TiDBDialect`**; creds via `BB_DB_HOST`/`BB_DB_PORT`/`BB_DB_USER`/`BB_DB_PASSWORD` env vars (IntelliJ Run → Edit Configurations); local XAMPP fallback = `BB_DB_PORT=3306` + `BB_DB_SSLMODE=DISABLE`; MailHog SMTP on 1025 via `BB_SMTP_*`; multipart caps 2MB. **Schema must be created once in the TiDB SQL editor** (`CREATE DATABASE bloodbuddy`) — serverless tiers don't support `createDatabaseIfNotExist`.
+- **`tools/sync_frontend_to_backend.py`** — copies CODE/, CSS/, images/, resptest/, 404.html into `backend/src/main/resources/static/` (94 files). **static/ is GENERATED + gitignored** — re-run after any frontend edit. Frontend needs ZERO edits: relative asset paths resolve, `/api/**` is same-origin (bb-api.js `BASE=''`), 404.html sits at static root.
+- **`backend/README.md`** — run steps, config, layering map.
+- **IntelliJ flow:** File → Open → `backend/` → wait for Maven import → create `bloodbuddy` schema in TiDB Cloud SQL editor → set `BB_DB_*` env vars in Run Configuration → (optional) MailHog → run `BloodBuddyApplication` → http://localhost:8080/CODE/HTML/landing.html
+- **Next: B1** — 6 JPA entities (USER, DONOR, BLOOD_REQUEST, HOSPITAL, BLOOD_INVENTORY, EMAIL_NOTIFICATION) + Spring Data repositories + seed data, relationships per the proposal ERD (1:1/1:N/M:N, §2.3).
+
+### Session #13 addendum — reference project `SpringWebVir` (user's class example, io.virinchi)
+
+Copied read-only to `reference/` (gitignored — never committed/submitted) from `~/IdeaProjects/SpringWebVir`. Spring Boot 4.1.0, Thymeleaf, session auth, TiDB Cloud + Gmail SMTP.
+
+- **Adopt:** `@Lob`+MEDIUMBLOB image pattern (§2.5 — as `byte[]`), `@RestController`+ResponseEntity style, derived-query repositories, Lombok in entities.
+- **Do better than reference (grading-critical):** reference has NO Service layer (controllers→repos directly — §2.2 wants Controller/Service/Repository), returns entities straight from REST (leaks password field), stores plaintext passwords (we: BCrypt in B6), Security permitAll (we: real role rules in B6).
+
+### Session #13 addendum — CREDENTIAL EXPOSURE + account decisions (read this next session)
+
+**What happened:** `SpringWebVir` is PUBLIC on GitHub (`github.com/javasessionwithashish/SpringWebVir` — lecturer Asish's class repo, user's commits ~Aug 21) and its committed `application.properties` contains the user's **TiDB temp-mail password** + **REAL Gmail app password** (`vrpi kbhf nohl gxzp` for sakshammaharjan9@gmail.com). Bots scan for these — treat as compromised.
+
+**User decisions (session #13):**
+1. **New dedicated Gmail** for BloodBuddy (e.g. `bloodbuddy.<x>@gmail.com`) → TiDB Cloud account + cluster live under it, AND it is the §2.4 SMTP sender (notification mail comes from it, not the personal address). Needs 2-Step Verification enabled before it can mint app passwords.
+2. **Real Gmail:** user must REVOKE the leaked app password (myaccount.google.com → Security → 2-Step Verification → App passwords → delete). Not optional; still outstanding as of end of session #13.
+3. **Old temp-mail TiDB cluster:** abandon (burner account, low stakes; temp addresses get recycled — nothing to rotate if the account is disposable).
+
+**Outstanding user setup before the backend can boot (all browser-side, ~15 min):**
+1. Create the new Gmail + enable 2FA + mint an app password (keep for B4: `BB_SMTP_USER`/`BB_SMTP_PASSWORD`).
+2. TiDB Cloud under the new Gmail → Serverless cluster (region: Singapore/alicloud — the class cluster's host was `gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com:4000`) → strong root password.
+3. SQL editor: `CREATE DATABASE IF NOT EXISTS bloodbuddy CHARACTER SET utf8mb4;`
+4. IntelliJ Run → Edit Configurations → env vars: `BB_DB_HOST` / `BB_DB_PORT=4000` / `BB_DB_USER` / `BB_DB_PASSWORD` (new cluster's values; never in code files).
+
+**Then:** resume at **B1** — 6 JPA entities (USER, DONOR, BLOOD_REQUEST, HOSPITAL, BLOOD_INVENTORY, EMAIL_NOTIFICATION) + Spring Data repositories + seed data, reference-style (Lombok, derived queries) but WITH Service layer + DTOs.
+
+## Session #12 (2026-09-15) — CPJ119 written technical report (§5)
+
+Generated the final project report (reference = Yatra Report PDF as TEMPLATE ONLY, content = proposal + PROGRESS.md + code). Deliverables + generator:
+
+- **Generator:** `tools/report/build_report.py` (python-docx, Arial/Courier New, A4, real TOC field, bracketed figure placeholders) → `tools/report/finalize_word.py` (Word COM: fills TOC page numbers, exports PDF). Optional output-path arg on both. Assets extracted from the proposal DOCX live in `tools/report/assets/` (cover logo, Fig 3-1 architecture, Fig 3-3 ERD, Fig 3-4 class, Fig 6-1 Gantt).
+- **Content module:** `tools/report/bb_content.py` — every fact sourced; zero Yatra terms (verified scan: Yatra/eSewa/flight/airline/seat/JWT/Cloudinary = 0 hits). Backend items honestly marked "Pending/Scheduled (backend phase)" — nothing fabricated. Untested claims avoided throughout Ch5/Table 5-1.
+- **v1 delivered:** `docs/BloodBuddy_Final_Report.docx/.pdf` (37pp). **v2 (39pp, adds cover logo + the 4 diagram images)** built to `%TEMP%\bbreport\BloodBuddy_Final_Report_v2.docx/.pdf` because Word had the docs copy locked — **v2 is in TEMP and will be wiped; copy it out or rebuild** with the two commands above.
+- **Remaining:** insert the 9 screenshot placeholders (Fig 1-1 lifecycle, 3-2 use case, 3-5 DFD, 4-1 file tree, 4-2 search, 4-3 request forms, 4-4 photo upload, 4-5 admin dashboard, 5-1 QA reports); swap v2 into `docs/`; Postman collection lands with the backend phase.
 
 ## Session #10 (2026-09-15, COMPLETE) — proposal v2 + CPJ119 compliance
 
