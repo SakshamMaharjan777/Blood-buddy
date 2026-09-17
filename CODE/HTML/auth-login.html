@@ -209,15 +209,25 @@
       const email = emailEl.value.trim();
       const pass = passEl.value;
 
+      let res = null;
       try {
-        await API.auth.login({ email: email, password: pass, role: document.getElementById('login-role').value });
-        /* Mock responds ok — a real session token arrives with Spring Security (CPP401). */
+        /* POST /api/auth/login — the server verifies the password (BCrypt) and
+           opens the session, so the response sets the JSESSIONID cookie and
+           carries the account. Failures answer 409 with the service's own
+           sentence, which is what the user should read. */
+        res = await API.auth.login({ email: email, password: pass, role: document.getElementById('login-role').value });
       } catch (err) {
-        return showAlert('error', 'Login failed — please try again.');
+        return showAlert('error', (err && err.message) || 'Login failed — please try again.');
       }
 
-      showAlert('success', 'Logged in as ' + email + ' (demo) — taking you to your dashboard…');
-      const role = document.getElementById('login-role').value;
+      /* The ROLE comes from the server, never from the dropdown: the API
+         validates the portal you picked and refuses a mismatch, so trusting
+         the form here would be trusting the browser with a security decision. */
+      const account = (res && res.user) || null;
+      const role = account ? String(account.role).toLowerCase() : document.getElementById('login-role').value;
+      const displayName = (account && account.name) || email.split('@')[0];
+
+      showAlert('success', 'Signed in as ' + displayName + ' — taking you to your dashboard…');
       const dashboards = {
         donor: 'donor-dashboard.html',
         requester: 'requester-search.html',
@@ -226,7 +236,15 @@
       };
       const target = dashboards[role] || 'donor-dashboard.html';
       if (window.BloodBuddyNav) {
-        window.BloodBuddyNav.setSession({ role: role, name: email.split('@')[0] });
+        window.BloodBuddyNav.setSession({
+          role: role,
+          name: displayName,
+          id: account && account.id,
+          email: email,
+          donorId: account && account.donorId,
+          hospitalId: account && account.hospitalId,
+          hospitalLabel: account && account.hospitalLabel
+        });
       }
       /* Honor "return to the page that bounced you" — but only when the
          role you just picked may actually access it (never bounce a
@@ -253,6 +271,33 @@
       const p = document.getElementById('login-pass');
       p.type = p.type === 'password' ? 'text' : 'password';
     });
+
+    /* Already signed in? The JSESSIONID cookie outlives a cleared localStorage,
+       so say so and offer the way on, instead of asking for the password again.
+       Real mode only — in mock mode there is no server session to ask about. */
+    (async () => {
+      try {
+        if (localStorage.getItem('bb_force_mock') === '1') return;
+      } catch (e) { return; }
+      let acct = null;
+      try { acct = await API.auth.me(); } catch (e) { return; }   /* 401 = normal */
+      if (!acct) return;
+      const dash = {
+        donor: 'donor-dashboard.html',
+        requester: 'requester-search.html',
+        hospital: 'hospital-dashboard.html',
+        admin: 'admin-dashboard.html'
+      }[String(acct.role).toLowerCase()];
+      if (!dash) return;
+      alertBox.className = 'alert alert-success';
+      alertBox.hidden = false;
+      alertText.textContent = 'You are already signed in as ' + acct.name + ' — ';
+      const go = document.createElement('a');
+      go.className = 'link';
+      go.href = dash;
+      go.textContent = 'continue to your dashboard';
+      alertText.appendChild(go);
+    })();
   </script>
 </body>
 </html>

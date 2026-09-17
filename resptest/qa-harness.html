@@ -31,6 +31,11 @@
   function primeStorage(session, seed) {
     clearStorage();
     try {
+      /* Pin the MOCK transport. bb-api.js is REAL by default since B7 (the app
+         talks to the Spring backend); this suite runs on the plain static
+         server, which answers /api/ with 404, so it asks for the documented
+         override instead. Section 22 asserts that override still exists. */
+      localStorage.setItem('bb_force_mock', '1');
       if (session) localStorage.setItem('bb_session', JSON.stringify(session));
       if (seed) seed(); /* runs BEFORE the iframe loads — pages see these records */
     } catch (e) {}
@@ -542,7 +547,10 @@
     $(doc, '#reg-pass').value = 'secret123';
     $(doc, '#reg-terms').checked = true;
     $(doc, '#to-step-3').click();
-    await sleep(80);
+    /* The step is shown only AFTER POST /api/auth/register resolves (B7 made
+       the flow await its answer so a failed registration cannot reach the
+       success screen), so this has to outlast the mock's 60ms latency. */
+    await sleep(400);
     check('auth-register: success step shown (validation passed)', !$(doc, '#step-3').hidden);
     const dash = $(doc, '#dash-link');
     check('auth-register: CTA targets donor dashboard', /donor-dashboard\.html$/.test(dash.getAttribute('href')),
@@ -1176,11 +1184,12 @@
       r.status === 'Fulfilled' && after === before - 2, 'status=' + r.status + ' inv ' + before + '→' + after);
   });
 
-  /* ================= 22. REAL-MODE TRANSPORT CONTRACT =================
-     Real mode (MOCK = false) cannot be exercised here — this harness runs on the
-     plain static server, which answers /api/ with 404. resptest/real-mode-check.html
-     covers the behaviour against tools/mock_api_server.py. What this section can do
-     is assert the invariants that made that run fail the first time:
+  /* ================= 22. TRANSPORT CONTRACT =================
+     Since B7 the shipped mode is REAL, and this suite runs in MOCK (the override
+     set by primeStorage) because there is no backend behind the static server —
+     resptest/real-backend-check.html covers the real path against the running
+     app. What this section asserts is the invariants that make BOTH work, and
+     the one that made the first real-mode run fail:
 
        bb-api.js shipped MOCK = true but BASE = '/api', while every path passed to
        request() ALREADY begins '/api/'. Real mode therefore asked for
@@ -1221,9 +1230,16 @@
       paths.length > 0 && offenders.length === 0,
       offenders.length ? 'not under /api/: ' + offenders.join(', ') : 'all origin-relative');
 
-    /* The shipped default is the demo, not the unimplemented Spring backend. */
-    check('bb-api.js: ships with MOCK = true (real mode is opt-in)',
-      /var\s+MOCK\s*=\s*true\s*;/.test(apiSrc));
+    /* B7 turned the default around: the pages talk to the Spring backend unless
+       the demo store is pinned. So the invariant is no longer "ships MOCK =
+       true" — it is "ships REAL, with the mock reachable through the documented
+       override", which is what this whole suite and the Python stub rely on. */
+    check('bb-api.js: the mock override key exists (bb_force_mock)',
+      /bb_force_mock/.test(apiSrc));
+    check('bb-api.js: MOCK is the override flag, never hardcoded true',
+      /var\s+MOCK\s*=\s*FORCE_MOCK\s*;/.test(apiSrc) && !/var\s+MOCK\s*=\s*true\s*;/.test(apiSrc));
+    check('bb-api.js: ships the real backend path by default (FORCE_MOCK must be false unless pinned)',
+      /localStorage\.getItem\('bb_force_mock'\)\s*===\s*'1'/.test(apiSrc));
   }
 
   /* ================= REPORT ================= */

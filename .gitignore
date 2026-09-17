@@ -30,6 +30,10 @@ backend/target/
 backend/.idea/
 backend/*.iml
 
+# --- Local dev tooling (portable, NOT part of the submission) ----------------
+# .tools/ holds the Mailpit mail catcher (§2.4 dev inbox) + its captured mail.
+.tools/
+
 # --- Reference project (read-only, NOT part of BloodBuddy) -------------------
 # Copied in for pattern reference only; must never be committed or submitted.
 reference/

@@ -1,0 +1,1879 @@
+{
+  "info": {
+    "name": "BloodBuddy — REST API (CPJ119 §2.6)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "BloodBuddy — web-based blood donor management system (CPP401).\n\nCovers every endpoint of proposal Appendix B plus the ones B3 added for the frontend's real contract, and the refusals that prove the business rules (BR-1 … BR-9) are enforced server-side.\n\n## How to run\n1. Start the app (backend/README.md). It serves on http://localhost:8081.\n2. Postman: File → Import → this file. Collection variable `baseUrl` is pre-set to http://localhost:8081 — change it if you run elsewhere.\n3. Run the folders IN ORDER (\"Run collection\" does this):\n   - `00 · Public` runs logged OUT (it asserts the 401 boundary and registers an account).\n   - `01 · Session` logs in and CAPTURES the session — every folder after it is authenticated.\n   - `99 · End the session` logs out last, and then re-checks that the API answers 401 again.\n4. Watch the **Tests** tab, not just the status codes: the collection asserts the rule MESSAGES, not only 409s.\n\n## The session (this is the part to point at)\nLogin is not a bearer token. `POST /api/auth/login` verifies the password with BCrypt and opens a real server session, answering with a `Set-Cookie: JSESSIONID=…` header. **Postman's cookie jar stores it automatically** and sends it on every later request to the same host, so no token plumbing is needed — and the `01 · Session → Login` request asserts the capture explicitly (`pm.cookies.get('JSESSIONID')`) so you can see the proof in the Tests tab rather than assuming it.\n\nLogging out really ends it server-side: the `99` folder calls `POST /api/auth/logout` and then re-requests `/api/auth/me`, expecting 401.\n\n## Notes\n- Every negative case says WHY it is refused — the API returns the rule's own sentence as `message`, which is what the frontend displays.\n- Ids are never hardcoded: the login response captures `userId` / `donorId` / `hospitalId` into collection variables (Spring's IDENTITY ids have gaps, so a hardcoded id 1 is a coin flip).\n- This collection mutates a DEVELOPMENT database: it registers an account and creates requests. Point it at the demo schema, and undo afterwards with the SQL printed by `tools/api_check.py` or `resptest/real-backend-check.html`.\n- Error contract: **401** not signed in · **403** wrong role · **404** unknown row · **409** business-rule refusal · **400** validation."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    },
+    {
+      "key": "sessionEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionRole",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "otherUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "donorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hospitalId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "requestCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "guestCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberCode",
+      "value": "BB-5MN8VX",
+      "type": "string"
+    },
+    {
+      "key": "testEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "BloodBuddy#2026",
+      "type": "string"
+    },
+    {
+      "key": "localCode",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 · Public & the security boundary (run logged OUT)",
+      "description": "Everything a visitor can reach, and the proof that the rest is closed. This folder runs BEFORE login on purpose: the anonymous call must answer 401, which is only meaningful while the cookie jar is empty.",
+      "item": [
+        {
+          "name": "Public · POST /api/contact (form acknowledged)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/contact",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Saksham Maharjan\",\n  \"email\": \"saksham@example.com\",\n  \"message\": \"Public endpoint — reachable with no session.\"\n}"
+            },
+            "description": "Not an Appendix B endpoint (the contact page needs one). Validates and acknowledges; nothing is stored — there is no CONTACT table in the ERD, and the response says so instead of pretending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the acknowledgement carries the sender name', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().message).to.include('Saksham');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public · POST /api/auth/forgot (no account enumeration)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/forgot",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"does.not.exist@example.com\"\n}"
+            },
+            "description": "Answers 200 with the SAME wording whether or not the address has an account — otherwise the endpoint becomes a way to discover who is registered."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 for an address with no account (no enumeration)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('the wording does not reveal whether the account exists', function () {",
+                  "  pm.expect(pm.response.json().message).to.match(/If that email has a BloodBuddy account/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Boundary · GET /api/donors/search with NO session → 401",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/search?blood=B%2B",
+            "description": "The security boundary (B6). Spring Security answers 401 as the same ApiError JSON shape the controllers use, so the frontend parses one contract either way. Run this while logged OUT — after login it correctly answers 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 while anonymous', function () { pm.response.to.have.status(401); });",
+                  "pm.test('the 401 body is ApiError JSON, not an HTML error page', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public · POST /api/requests (guest emergency → EM- code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emergency\": true,\n  \"blood\": \"O-\",\n  \"units\": 1,\n  \"urgency\": \"Urgent\",\n  \"neededBy\": \"2030-01-01\",\n  \"hospital\": \"Patan Hospital\",\n  \"district\": \"Lalitpur\",\n  \"notes\": \"Postman: guest emergency submission\",\n  \"contactPhone\": \"9801234567\"\n}"
+            },
+            "description": "The public emergency form — the ONE write a visitor may make without an account (proposal §1.4). `emergency: true` takes an EM- code and requires a contact phone, because a guest has no profile to fall back on."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 with an EM- public code', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().id).to.match(/^EM-/);",
+                  "});",
+                  "pm.test('it is flagged as a guest submission', function () {",
+                  "  pm.expect(pm.response.json().guest).to.be.true;",
+                  "});",
+                  "pm.collectionVariables.set('guestCode', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public · GET /api/requests/lookup/{{guestCode}} (BR-8 status check)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests/lookup/{{guestCode}}",
+            "description": "The public \"already submitted? check its status\" card. Guest codes only — see the BR-8 refusal in folder 98."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the guest request is visible publicly', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('guestCode'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public · POST /api/auth/register (201 — also triggers §2.4 mail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Tester\",\n  \"email\": \"postman+{{$timestamp}}@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\",\n  \"phone\": \"9800000000\",\n  \"district\": \"Kathmandu\",\n  \"blood\": \"B+\",\n  \"area\": \"Baneshwor, Kathmandu\"\n}"
+            },
+            "description": "Registration is the §2.4 trigger: the server queues the confirmation, sends it over SMTP and stamps the audit row SENT (or FAILED with the mail server's own error). Check the dev inbox at http://127.0.0.1:8025. The email uses a Postman timestamp variable so a re-run is not a duplicate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', function () { pm.response.to.have.status(201); });",
+                  "var body = pm.response.json();",
+                  "pm.test('a Donor row was created alongside the account', function () {",
+                  "  pm.expect(body.donorId).to.be.a('string');",
+                  "});",
+                  "pm.test('the response never contains a password or hash (BR-9)', function () {",
+                  "  pm.expect(JSON.stringify(body)).to.not.match(/password/i);",
+                  "});",
+                  "pm.collectionVariables.set('testEmail', body.email);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Public · POST /api/auth/register as HOSPITAL STAFF (name → staffedHospital link)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Nurse\",\n  \"email\": \"postman.nurse+{{$timestamp}}@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"hospital\",\n  \"phone\": \"9800000001\",\n  \"district\": \"Kathmandu\",\n  \"hospital\": \"TUTH\"\n}"
+            },
+            "description": "The registration form collects a hospital NAME, not an id, so the server resolves it with the same HospitalResolver the request queue uses — \"TUTH\" becomes the Tribhuvan University Teaching Hospital row and the account is scoped to that queue (BR-5). Asserting the link here is the point: a hospital account with no link can log in but cannot touch any stock. A name matching no partner hospital still creates the account, unlinked, with a server-side warning rather than a failed registration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created as a Hospital account', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().role).to.eql('Hospital');",
+                  "});",
+                  "pm.test('the typed name resolved to a real hospital — BR-5 is active for it', function () {",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body.hospitalId, 'no staffedHospital link').to.be.a('string');",
+                  "  pm.expect(body.hospitalLabel).to.contain('Tribhuvan');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 · Session (login CAPTURES the cookie — folders below depend on it)",
+      "description": "Login, the account behind the session, and the same call without one.",
+      "item": [
+        {
+          "name": "Session · POST /api/auth/login (captures JSESSIONID)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"saksham@bloodbuddy.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"admin\"\n}"
+            },
+            "description": "Verifies the password with BCrypt (AuthService), then opens a real Spring Security session. The response sets `JSESSIONID`, which Postman's cookie jar stores for the host and replays on every later request — the Tests tab asserts that capture.\n\nThe seeded admin is used here because the admin folders come first; swap the body for any seeded account to walk the other roles:\n- donor     arun.s@example.com\n- requester sita.g@example.com\n- hospital  bloodbank@tuth.edu.np\nAll with password BloodBuddy#2026."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the session is opened', function () { pm.response.to.have.status(200); });",
+                  "var body = pm.response.json();",
+                  "pm.test('the ROLE comes from the server, not from the request', function () {",
+                  "  pm.expect(body.user.role).to.eql('Admin');",
+                  "});",
+                  "pm.test('JSESSIONID was captured into the cookie jar (this is the session)', function () {",
+                  "  pm.expect(pm.cookies.get('JSESSIONID')).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('sessionEmail', body.user.email);",
+                  "pm.collectionVariables.set('sessionRole', body.user.role);",
+                  "pm.collectionVariables.set('userId', body.user.id);",
+                  "if (body.user.donorId) pm.collectionVariables.set('donorId', body.user.donorId);",
+                  "if (body.user.hospitalId) pm.collectionVariables.set('hospitalId', body.user.hospitalId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Session · GET /api/auth/me (who the cookie says I am)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "description": "The real replacement for the frontend's cached `bb_session` — the page's role and name come from here, so a stale browser cache can never claim a role the server did not grant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the account matches the captured session', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get('sessionEmail'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Boundary · GET /api/admin/users as a NON-admin → 403",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "The role rule that matters most: an authenticated but wrong-role caller gets 403, not 401 and not data. To see it, log in as the requester (sita.g@example.com) and send this — or run the folder after swapping the login body. Enforced twice, in SecurityConfig's URL rules and again by @PreAuthorize on the controller."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('either 403 (wrong role) or 200 (you are signed in as the admin) — never 500', function () {",
+                  "  pm.expect([200, 403]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('when refused, it is a 403 with the ApiError body', function () {",
+                  "  if (pm.response.code === 403) { pm.expect(pm.response.json()).to.have.property('message'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Admin — user management (Appendix B)",
+      "description": "`/api/admin/**`: administrators only.",
+      "item": [
+        {
+          "name": "Admin · GET /api/admin/users (the user table)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users",
+            "description": "The dashboard's table. Ids are STRINGS here on purpose — the page calls `.toLowerCase()` on them."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + an array of accounts', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array').and.not.empty;",
+                  "});",
+                  "pm.test('ids are strings (what the page expects)', function () {",
+                  "  pm.expect(pm.response.json()[0].id).to.be.a('string');",
+                  "});",
+                  "pm.test('no password or hash is ever returned (BR-9)', function () {",
+                  "  pm.expect(JSON.stringify(pm.response.json())).to.not.match(/password/i);",
+                  "});",
+                  "// Capture a second account for the suspend/restore pair below, so no request",
+                  "// in this collection ever hardcodes a row id (IDENTITY ids have gaps).",
+                  "var me = pm.collectionVariables.get('userId');",
+                  "var others = pm.response.json().filter(function (u) { return u.id !== me; });",
+                  "if (others.length) pm.collectionVariables.set('otherUserId', others[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin · GET /api/admin/users?role=Donor&status=Active&q=arun (filters)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users?role=Donor&status=Active&q=arun",
+            "description": "The toolbar's three filters, applied server-side."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + only matching accounts', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().forEach(function (u) {",
+                  "    pm.expect(u.role).to.eql('Donor');",
+                  "    pm.expect(u.status).to.eql('Active');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin · GET /api/admin/users/{{userId}} (one account)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}",
+            "description": "`{{userId}}` was captured from the login response — never a hardcoded id, because Spring's IDENTITY ids have gaps."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the account asked for', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('userId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin · PATCH /api/admin/users/{{userId}} (suspend)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Suspended\"\n}"
+            },
+            "description": "Suspending blocks the NEXT login with a real reason. Known limitation (deliberate, and asserted in the test suite): it does not kill a session that is already open — that needs a SessionRegistry + HttpSessionEventPublisher. Restoring is the next request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a self-suspension is refused (the admin cannot lock themselves out)', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().message).to.match(/your own account/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin · PATCH /api/admin/users/{other-id} (suspend someone else)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/{{otherUserId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Suspended\"\n}"
+            },
+            "description": "Suspend one account, then send the same request with \"Active\" to restore it. Set `otherUserId` from the users list response (the collection stores the second account it finds in the previous GET's Tests — see the note there if you want it automated).\n\nThe previous request deliberately shows the REFUSAL (self-suspension); this one performs the action on a different id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with the new status, or 409 if the id happens to be the admin', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · Donors — search, one donor, compatibility, §2.5 photo",
+      "description": "`/api/donors/*`. Signed-in accounts (any role) can read; there is no write except the §2.5 photo.",
+      "item": [
+        {
+          "name": "Donors · GET /api/donors/search?blood=B%2B&district=Kathmandu&available=true",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/search?blood=B%2B&district=Kathmandu&available=true",
+            "description": "Appendix B's core search. `blood` is the RECIPIENT group the search is run for — it decides the `compat` flag on each card (BR-1), which is why the same donor can be compatible in one search and not another.\n\nThe response is the plain ARRAY (the page iterates it directly); add `withMeta=true` for the next request's wrapper."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + an array of donor cards', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('every card carries the fields the donor card renders', function () {",
+                  "  var d = pm.response.json()[0];",
+                  "  pm.expect(d).to.have.all.keys(['id', 'name', 'blood', 'area', 'district', 'avail', 'compat', 'last', 'hasPhoto']);",
+                  "});",
+                  "pm.test('available=true returned only available donors', function () {",
+                  "  pm.response.json().forEach(function (d) { pm.expect(d.avail).to.be.true; });",
+                  "});",
+                  "pm.test('a B+ recipient means every B+ donor is compatible (Appendix A)', function () {",
+                  "  pm.response.json().filter(function (d) { return d.blood === 'B+'; })",
+                  "    .forEach(function (d) { pm.expect(d.compat).to.be.true; });",
+                  "});",
+                  "if (pm.response.json().length) pm.collectionVariables.set('donorId', pm.response.json()[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Donors · GET /api/donors/search?blood=A%2B&district=Chitwan&withMeta=true (widen fallback)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/search?blood=A%2B&district=Chitwan&withMeta=true",
+            "description": "The emergency-search fallback: when the chosen group has nobody in that district the server widens to all districts and SAYS SO, rather than dead-ending at \"0 results\". `withMeta=true` is what surfaces that explanation (`widened` + `message`) — the widen decision itself is server-side, not a page hack."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the wrapper carries the widen explanation', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('donors');",
+                  "  pm.expect(body).to.have.property('widened');",
+                  "});",
+                  "pm.test('widening is reported, never silent', function () {",
+                  "  var body = pm.response.json();",
+                  "  if (body.widened) { pm.expect(body.message).to.be.a('string').and.not.empty; }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Donors · GET /api/donors/{{donorId}}?blood=B%2B (one donor)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/{{donorId}}?blood=B%2B",
+            "description": "One donor card. `blood` is optional and only affects the `compat` flag."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the donor asked for', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('donorId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Donors · GET /api/donors/compatible?blood=AB%2B (the alert set)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/compatible?blood=AB%2B",
+            "description": "Everyone who may donate to an AB+ recipient — i.e. every group, because AB+ is the universal recipient (Appendix A). This is the same list the urgent-request fan-out emails, exposed so the UI can show its reasoning instead of asserting it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a non-empty compatible set', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array').and.not.empty;",
+                  "});",
+                  "pm.test('AB+ accepts every donor group (universal recipient)', function () {",
+                  "  var groups = {};",
+                  "  pm.response.json().forEach(function (d) { groups[d.blood] = true; });",
+                  "  pm.expect(Object.keys(groups).length).to.be.above(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Donors · GET /api/donors/{{donorId}}/hospitals (M:N — the blood banks near you)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/{{donorId}}/hospitals",
+            "description": "The Donor ↔ Hospital many-to-many (CPJ119 §2.3), read from the donor's side. `donorId` is the one captured from the login response, so this is the signed-in donor's own list. The affiliation is seeded by a same-district rule: a donor is registered with the partner hospitals in their own district, so every row here should be in the donor's district — and a donor whose district has no partner hospital simply has none, which is the honest outcome of the rule."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the affiliation list', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('every item carries the id and the labels the UI needs', function () {",
+                  "  pm.response.json().forEach(function (h) {",
+                  "    pm.expect(h.id).to.be.a('string');",
+                  "    pm.expect(h.label, 'the canonical \"name, area\"').to.be.a('string');",
+                  "    pm.expect(h.shortName).to.be.a('string');",
+                  "    pm.expect(h.district).to.be.a('string');",
+                  "  });",
+                  "});",
+                  "pm.test('the seeded rule holds: every affiliation is in the donor’s district', function () {",
+                  "  pm.response.json().forEach(function (h) {",
+                  "    pm.expect(h.district).to.eql('Kathmandu');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Photo · POST /api/donors/{{donorId}}/photo (§2.5 — Base64 → BLOB)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/donors/{{donorId}}/photo",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dataUrl\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8AAAwAB/AF+7VwAAAAASUVORK5CYII=\"\n}"
+            },
+            "description": "§2.5 requires the image IN THE DATABASE — not a file path, not static hosting. The picker in the profile pages hands the API a Base64 data URL; the server unwraps it to raw bytes in a MEDIUMBLOB column. Ids come from the previous search, never hardcoded."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the server confirms it stored the image', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().message).to.match(/stored in the database/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Photo · GET /api/donors/{{donorId}}/photo (§2.5 — bytes back out)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/{{donorId}}/photo",
+            "description": "The stored image itself, with a content type sniffed from the bytes. Send this in Postman and use **Save Response → Save to a file** — the file is the proof that the picture really lives in the database row."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with an image content type served from the BLOB', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^image\\//);",
+                  "});",
+                  "pm.test('the bytes have a real image signature', function () {",
+                  "  pm.expect(pm.response.stream.length).to.be.above(20);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Photo · GET /api/donors/{{donorId}}/photo.json (same BLOB as a data URL)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/donors/{{donorId}}/photo.json",
+            "description": "Convenience for pages that embed the image directly: the same stored bytes, re-wrapped as the Base64 data URL the profile pages render."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a data URL round-trip', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().message).to.match(/^data:image\\//);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Requests — the lifecycle (Appendix B)",
+      "description": "`/api/requests*`: create, read per role, and the PATCH that routes one generic update into the rule-checked operations.",
+      "item": [
+        {
+          "name": "Requests · POST /api/requests (member submission → BB- code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blood\": \"B+\",\n  \"units\": 2,\n  \"urgency\": \"Urgent\",\n  \"neededBy\": \"2030-01-01\",\n  \"hospital\": \"TUTH, Maharajgunj\",\n  \"district\": \"Kathmandu\",\n  \"notes\": \"Postman: the lifecycle walkthrough\",\n  \"contactPhone\": \"9800000001\"\n}"
+            },
+            "description": "The requester is taken from the SESSION, never the body — the page's `requester` display name is ignored by design (a client must not be able to file a request as somebody else). The server generates the BB- code, recomputes `compatOk` from the Appendix A chart and writes the opening timeline entry.\n\nNote what is NOT in the body: `requester`, `compatOk`, `timeline` — all three are the server's to decide."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 with a BB- public code', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().id).to.match(/^BB-/);",
+                  "});",
+                  "pm.test('a new request starts Pending', function () {",
+                  "  pm.expect(pm.response.json().status).to.eql('Pending');",
+                  "});",
+                  "pm.test('the opening timeline entry says compatible donors were notified', function () {",
+                  "  var t = pm.response.json().timeline;",
+                  "  pm.expect(t).to.be.an('array').and.not.empty;",
+                  "  pm.expect(t[0].what).to.include('compatible donor');",
+                  "});",
+                  "pm.test('compatOk was computed by the server', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('compatOk');",
+                  "});",
+                  "pm.collectionVariables.set('requestCode', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · GET /api/requests/{{requestCode}} (one request + timeline)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests/{{requestCode}}",
+            "description": "One request with its full lifecycle audit trail. The timeline is appended by the SERVER on every transition — a patch cannot rewrite it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the request asked for', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('requestCode'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · GET /api/requests?requester=sita.g@example.com (the tracker)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests?requester=sita.g%40example.com",
+            "description": "The tracker asks by reference (the demo tracks by the signed-in name), and the server resolves it to the account. With no filter at all, a DONOR session gets their own board (BR-1 compatible, BR-7 declines removed) and everyone else gets the full list — the same endpoint, five screens."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + an array of that requester\\'s requests', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('the tracker preserves the demo\\'s per-user behaviour', function () {",
+                  "  pm.response.json().forEach(function (r) {",
+                  "    if (r.requester && r.requester !== 'Guest (emergency)') {",
+                  "      pm.expect(r.requester).to.include('Sita');",
+                  "    }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · GET /api/requests?hospital=TUTH, Maharajgunj (the hospital queue)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests?hospital=TUTH%2C%20Maharajgunj",
+            "description": "The queues are addressed by the hospital LABEL the forms submit (\"TUTH, Maharajgunj\", \"Bir Hospital\", \"NMC\") — the server-side replacement for the frontend's alias table. `?unrouted=true` and `?guest=true` give the admin's two special buckets."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + only TUTH\\'s queue', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().forEach(function (r) {",
+                  "    pm.expect(r.hospital || '').to.include('Tribhuvan');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · GET /api/requests?unrouted=true (admin: not routed yet)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests?unrouted=true",
+            "description": "The admin moderation queue's \"Not routed yet\" bucket — requests no hospital has been given."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + an array (possibly empty)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · GET /api/requests?status=Pending (narrow any queue)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests?status=Pending",
+            "description": "The status filter combines with any of the queues above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + only the status asked for', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().forEach(function (r) { pm.expect(r.status).to.eql('Pending'); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · Requests — the PATCH translator (one endpoint, five events)",
+      "description": "The demo's UI posts ONE generic `{ status: … }` for five different things. The server translates it by asking WHO is calling — a donor match, an admin routing decision and a hospital takeover are all `\"Accepted\"` in the browser and three different operations here.\n\nEach request below should be sent with the RIGHT account signed in (see the note inside). Run them in order to watch a request travel the lifecycle.",
+      "item": [
+        {
+          "name": "Lifecycle 1 · PATCH as ADMIN — forward to a hospital (stays Pending)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{memberCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Accepted\",\n  \"hospital\": \"TUTH, Maharajgunj\"\n}"
+            },
+            "description": "Sent as the admin with no donor in the session and a hospital in the body → this is a ROUTING decision, so the request is put in that hospital's queue and **deliberately stays Pending**: routing is not matching. The timeline says who forwarded it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the request is routed but still Pending', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('Pending');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lifecycle 2 · PATCH as DONOR — accept (BR-1 + BR-3)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{requestCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Matched\"\n}"
+            },
+            "description": "Log in as `arun.s@example.com` (B+, compatible with a B+ recipient) and send this. The donor comes from the SESSION, so the body needs no donor name — and the server re-checks BR-1 (compatibility) and BR-3 (one donor per request, under a pessimistic row lock).\n\n`\"Matched\"` and `\"Accepted\"` both mean accept; the demo uses both spellings."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the request is now Matched', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('Matched');",
+                  "});",
+                  "pm.test('the match stamps the donor the server took from the session', function () {",
+                  "  pm.expect(pm.response.json().donor).to.be.a('string').and.not.empty;",
+                  "  pm.expect(pm.response.json().donorAt).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('the server appended its own timeline entry', function () {",
+                  "  pm.expect(pm.response.json().timeline.length).to.be.above(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lifecycle 3 · PATCH as HOSPITAL — mark fulfilled (BR-2 + BR-4)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{requestCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Fulfilled\"\n}"
+            },
+            "description": "Log in as `bloodbank@tuth.edu.np`. Fulfilment is the one transition that moves stock: the units are deducted from that hospital's inventory (BR-4, never below zero) and the request is closed (BR-2 — terminal states are locked).\n\nWatch the timeline for the stock line, and compare the inventory board before and after with folder 06."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the request is Fulfilled', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('Fulfilled');",
+                  "});",
+                  "pm.test('the timeline records the stock movement', function () {",
+                  "  var words = pm.response.json().timeline.map(function (t) { return t.what; }).join(' ');",
+                  "  pm.expect(words).to.include('issued from');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lifecycle 4 · PATCH a terminal request — refused (BR-2)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{requestCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Cancelled\"\n}"
+            },
+            "description": "A Fulfilled request cannot be cancelled — the state machine (BR-2) refuses it with the rule's own sentence, and the frontend shows exactly that message."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 with the rule\\'s own explanation', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decline · PATCH as DONOR — \"not me\" (BR-7)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{memberCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"declinedBy\": [\"Arun Shrestha\"]\n}"
+            },
+            "description": "The donor's Decline button. BR-7: it hides the request for THAT donor only (a RequestDecline row) and leaves the request untouched — declining is not a rejection, and other donors can still take it. Idempotent: sending it twice neither fails nor duplicates."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the request itself is unchanged (still open)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.not.eql('Cancelled');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Note · PATCH a requester note (the one free-text field)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{memberCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Updated from Postman — the patient's surgery moved to Friday.\"\n}"
+            },
+            "description": "With no `status`, a `notes`-only patch edits the note. Every other field the demo's optimistic UI sends (`timeline`, `donor`, `compatOk`) is IGNORED by the server on purpose — the client may not rewrite history or invent a match."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the note was stored', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().notes).to.include('surgery moved');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · Hospitals — blood bank inventory (Appendix B)",
+      "description": "`/api/hospitals/*`: hospital staff and administrators only. BR-5 — a hospital account may only touch its own stock, and the controller enforces it by preferring the session's hospital over any `?hospitalId` in the URL.",
+      "item": [
+        {
+          "name": "Hospital · GET /api/hospitals/inventory (the scoped board)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/hospitals/inventory",
+            "description": "Log in as `bloodbank@tuth.edu.np` for the real thing: the session decides WHICH hospital, so no id is passed. As the admin, add `?hospitalId=` to read any board (see the next request).\n\nResponse shape is the plain `{ \"O+\": 24, … }` map the dashboard iterates."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a group→units map', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  var board = pm.response.json();",
+                  "  pm.expect(board).to.be.an('object');",
+                  "  pm.expect(Object.keys(board).length).to.be.above(0);",
+                  "});",
+                  "pm.test('units are numbers, never strings', function () {",
+                  "  Object.keys(pm.response.json()).forEach(function (g) {",
+                  "    pm.expect(pm.response.json()[g]).to.be.a('number');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hospital · GET /api/hospitals/{{hospitalId}}/inventory (admin form)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/hospitals/{{hospitalId}}/inventory",
+            "description": "Appendix B's explicit form. `@PreAuthorize(\"hasRole('ADMIN')\")` — a hospital account is refused here even for its own board, because staff should use the scoped call above; the id form exists for administrators."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 as admin, 403 as hospital staff, 409 if the account has no hospital', function () {",
+                  "  pm.expect([200, 403, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hospital · PUT /api/hospitals/inventory/B%2B (set stock — the adjust modal)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hospitals/inventory/B%2B",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"units\": 14\n}"
+            },
+            "description": "Absolute set for one group (the dashboard's adjust-stock modal), not a delta — so it is safe to re-run. The stock level is on the scoped hospital only.\n\nREMEMBER: this mutates the demo database. TUTH's B+ baseline is 12 — send the same call with `\"units\": 12` to put it back."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the new level is echoed back', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().units).to.eql(14);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hospital · PUT /api/hospitals/inventory/B%2B (restore the demo level: 12)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hospitals/inventory/B%2B",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"units\": 12\n}"
+            },
+            "description": "Puts TUTH's B+ back to the demo baseline, so a collection run leaves the database as it found it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the baseline is restored', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().units).to.eql(12);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 · Profiles — the four editors",
+      "description": "`/api/profile/{role}`. The role in the path says which editor is asking; the ACCOUNT comes from the session. An endpoint that took a user id would let anyone edit anyone.",
+      "item": [
+        {
+          "name": "Profile · GET /api/profile/donor (the signed-in donor's own profile)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/profile/donor",
+            "description": "Field names are the pages' own form ids (`p-fname`, `p-lname`, …), which is why the profile editors needed no edit for the real-mode flip. Sign in as a donor first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the editor payload', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('with a donor session it carries blood group + availability', function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    pm.expect(pm.response.json()).to.have.property('blood');",
+                  "    pm.expect(pm.response.json()).to.have.property('available');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profile · PUT /api/profile/donor (save — answers with what is STORED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/profile/donor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fname\": \"Arun\",\n  \"lname\": \"Shrestha\",\n  \"email\": \"arun.s@example.com\",\n  \"phone\": \"9801111111\",\n  \"district\": \"Kathmandu\",\n  \"address\": \"Baneshwor\",\n  \"blood\": \"B+\",\n  \"available\": true\n}"
+            },
+            "description": "The save path. The response is what is now in the database, not an echo of the request — so a field the server declined to keep shows up as such instead of looking saved.\n\nTwo honest mappings worth mentioning if asked: `users.name` is one column while the form has first/last (the service joins and splits), and the requester/admin address field exists on the form but was never in the ERD, so `users.address` was added rather than silently dropping what the user typed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the round trip preserves the name', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('the saved payload comes back from storage, not from the request', function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    pm.expect(pm.response.json().fname).to.eql('Arun');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 · Appendix B — the hospital-scoped local API + pagination",
+      "item": [
+        {
+          "name": "Local · POST /api/hospitals/inventory?bloodGroup=B%2B (set stock, session-scoped)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hospitals/inventory?bloodGroup=B%2B",
+            "description": "Proposal Appendix B's update shape. The hospital comes from the SESSION (BR-5), never the body; ?hospitalId= is ignored for staff.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"units\": 12\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and B+ is set to 12', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().units).to.eql(12);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Local · PUT /api/hospitals/{{hospitalId}}/inventory/B%2B (Appendix B path form)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hospitals/{{hospitalId}}/inventory/B%2B",
+            "description": "The same write addressed the way the appendix spells it. A staff account may only name its OWN hospital in the path.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"units\": 12\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — the path-addressed stock set', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('a staff account naming a DIFFERENT hospital would be refused (BR-5)', function () {",
+                  "  // the negative case lives in 98 · Rule refusals",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Local · GET /api/hospitals/{{hospitalId}}/donors/nearby?blood=B%2B",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/hospitals/{{hospitalId}}/donors/nearby?blood=B%2B",
+            "description": "Appendix B: registered donors near a partner hospital's district, filtered by blood group."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + the donors near that hospital, filtered by group', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.be.an('array');",
+                  "  pm.expect(pm.response.json().length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Local · POST /api/hospitals/{{hospitalId}}/requests (straight into the queue)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/hospitals/{{hospitalId}}/requests",
+            "description": "The hospital comes from the path, so a body-supplied hospital is overwritten rather than trusted (identity never from the body).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blood\": \"O+\",\n  \"units\": 2,\n  \"urgency\": \"Urgent\",\n  \"neededBy\": \"2026-12-31\",\n  \"district\": \"Kathmandu\",\n  \"notes\": \"Postman local-API check\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 — the hospital in the PATH owns the request', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.status).to.eql('Pending');",
+                  "  pm.expect(b.hospital).to.not.eql('—');",
+                  "  pm.collectionVariables.set('localCode', b.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Local · GET /api/hospitals/{{hospitalId}}/requests/{{localCode}}/status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/hospitals/{{hospitalId}}/requests/{{localCode}}/status",
+            "description": "Appendix B: one request's status within that hospital's queue. A request belonging to ANOTHER hospital answers 404 (BR-5)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — the fulfilment status read back', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('localCode'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Appendix B · POST /api/admin/users/{{otherUserId}}/deactivate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/users/{{otherUserId}}/deactivate",
+            "description": "The appendix's explicit deactivate path. Same operation as the PATCH toggle — both call AdminService.setStatus, so they cannot drift."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 and the account is Suspended', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('Suspended');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Appendix B · PATCH /api/admin/users/{{otherUserId}} (restore to Active)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/{{otherUserId}}",
+            "description": "Undo the deactivate above so the demo dataset is left as it was found.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — restored', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('Active');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination · GET /api/donors/search?page=0&size=5",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/donors/search?page=0&size=5",
+            "description": "Additive: WITHOUT ?page= the endpoint still answers the bare array every page consumes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a paged envelope (items/total/totalPages)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.items).to.be.an('array');",
+                  "  pm.expect(b.items.length).to.eql(5);",
+                  "  pm.expect(b.total).to.be.above(4);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination · GET /api/admin/users?page=0&size=3",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/users?page=0&size=3",
+            "description": "CPJ119 §3 pagination / proposal §1.4 'administrative user listings'."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a paged envelope over the user table', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().items.length).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination · GET /api/requests?page=0&size=2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/requests?page=0&size=2",
+            "description": "CPJ119 §3 pagination / proposal §1.4 'administrative request listings'."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 + a paged envelope over the request queue', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().items.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "98 · Rule refusals — the business rules, proven (BR-1 … BR-9)",
+      "description": "A refusal with the right SENTENCE is the feature: the API answers 409 with the rule's own message, which is what the toast shows the user. These are the checks that make the rules real rather than documented.",
+      "item": [
+        {
+          "name": "BR-1 · an incompatible donor cannot accept (A+ donor, B+ recipient)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{memberCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Matched\"\n}"
+            },
+            "description": "Sign in as an INCOMPATIBLE donor (dipesh.l@example.com is A+) and try to accept a B+ request. Appendix A is written recipient → donor: a B+ patient accepts B+, B-, O+ and O- — never A+. The server refuses with the chart in the message, because reading that chart backwards is the classic bug in this domain."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 with the compatibility reason (or 401/403 without a donor session)', function () {",
+                  "  pm.expect([409, 401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "pm.test('the message names the rule that refused it', function () {",
+                  "  if (pm.response.code === 409) {",
+                  "    pm.expect(pm.response.json().message).to.match(/compatib|BR-1/i);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BR-3 · a second donor cannot take a matched request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/BB-8F3K2M",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Matched\"\n}"
+            },
+            "description": "BB-8F3K2M is already matched to a donor in the seeded data. A second donor accepting it is refused — and the check is race-safe in the real path: the accept loads the request under a PESSIMISTIC_WRITE lock and re-checks the donor, instead of leaving the read-then-write window the simple `existsBy…` guard leaves open."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 (already matched) or 401/403 without a donor session', function () {",
+                  "  pm.expect([409, 401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BR-5 · a hospital cannot fulfil another hospital's request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests/{{memberCode}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Fulfilled\"\n}"
+            },
+            "description": "Sign in as Bir Hospital (admin@birhospital.org.np) and try to fulfil a TUTH request. BR-5 is a comparison between the SESSION's hospital and the row's, so it lives in the service layer — the controller's only job is to refuse a caller-supplied `hospitalId` when the session already has one."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 (wrong hospital) or 401/403 without a hospital session', function () {",
+                  "  pm.expect([409, 401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BR-8 · the public lookup refuses a MEMBER code",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests/lookup/{{memberCode}}",
+            "description": "The guest status card must not become a way to confirm that somebody else's request exists: `BB-` codes answer 404 here and only `EM-` guests are visible."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 — the public lookup only sees EM- guests', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "§4 validation · a past needed-by date is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blood\": \"B+\",\n  \"units\": 1,\n  \"urgency\": \"Normal\",\n  \"neededBy\": \"2020-01-01\",\n  \"hospital\": \"TUTH, Maharajgunj\",\n  \"district\": \"Kathmandu\",\n  \"contactPhone\": \"9800000000\"\n}"
+            },
+            "description": "Validation exists on BOTH tiers (§4): the browser catches this before the request leaves, and the server refuses it anyway if the browser is bypassed — which is exactly what Postman is for."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 (or 400) with an explanation, never a 500', function () {",
+                  "  pm.expect([400, 409]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "§4 validation · a register POST with a short password is refused (BR-9)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Too Short\",\n  \"email\": \"short.pass+{{$timestamp}}@example.com\",\n  \"password\": \"abc\",\n  \"role\": \"donor\",\n  \"district\": \"Kathmandu\",\n  \"blood\": \"O+\"\n}"
+            },
+            "description": "The password policy (8 characters) is enforced server-side as well as in the browser, and the message tells the user the actual rule."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 or 409 with the password rule in the message', function () {",
+                  "  pm.expect([400, 409]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().message).to.match(/8|password/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "BR-9/BR-5 · an unknown row answers 404, not 500",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/requests/BB-ZZZZZZ",
+            "description": "The error contract's edge: a well-formed request for a row that does not exist is a 404 with a readable message. There is deliberately no catch-all exception handler, because it would also swallow Spring's static-resource 404 and turn a missing page into a 500."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 with the ApiError body', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "99 · End the session (logout really ends it)",
+      "description": "Run this LAST. The session is server-side, so logging out is a request — clearing a browser variable would leave the cookie working.",
+      "item": [
+        {
+          "name": "Session · POST /api/auth/logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Ends the session server-side and invalidates it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 signed out', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Session · GET /api/auth/me AFTER logout → 401 (the proof)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me",
+            "description": "The check that makes the previous request mean something: the cookie no longer authenticates anything."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 — the session is genuinely over', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

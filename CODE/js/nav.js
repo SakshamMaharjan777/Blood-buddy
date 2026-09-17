@@ -3,9 +3,16 @@
    Role-aware navigation for the demo (no backend).
    Loaded by every page BEFORE main.js.
 
-   Session model (localStorage key: bb_session):
-     { role: 'donor'|'requester'|'hospital'|'admin', name?: string }
-   Absent key = logged out.
+   Session model. The SERVER owns the session (a JSESSIONID cookie set by
+   POST /api/auth/login, B6); localStorage key `bb_session`
+     { role: 'donor'|'requester'|'hospital'|'admin', name?: string, id?, donorId?, hospitalId? }
+   is only this script's CACHE of it, so the nav can render without waiting
+   for a round trip. On every page load the cache is reconciled with
+   GET /api/auth/me (see step 5 below): a cookie that outlives the cache
+   still signs you in, and a cache that outlives the cookie is cleared
+   instead of opening a portal the API will 401 anyway. In MOCK mode
+   (localStorage.bb_force_mock = '1', bb-api.js) the cache IS the session
+   and nothing is reconciled. Absent key = logged out.
 
    RBAC GUARD: role-private pages (role portals, moderation, and each
    role's profile page) redirect to the login page when opened logged-out,
@@ -21,9 +28,10 @@
    already had), so your portal links follow you onto public pages
    like about.html instead of swapping back to marketing links.
 
-   Demo credentials: any email + password (6+ chars).
-   The login page lets you pick a role; register saves
-   the role you registered as.
+  Demo credentials (seeded): arun.s@example.com,
+  sita.g@example.com, bloodbank@tuth.edu.np,
+  saksham@bloodbuddy.np — password BloodBuddy#2026.
+  The server decides the role, not the login page's dropdown.
    ============================================= */
 
 (function () {
@@ -56,6 +64,14 @@
     'requester-profile.html':   ['requester']
   };
   var RETURN_KEY = 'bb_return_to'; /* sessionStorage — where a bounced visitor came from */
+
+  /* Which transport the pages are using — read straight from localStorage so
+     this file keeps working on pages that never load bb-api.js (the
+     marketing pages), and stays independent of load order. */
+  function apiMode() {
+    try { return localStorage.getItem('bb_force_mock') === '1' ? 'mock' : 'real'; }
+    catch (e) { return 'real'; }
+  }
 
   function getSession() {
     try { return JSON.parse(localStorage.getItem('bb_session') || 'null'); }
@@ -271,6 +287,18 @@
       logout.addEventListener('click', function (e) {
         e.preventDefault();
         setSession(null);
+        /* Real mode: end the SERVER session too, or the cookie keeps working
+           and the next page load's revalidation would sign you straight back
+           in. Fire-and-forget: the local cache is cleared either way, so a
+           failed call cannot leave the UI believing it is signed in. */
+        if (apiMode() === 'real') {
+          try {
+            fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+              .catch(function () {})
+              .then(function () { window.location.href = 'landing.html'; });
+            return;
+          } catch (err) { /* fall through to the local redirect */ }
+        }
         window.location.href = 'landing.html';
       });
     }
@@ -286,5 +314,55 @@
         e.preventDefault();
       }
     });
+
+    /* --- 5. Reconcile the cached session with the server (real mode) ---
+       bb_session is a cache; the JSESSIONID cookie is the truth. Ask
+       /api/auth/me once per page load so both directions are handled:
+         * cookie alive, cache gone  → sign in from the server's answer;
+         * cache stale, cookie gone  → clear it (and leave a private page);
+         * no answer at all (offline, or a static-only server) → change
+           nothing. A network blip must never log anyone out.
+       Mock mode skips this: there is no server session to ask about. */
+    if (apiMode() === 'real') {
+      fetch('/api/auth/me', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (res) {
+          if (res.ok) return res.json();
+          if (res.status === 401) return null;      /* definitely signed out */
+          return undefined;                          /* anything else: no opinion */
+        })
+        .then(function (acct) {
+          if (acct === undefined) return;
+          var cached = getSession();
+          if (!acct) {
+            if (cached) {
+              setSession(null);
+              var file = (window.location.pathname.split('/').pop() || '').toLowerCase();
+              if (RBAC_GUARD[file]) window.location.replace('auth-login.html');
+            }
+            return;
+          }
+          var role = String(acct.role || '').toLowerCase();
+          var next = {
+            role: role, name: acct.name || roleLabel(role), id: acct.id, email: acct.email,
+            donorId: acct.donorId, hospitalId: acct.hospitalId, hospitalLabel: acct.hospitalLabel
+          };
+          if (!cached || cached.role !== role) {
+            setSession(next);
+            /* One reload so the guard and the nav render for the role the
+               server actually granted. The cache now matches the server, so
+               this cannot repeat — the flag is belt and braces. */
+            var flag = 'bb_session_synced';
+            var done = false;
+            try { done = sessionStorage.getItem(flag) === '1'; } catch (e) {}
+            if (!done) {
+              try { sessionStorage.setItem(flag, '1'); } catch (e) {}
+              window.location.reload();
+            }
+          } else if (cached.name !== next.name) {
+            setSession(next);   /* label-only change: no reload needed */
+          }
+        })
+        .catch(function () { /* no answer → keep the cache as it is */ });
+    }
   });
 })();

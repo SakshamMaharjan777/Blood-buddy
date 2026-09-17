@@ -31,7 +31,7 @@
     phone: /^\d{10}$/,
     /* Blood group format: A/B/AB/O with a +/− Rh factor, e.g. O+, AB- */
     blood: /^(A|B|AB|O)[+-]$/,
-    password: /.{6,}/
+    password: /.{8,}/
   };
 
   var MESSAGES = {
@@ -39,7 +39,7 @@
     email: 'Please enter a valid email address.',
     phone: 'Please enter a 10-digit phone number.',
     blood: 'Select a valid blood group (e.g. O+).',
-    password: 'Password must be at least 6 characters.',
+    password: 'Password must be at least 8 characters.',
     future: 'Choose today or a future date.',
     minUnits: 'At least 1 unit is required.',
     terms: 'You must accept the Terms to continue.'

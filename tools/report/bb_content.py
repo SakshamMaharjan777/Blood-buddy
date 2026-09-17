@@ -435,7 +435,8 @@ TABLE_3_1 = {
         ["Hospital → BloodInventory", "1:N", "Per-hospital stock rows, one per blood group"],
         ["Hospital → BloodRequest", "1:N", "Requests routed/forwarded into a hospital's queue"],
         ["BloodRequest → EmailNotification", "1:N", "Each notification references the request that triggered it"],
-        ["Donor ↔ Blood Group (compatibility)", "M:N", "Realised through the Appendix A compatibility chart; drives donor matching"],
+        ["Donor ↔ Hospital (affiliation)", "M:N", "A donor is registered with the partner hospitals in their own district — \"the blood banks near you\". Realised as the donor_hospital_affiliation join table (CPJ119 §2.3)"],
+        ["Donor ↔ Blood Group (compatibility)", "M:N", "Realised through the Appendix A compatibility chart; drives donor matching. A compatibility rule, not a physical join table"],
         ["User → Role", "N:1", "Role enum: DONOR / REQUESTER / HOSPITAL / ADMIN"],
     ],
 }

@@ -435,12 +435,26 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    /* ---- Reset demo data (BloodBuddyStore.reset re-seeds everything) ---- */
-    document.getElementById('reset-demo-btn').addEventListener('click', () => {
-      if (!window.confirm('Reset ALL demo data? Requests, inventory and users go back to their seed state.')) return;
-      store.reset();
-      window.location.reload();
-    });
+    /* ---- Reset demo data ----
+       BloodBuddyStore.reset() re-seeds the localStorage store — which is the
+       storage the MOCK transport uses and nothing else. In real mode (the
+       shipped default since B7) every request, user and stock row lives in the
+       MySQL/TiDB database, so this button would ask "Reset ALL demo data?",
+       appear to succeed, and change nothing at all. A control that lies is
+       worse than a missing one: it is hidden unless the demo store is actually
+       the data source. Restoring a real database is a deliberate step (re-run
+       the seeder / the SQL in PROGRESS.md), not a button. */
+    const resetBtn = document.getElementById('reset-demo-btn');
+    if (window.BloodBuddyAPI && !window.BloodBuddyAPI.isMock()) {
+      resetBtn.hidden = true;
+      resetBtn.title = 'Demo-store reset — not available while the app is backed by the database';
+    } else {
+      resetBtn.addEventListener('click', () => {
+        if (!window.confirm('Reset ALL demo data? Requests, inventory and users go back to their seed state.')) return;
+        store.reset();
+        window.location.reload();
+      });
+    }
 
     /* ---- Initial load via the API layer ---- */
     API.users.list().then(list => {

@@ -21,7 +21,15 @@
      GET/PUT /api/profile/{role}     (GET /api/auth/me + PUT later)
 
    ── MOCK MODE (current) ─────────────────────────
-   MOCK = true serves every call from the shared
+   The shipped default is REAL: every call goes
+   through fetch() to the Spring endpoints above,
+   same-origin, carrying the session cookie (the
+   backend serves these pages out of static/).
+   Mock mode is still supported — set
+   localStorage.bb_force_mock = '1' before this
+   script runs (that is how the 266-check QA
+   harness and the Python stub run with no
+   backend). It serves every call from the shared
    localStorage demo store (BloodBuddyStore) with
    simulated latency, so the whole UI already runs
    on the promise/fetch flow. Store mutations land
@@ -40,14 +48,21 @@
    browser resolves them against the page's own
    origin. Verify with tools/mock_api_server.py
    (serves the pages AND the Appendix B stub):
-     python tools/mock_api_server.py -p 8322
-     open http://localhost:8322/resptest/real-mode-check.html
+     open http://localhost:8081/resptest/real-backend-check.html
+   (the Python stub still works for the offline
+   mock-mode transport check: tools/mock_api_server.py)
    ============================================= */
 
 (function () {
   'use strict';
 
-  var MOCK = true;          /* false → every call goes through fetch() */
+  /* Mode. REAL is the shipped default (B7); the mock override is read from
+     localStorage so the QA harness and the Python stub can pin the demo store
+     without editing this file. */
+  var FORCE_MOCK = (function () {
+    try { return localStorage.getItem('bb_force_mock') === '1'; } catch (e) { return false; }
+  })();
+  var MOCK = FORCE_MOCK;    /* true → serve from the demo store, no network */
   var BASE = '';            /* prefix for the real backend; every path below
                                already starts with /api/, so this stays ''
                                (point it at http://host:port for a remote API) */
@@ -125,6 +140,20 @@
       if (r[1] === 'login' && method === 'POST') {
         return { ok: true, token: 'demo-' + Date.now().toString(36) };
       }
+      /* GET /api/auth/me — the account behind the session. In mock mode the
+         cached bb_session IS the session, so this answers from it and nav.js
+         can call one method in either mode. */
+      if (r[1] === 'me' && method === 'GET') {
+        var cached = null;
+        try { cached = JSON.parse(localStorage.getItem('bb_session') || 'null'); } catch (e) {}
+        if (!cached || !cached.role) throw new ApiError('Not signed in', 401);
+        var label = cached.role.charAt(0).toUpperCase() + cached.role.slice(1);
+        return { id: cached.id || null, name: cached.name || label, email: cached.email || '',
+                 role: label, district: cached.district || null, status: 'Active',
+                 donorId: cached.donorId || null, hospitalId: cached.hospitalId || null,
+                 hospitalLabel: cached.hospitalLabel || null };
+      }
+      if (r[1] === 'logout' && method === 'POST') return { ok: true, message: 'Signed out.' };
       if (r[1] === 'forgot' && method === 'POST') {
         return { ok: true, message: 'Password reset link sent (demo — no real email).' };
       }
@@ -270,7 +299,11 @@
     auth: {
       register: function (body) { return request('POST', '/api/auth/register', body); },
       login: function (body) { return request('POST', '/api/auth/login', body); },
-      forgot: function (body) { return request('POST', '/api/auth/forgot', body); }
+      forgot: function (body) { return request('POST', '/api/auth/forgot', body); },
+      /* The account behind the session — what this session's role/name come
+         from in real mode (nav.js refreshes bb_session from it). */
+      me: function () { return request('GET', '/api/auth/me'); },
+      logout: function () { return request('POST', '/api/auth/logout'); }
     },
 
     contact: function (body) { return request('POST', '/api/contact', body); },

@@ -238,7 +238,7 @@
             <div class="field-group full">
               <label class="field-label" for="reg-pass">Password</label>
               <div class="password-wrap">
-                <input class="field-input" type="password" id="reg-pass" placeholder="Min. 6 characters" />
+                <input class="field-input" type="password" id="reg-pass" placeholder="Min. 8 characters" />
                 <button type="button" class="eye-btn" id="toggle-reg-pass" aria-label="Show password">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -428,7 +428,7 @@
     const API = window.BloodBuddyAPI;
     V.bindLive(document.querySelectorAll('#reg-form input, #reg-form select'));
 
-    document.getElementById('to-step-3').addEventListener('click', () => {
+    document.getElementById('to-step-3').addEventListener('click', async () => {
       const role = document.querySelector('input[name="role"]:checked').value;
       const els = {
         fname: document.getElementById('reg-fname'),
@@ -512,22 +512,55 @@
       dashLink.href = dashboards[role] || 'donor-dashboard.html';
       dashLink.textContent = roleMeta[role].dash;
 
-      // Save the demo session so nav is role-aware site-wide
-      if (window.BloodBuddyNav) {
-        window.BloodBuddyNav.setSession({ role: role, name: fullName });
+      // Create the account through the API layer — POST /api/auth/register
+      // (Appendix B). Real mode: the password is REQUIRED by the server
+      // (min 8, BCrypt-hashed in AuthService — BR-9) and the response is the
+      // account the session is built from. This is the §2.4 trigger point:
+      // the server queues AND sends the registration confirmation here.
+      // Failures are the server's own sentence ("An account with that email
+      // already exists — try logging in.") and keep the form on step 2.
+      document.getElementById('to-step-3').disabled = true;
+      let account = null;
+      try {
+        account = await API.auth.register({
+          name: fullName,
+          email: email,
+          password: pass,
+          role: role,
+          phone: phone,
+          district: district,
+          blood: role === 'hospital' ? null : blood,
+          area: null,          /* the server falls back to the district */
+          /* The staffed-hospital link (BR-5). Hospital names are resolved
+             SERVER-side by HospitalResolver: the form submits what the staff
+             member typed ("TUTH", "Bir Hospital", "Central Hospital,
+             Kathmandu") and the server matches it to a row — the same
+             component the request queue uses, so the two can never disagree
+             about which hospital "TUTH" is. A name matching no partner
+             hospital still creates the account, unlinked, with a warning. */
+          hospitalId: null,
+          hospital: role === 'hospital' ? hname : null,
+          photo: null
+        });
+      } catch (err) {
+        document.getElementById('to-step-3').disabled = false;
+        return showAlert('error', (err && err.message) || 'Registration failed — please try again.');
       }
+      document.getElementById('to-step-3').disabled = false;
 
-      // Register the account through the API layer (POST /api/auth/register —
-      // mocked over the shared store; the real endpoint arrives in CPP401).
-      // The mock lands the row in the same bb_db.users collection, so the
-      // admin's user-management table keeps working unchanged.
-      API.auth.register({
-        name: fullName,
-        email: email,
-        role: role,
-        blood: role === 'hospital' ? '—' : blood,
-        district: district
-      }).catch(() => { /* demo: registration failures surface in CPP401 */ });
+      // The session comes from the SERVER's answer, not from the form.
+      if (window.BloodBuddyNav) {
+        const acctRole = (account && account.role ? String(account.role) : role).toLowerCase();
+        window.BloodBuddyNav.setSession({
+          role: acctRole,
+          name: (account && account.name) || fullName,
+          id: account && account.id,
+          email: email,
+          donorId: account && account.donorId,
+          hospitalId: account && account.hospitalId,
+          hospitalLabel: account && account.hospitalLabel
+        });
+      }
 
       showStep(3);
     });

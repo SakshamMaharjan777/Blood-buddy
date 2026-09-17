@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>REAL-BACKEND-CHECK</title>
+<style>body{margin:0;font:12px monospace}#w{position:absolute;left:-10000px;top:0}pre{white-space:pre-wrap;padding:10px}</style>
+</head>
+<body>
+<div id="w"></div>
+<pre id="out">running…</pre>
+<script>
+/* ===================================================================
+   REAL-BACKEND CHECK (B7) — the frontend against the actual Spring app.
+
+   The other two tools deliberately avoid the backend:
+     resptest/qa-harness.html        MOCK transport (266 checks, no network)
+     resptest/real-mode-check.html   real fetch() against a PYTHON STUB
+   Neither can answer "does the shipped page work against TiDB through Spring
+   Security?". This page does, and it runs on the app's own origin so the
+   JSESSIONID cookie the login sets is the one the pages use.
+
+   HOW TO RUN
+     1. start the app  (IntelliJ ▶, or the maven recipe in backend/README.md)
+     2. sync the frontend into its static folder:
+          python tools/sync_frontend_to_backend.py
+     3. open  http://localhost:8081/resptest/real-backend-check.html
+
+   WHAT MAKES IT A PROOF
+   Every page is loaded with the demo store PINNED EMPTY (bb_db.* = []), so a
+   page that renders rows cannot have got them from localStorage — they came
+   over HTTP from TiDB. Reads, plus a donor write path, and two registrations
+   (a donor and a hospital-staff account) — each reported at the end with the
+   SQL to undo it.
+   =================================================================== */
+(async function () {
+  'use strict';
+  const P = '/CODE/HTML/';
+  const PASSWORD = 'BloodBuddy#2026';
+  const ACCOUNTS = {
+    donor:     'arun.s@example.com',
+    requester: 'sita.g@example.com',
+    hospital:  'bloodbank@tuth.edu.np',
+    admin:     'saksham@bloodbuddy.np'
+  };
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const lines = [];
+  let pass = 0, fail = 0;
+  const check = (name, ok, detail) => {
+    ok ? pass++ : fail++;
+    lines.push((ok ? 'PASS ' : 'FAIL ') + name + (detail ? ' — ' + detail : ''));
+    document.getElementById('out').textContent = lines.join('\n');
+  };
+  const note = t => { lines.push(t); document.getElementById('out').textContent = lines.join('\n'); };
+
+  /* The API facade, same-origin, with the session cookie. */
+  async function api(method, path, body) {
+    const res = await fetch(path, {
+      method: method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin'
+    });
+    let payload = null;
+    try { payload = await res.json(); } catch (e) { /* 204 / empty */ }
+    return { status: res.status, ok: res.ok, body: payload };
+  }
+
+  async function signIn(role) {
+    await api('POST', '/api/auth/logout');
+    const r = await api('POST', '/api/auth/login', { email: ACCOUNTS[role], password: PASSWORD, role: role });
+    return r;
+  }
+
+  function clearStorage() { try { localStorage.clear(); } catch (e) {} }
+
+  /* Load a page the way a signed-in browser has it: the cached session the
+     login would have written, and the demo store pinned empty. */
+  async function loadPage(page, role, account) {
+    ['bb_db.donors', 'bb_db.requests', 'bb_db.users', 'bb_db.inventory'].forEach(k => localStorage.setItem(k, '[]'));
+    localStorage.setItem('bb_session', JSON.stringify({
+      role: role, name: account.name, id: account.id, email: account.email,
+      donorId: account.donorId, hospitalId: account.hospitalId, hospitalLabel: account.hospitalLabel
+    }));
+    const f = await new Promise(resolve => {
+      const el = document.createElement('iframe');
+      el.width = 1280; el.height = 900; el.src = P + page;
+      el.onload = () => resolve(el);
+      setTimeout(() => resolve(el), 5000);
+      document.getElementById('w').appendChild(el);
+    });
+    await sleep(1200);   /* let the real round-trips land */
+    return f;
+  }
+
+  /* ---------- 1. the shipped transport is REAL ---------- */
+  clearStorage();
+  const probe = await new Promise(resolve => {
+    const f = document.createElement('iframe');
+    f.width = 400; f.height = 300; f.src = P + 'auth-login.html';
+    f.onload = () => resolve(f);
+    setTimeout(() => resolve(f), 5000);
+    document.getElementById('w').appendChild(f);
+  });
+  const probeWin = probe.contentWindow;
+  const mock = probeWin.BloodBuddyAPI ? probeWin.BloodBuddyAPI.isMock() : null;
+  probe.remove();
+  check('the shipped page uses the REAL transport (isMock() === false)', mock === false, 'isMock=' + mock);
+
+  /* ---------- 2. the security boundary, from the page's own origin ---------- */
+  const anon = await api('GET', '/api/donors/search?blood=B%2B');
+  check('anonymous donor search is refused with 401 (B6)', anon.status === 401, 'status=' + anon.status);
+
+  /* ---------- 3. login opens a session, /me reads it back ---------- */
+  const login = await signIn('requester');
+  check('POST /api/auth/login accepts a seeded account', login.ok && login.body && login.body.user,
+    'status=' + login.status + ' role=' + (login.body && login.body.user && login.body.user.role));
+  const me = await api('GET', '/api/auth/me');
+  check('GET /api/auth/me answers from the session cookie', me.ok && me.body && me.body.email === ACCOUNTS.requester,
+    'status=' + me.status + ' email=' + (me.body && me.body.email));
+  const requesters = me.body;
+
+  /* ---------- 4. the role split is enforced SERVER-side ---------- */
+  const forbidden = await api('GET', '/api/admin/users');
+  check('a requester session cannot read /api/admin/users (403)', forbidden.status === 403,
+    'status=' + forbidden.status);
+
+  /* ---------- 5. cookie alive, cache gone → the login page says so ---------- */
+  clearStorage();
+  const loginPage = await new Promise(resolve => {
+    const f = document.createElement('iframe');
+    f.width = 900; f.height = 700; f.src = P + 'auth-login.html';
+    f.onload = () => resolve(f);
+    setTimeout(() => resolve(f), 5000);
+    document.getElementById('w').appendChild(f);
+  });
+  await sleep(1200);
+  let notice = '';
+  try {
+    const box = loginPage.contentDocument.getElementById('login-alert');
+    notice = box && !box.hidden ? box.textContent : '';
+  } catch (e) {}
+  loginPage.remove();
+  check('with the cookie alive and no cached session, the login page offers the way on',
+    /already signed in/i.test(notice), notice ? notice.trim() : 'no notice shown');
+
+  /* ---------- 6. pages render from TiDB, with the demo store pinned empty ---------- */
+  const PAGES = [
+    ['requester', 'requester-search.html',    '.donor-card',        5],
+    ['requester', 'requester-tracking.html',  '#req-list .req-card', 0],
+    ['admin',     'admin-dashboard.html',     '#users-tbody tr',     5],
+    ['hospital',  'hospital-dashboard.html',  '.inv-card',           5],
+    ['donor',     'donor-dashboard.html',     '#nearby-body tr',     0]
+  ];
+  for (const [role, page, sel, min] of PAGES) {
+    const signed = await signIn(role);
+    const account = signed.body && signed.body.user;
+    if (!account) { check(page + ': signed in as ' + role, false, 'login failed'); continue; }
+
+    const f = await loadPage(page, role, account);
+    let n = 0, isMock = null, wrote = [];
+    try {
+      n = f.contentDocument.querySelectorAll(sel).length;
+      isMock = f.contentWindow.BloodBuddyAPI ? f.contentWindow.BloodBuddyAPI.isMock() : null;
+      wrote = ['bb_db.donors', 'bb_db.requests', 'bb_db.users', 'bb_db.inventory']
+        .filter(k => (localStorage.getItem(k) || '[]') !== '[]');
+    } catch (e) { /* reported below */ }
+    f.remove();
+
+    check(page + ': real transport in the page (isMock() === false)', isMock === false, 'isMock=' + isMock);
+    check(page + ': the demo store stayed EMPTY (rows came from the API, not localStorage)',
+      wrote.length === 0, wrote.length ? 'written: ' + wrote.join(',') : 'untouched');
+    check(page + ': rendered at least ' + min + ' ' + sel, n >= min, n + ' found');
+    await sleep(60);
+  }
+
+  /* ---------- 7. §2.4 registration path, end to end ---------- */
+  const email = 'b7check+' + Date.now() + '@example.com';
+  const reg = await api('POST', '/api/auth/register', {
+    name: 'B7 Check', email: email, password: PASSWORD, role: 'donor',
+    phone: '9800000000', district: 'Kathmandu', blood: 'O-', area: 'Baneshwor'
+  });
+  check('POST /api/auth/register creates the account (201)', reg.status === 201,
+    'status=' + reg.status + ' ' + JSON.stringify(reg.body && reg.body.message || reg.body && reg.body.role));
+  check('the response carries the new donor id (the Donor row was created)',
+    !!(reg.body && reg.body.donorId), 'donorId=' + (reg.body && reg.body.donorId));
+  check('the register page sends password now (min 8, server-validated)',
+    reg.ok, reg.ok ? 'accepted' : 'rejected — a register POST without password 400s');
+
+  /* ---------- 7b. THE DONOR WRITE PATH: does accepting RECORD anything? ----------
+     Read-only checks cannot answer "does it keep records?", so this one performs
+     the demo's central action end to end — submit as a requester, accept as a
+     compatible donor — and then re-reads the row from the server to prove the
+     change was STORED, not just echoed back in the response. */
+  let ticketCode = null;
+  const requesterLogin = await signIn('requester');
+  if (requesterLogin.ok) {
+    const neededBy = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+    const made = await api('POST', '/api/requests', {
+      emergency: false, blood: 'B+', units: 1, urgency: 'Urgent', neededBy: neededBy,
+      hospital: 'TUTH, Maharajgunj', district: 'Kathmandu', notes: 'B7 write check', contactPhone: '9800000000'
+    });
+    ticketCode = made.body && made.body.id;
+    check('a requester can submit a request (201, real row in the database)',
+      made.status === 201 && !!ticketCode, 'status=' + made.status + ' code=' + ticketCode);
+
+    const before = await api('GET', '/api/requests/' + ticketCode);
+    const beforeLen = (before.body && before.body.timeline || []).length;
+
+    const donorLogin = await signIn('donor');
+    check('a compatible donor signs in (Arun, B+)', donorLogin.ok && !!donorLogin.body.user,
+      'status=' + donorLogin.status);
+
+    const accepted = await api('PATCH', '/api/requests/' + ticketCode, {
+      status: 'Matched', donorAt: new Date().toISOString()
+    });
+    check('the donor accepting the request is accepted by the server (BR-1/BR-3)',
+      accepted.ok && accepted.body && accepted.body.status === 'Matched',
+      'status=' + accepted.status + ' -> ' + (accepted.body && accepted.body.status));
+    check('the match stamps the donor on the row',
+      !!(accepted.body && accepted.body.donor), 'donor=' + (accepted.body && accepted.body.donor));
+    check('the server wrote its own timeline entry (it is not a client-supplied one)',
+      ((accepted.body && accepted.body.timeline) || []).length > beforeLen,
+      beforeLen + ' -> ' + ((accepted.body && accepted.body.timeline) || []).length);
+
+    /* The one that matters: ask the SERVER again, with no client state. */
+    const after = await api('GET', '/api/requests/' + ticketCode);
+    check('re-reading the request proves the record was KEPT (status persisted as Matched)',
+      after.body && after.body.status === 'Matched',
+      'status=' + (after.body && after.body.status));
+    check('the persisted row still carries the donor and the match time',
+      !!(after.body && after.body.donor && after.body.donorAt),
+      'donor=' + (after.body && after.body.donor) + ' at=' + (after.body && after.body.donorAt));
+  }
+
+  /* ---------- 7c. CPJ119 §2.3 — the Donor ↔ Hospital M:N read ----------
+     The relationship is read from the DONOR's side here (the hospital side is a
+     repository join). Arun is a Kathmandu donor, and exactly four of the five
+     partner hospitals are in Kathmandu, so the same-district rule must give him
+     four — a number that would be different under a 1:N and is the reason the
+     relationship has to be many-to-many. */
+  const donorMe = await signIn('donor');
+  const donorId = donorMe.body && donorMe.body.user && donorMe.body.user.donorId;
+  check('a donor session exposes its donor id (the M:N is read per donor)',
+    !!donorId, 'donorId=' + donorId);
+  if (donorId) {
+    const aff = await api('GET', '/api/donors/' + donorId + '/hospitals');
+    const list = Array.isArray(aff.body) ? aff.body : [];
+    check('GET /api/donors/{id}/hospitals answers 200 with an array',
+      aff.status === 200 && Array.isArray(aff.body),
+      'status=' + aff.status + ' n=' + list.length);
+    check('the affiliation list carries the HospitalOption shape (id + labels)',
+      list.length > 0 && list.every(h => h && h.id && h.label && h.shortName),
+      JSON.stringify(list[0] || {}));
+    check('Arun (Kathmandu) is affiliated with the 4 Kathmandu partner hospitals, TUTH among them',
+      list.length === 4 && list.some(h => /Tribhuvan/i.test(h.label)),
+      'n=' + list.length + ' [' + list.map(h => h.shortName).join(', ') + ']');
+  }
+
+  /* ---------- 7d. the staffed-hospital link — BR-5 for a NEWLY registered staff ----------
+     Before session #22 a hospital account registered through the form had no
+     staffedHospital, so BR-5 had nothing to scope to. This registers by the
+     hospital NAME the form actually collects and asserts the link was made. */
+  const staffEmail = 'b7staff+' + Date.now() + '@example.com';
+  const staffReg = await api('POST', '/api/auth/register', {
+    name: 'B7 Staff', email: staffEmail, password: PASSWORD, role: 'hospital',
+    district: 'Kathmandu', hospital: 'TUTH'
+  });
+  check('a hospital staff account registers by hospital NAME (201)',
+    staffReg.status === 201, 'status=' + staffReg.status);
+  check('the staff account is linked to the hospital it named (BR-5 scoping active)',
+    !!(staffReg.body && staffReg.body.hospitalId), 'hospitalId=' + (staffReg.body && staffReg.body.hospitalId));
+  check('the link resolves to TUTH (label contains "Tribhuvan")',
+    !!(staffReg.body && /Tribhuvan/i.test(staffReg.body.hospitalLabel || '')),
+    'hospitalLabel=' + (staffReg.body && staffReg.body.hospitalLabel));
+
+  /* ---------- 8. logout really ends it ---------- */
+  const out = await api('POST', '/api/auth/logout');
+  const after = await api('GET', '/api/auth/me');
+  check('POST /api/auth/logout ends the session (the next /me is 401)',
+    out.ok && after.status === 401, 'logout=' + out.status + ' me=' + after.status);
+
+  note('');
+  note(pass + ' passed, ' + fail + ' failed');
+  if (reg.ok || ticketCode || staffReg.ok) {
+    note('');
+    note('CLEANUP — the rows this page creates. Copy into the TiDB SQL editor,');
+    note('FK order matters (timeline/declines/notifications point at the request).');
+    if (ticketCode) {
+      /* public_code, not publicCode: the entity declares
+         @Column(name = "publicCode") but Spring Boot's physical naming strategy
+         renders it snake_case in the database. Verified the hard way. */
+      const id = "(SELECT request_id FROM blood_requests WHERE public_code = '" + ticketCode + "')";
+      note("DELETE FROM request_timeline WHERE request_id = " + id + ";");
+      note("DELETE FROM request_declines WHERE request_id = " + id + ";");
+      note("DELETE FROM email_notifications WHERE request_id = " + id + ";");
+      note("DELETE FROM blood_requests WHERE public_code = '" + ticketCode + "';");
+    }
+    if (reg.ok) {
+      note("DELETE n FROM email_notifications n JOIN users u ON u.user_id = n.recipient_user_id WHERE u.email = '" + email + "';");
+      note("DELETE FROM donors WHERE user_id = (SELECT user_id FROM users WHERE email = '" + email + "');");
+      note("DELETE FROM users WHERE email = '" + email + "';");
+    }
+    if (staffReg.ok) {
+      /* No donor row for a staff account — it links to a hospital, not a Donor. */
+      note("DELETE n FROM email_notifications n JOIN users u ON u.user_id = n.recipient_user_id WHERE u.email = '" + staffEmail + "';");
+      note("DELETE FROM users WHERE email = '" + staffEmail + "';");
+    }
+  }
+  document.getElementById('out').textContent = lines.join('\n');
+  document.title = 'REAL-BACKEND-DONE ' + pass + '/' + (pass + fail);
+})().catch(e => {
+  document.getElementById('out').textContent = 'ERR ' + (e && e.stack);
+  document.title = 'REAL-BACKEND-ERR';
+});
+</script>
+</body>
+</html>
