@@ -1,0 +1,13 @@
+{
+  "name": "bloodbuddy-walkthrough",
+  "private": true,
+  "description": "Walks docs/DEMO_RUNBOOK.md in a headless browser, screenshot by screenshot, and asserts what each checkpoint claims. Rehearsal aid for the CPP401 defence.",
+  "scripts": {
+    "walk": "node walkthrough.js",
+    "walk:fast": "node walkthrough.js --first 26",
+    "gallery": "node gallery.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.11.0"
+  }
+}

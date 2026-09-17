@@ -34,6 +34,10 @@ backend/*.iml
 # .tools/ holds the Mailpit mail catcher (§2.4 dev inbox) + its captured mail.
 .tools/
 
+# tools/walkthrough is tracked, but its dependency folder and its screenshots are not
+# (the output goes to .tools/wt/walkthrough/ by default — see BB_WALK_OUT).
+tools/walkthrough/node_modules/
+
 # --- Reference project (read-only, NOT part of BloodBuddy) -------------------
 # Copied in for pattern reference only; must never be committed or submitted.
 reference/

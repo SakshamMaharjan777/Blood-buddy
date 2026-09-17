@@ -67,6 +67,7 @@ Run **§1** below top to bottom; **§6** is the 60-second version if you are cut
 | REST API over HTTP | app running, then `python tools/api_check.py` | `98 passed, 0 failed` |
 | Postman collection (§2.6) | app running, then `npx --yes newman run docs/postman/BloodBuddy.postman_collection.json` | `76 requests · 107 assertions · 0 failed` (~2 min) |
 | Service layer vs TiDB | `BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false <mvn> -DskipTests compile spring-boot:run` in `backend/` | `smoke run: 31 checks, 0 failed`, then it exits itself |
+| **This whole script, rehearsed in a browser** | app + Mailpit running, then `cd tools/walkthrough && npm install` (once) and `node walkthrough.js` | **32 screenshots + 35 assertions, 0 failed** — browse `.tools/wt/walkthrough/index.html`. `--first 26` skips the three slow suites |
 
 ### E. Shut it down
 ```bash
@@ -169,13 +170,13 @@ TUTH B+ = 12.
   **[tool-verified]** `resptest/responsive-check.html` → 92/92 page×width combinations.
 
 ### 1:00 — Register a donor (3 min) — *this is the §2.4 money shot*
-1. **Register** → pick *Blood Donor* → step 2 → fill it in (try submitting with a bad email first: **inline field error, no alert box** — client-side validation, §2.1/§4).
+1. **Register** → pick *Blood Donor* → step 2 → fill it in (try submitting with a bad email first: the field goes **red with the error underneath it** and the form shows a one-line summary banner — no browser `alert()` popup, and the client catches it before anything is sent — client-side validation, §2.1/§4).
 2. Complete it. The success screen appears **only because the server accepted the POST**.
 3. **Switch to the Mailpit tab and refresh**: `Welcome to BloodBuddy — confirmation for <name>` is sitting there. That is the §2.4 mandatory notification.
 4. Say the line that matters: *"That account is a row in TiDB, and that email is a real SMTP delivery — not a toast that pretends."*
 5. If they ask to see the record: the admin portal's user table shows the new account (or show the DB — §4 has the query).
 
-  **[tool-verified]** `resptest/real-backend-check.html`: register → `201` + donor row created.
+  **[tool-verified]** `resptest/real-backend-check.html`: register → `201` + donor row created. **[walked in the browser 2026-09-17]** the wizard was driven for real: bad email blocked inline, the corrected form came back `201`, and the **Mailpit inbox went 0 → 1** with *“Welcome to BloodBuddy — confirmation for …”*.
 
 ### 4:00 — Requester flow (3 min)
 Log out (top-right) and log in as **`sita.g@example.com`**.
