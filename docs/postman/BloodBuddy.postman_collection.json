@@ -537,6 +537,37 @@
               }
             }
           ]
+        },
+        {
+          "name": "Admin · PATCH /api/admin/users/{{otherUserId}} (restore — leave no one suspended)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/{{otherUserId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\"\n}"
+            },
+            "description": "Undo the suspension above. Without this, a run can leave an account suspended and every later sign-in as that account fails."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 — restored, or 409 if the id was the admin', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -776,6 +807,75 @@
       "description": "`/api/requests*`: create, read per role, and the PATCH that routes one generic update into the rule-checked operations.",
       "item": [
         {
+          "name": "Sign in as REQUESTER (Sita)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sita.g@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"requester\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as REQUESTER (Sita)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Requests · POST /api/requests (second member request → memberCode, left Pending)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blood\": \"B+\",\n  \"units\": 1,\n  \"urgency\": \"Normal\",\n  \"neededBy\": \"2030-01-01\",\n  \"hospital\": \"TUTH, Maharajgunj\",\n  \"district\": \"Kathmandu\",\n  \"notes\": \"Postman member request (refusal fixture)\"\n}"
+            },
+            "description": "A SECOND member request, deliberately kept out of the lifecycle below so the §98 refusals have a PENDING B+ request to refuse. Captured as memberCode."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 — captured as memberCode, stays Pending for §98', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('Pending');",
+                  "  pm.collectionVariables.set('memberCode', pm.response.json().id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Requests · POST /api/requests (member submission → BB- code)",
           "request": {
             "method": "POST",
@@ -945,6 +1045,42 @@
       "description": "The demo's UI posts ONE generic `{ status: … }` for five different things. The server translates it by asking WHO is calling — a donor match, an admin routing decision and a hospital takeover are all `\"Accepted\"` in the browser and three different operations here.\n\nEach request below should be sent with the RIGHT account signed in (see the note inside). Run them in order to watch a request travel the lifecycle.",
       "item": [
         {
+          "name": "Sign in as ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"saksham@bloodbuddy.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"admin\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as ADMIN', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Lifecycle 1 · PATCH as ADMIN — forward to a hospital (stays Pending)",
           "request": {
             "method": "PATCH",
@@ -971,6 +1107,42 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('Pending');",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as DONOR (Arun, B+)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arun.s@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as DONOR (Arun, B+)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
                 ]
               }
             }
@@ -1010,6 +1182,42 @@
                   "pm.test('the server appended its own timeline entry', function () {",
                   "  pm.expect(pm.response.json().timeline.length).to.be.above(1);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as HOSPITAL STAFF (TUTH)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bloodbank@tuth.edu.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"hospital\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as HOSPITAL STAFF (TUTH)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
                 ]
               }
             }
@@ -1084,6 +1292,42 @@
           ]
         },
         {
+          "name": "Sign in as DONOR (Arun, B+)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arun.s@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as DONOR (Arun, B+)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Decline · PATCH as DONOR — \"not me\" (BR-7)",
           "request": {
             "method": "PATCH",
@@ -1110,6 +1354,42 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.not.eql('Cancelled');",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as REQUESTER (Sita)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sita.g@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"requester\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as REQUESTER (Sita)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
                 ]
               }
             }
@@ -1153,6 +1433,42 @@
       "name": "06 · Hospitals — blood bank inventory (Appendix B)",
       "description": "`/api/hospitals/*`: hospital staff and administrators only. BR-5 — a hospital account may only touch its own stock, and the controller enforces it by preferring the session's hospital over any `?hospitalId` in the URL.",
       "item": [
+        {
+          "name": "Sign in as HOSPITAL STAFF (TUTH)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bloodbank@tuth.edu.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"hospital\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as HOSPITAL STAFF (TUTH)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Hospital · GET /api/hospitals/inventory (the scoped board)",
           "request": {
@@ -1274,6 +1590,42 @@
       "description": "`/api/profile/{role}`. The role in the path says which editor is asking; the ACCOUNT comes from the session. An endpoint that took a user id would let anyone edit anyone.",
       "item": [
         {
+          "name": "Sign in as DONOR (Arun, B+)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arun.s@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as DONOR (Arun, B+)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Profile · GET /api/profile/donor (the signed-in donor's own profile)",
           "request": {
             "method": "GET",
@@ -1341,6 +1693,42 @@
     {
       "name": "08 · Appendix B — the hospital-scoped local API + pagination",
       "item": [
+        {
+          "name": "Sign in as HOSPITAL STAFF (TUTH)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bloodbank@tuth.edu.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"hospital\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as HOSPITAL STAFF (TUTH)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Local · POST /api/hospitals/inventory?bloodGroup=B%2B (set stock, session-scoped)",
           "request": {
@@ -1490,6 +1878,42 @@
           ]
         },
         {
+          "name": "Sign in as ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"saksham@bloodbuddy.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"admin\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as ADMIN', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Appendix B · POST /api/admin/users/{{otherUserId}}/deactivate",
           "request": {
             "method": "POST",
@@ -1623,6 +2047,42 @@
       "description": "A refusal with the right SENTENCE is the feature: the API answers 409 with the rule's own message, which is what the toast shows the user. These are the checks that make the rules real rather than documented.",
       "item": [
         {
+          "name": "Sign in as DONOR (Dipesh, A+ — the incompatible one)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dipesh.l@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as DONOR (Dipesh, A+ — the incompatible one)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "BR-1 · an incompatible donor cannot accept (A+ donor, B+ recipient)",
           "request": {
             "method": "PATCH",
@@ -1659,6 +2119,42 @@
           ]
         },
         {
+          "name": "Sign in as DONOR (Arun, B+)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"arun.s@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"donor\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as DONOR (Arun, B+)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "BR-3 · a second donor cannot take a matched request",
           "request": {
             "method": "PATCH",
@@ -1684,6 +2180,42 @@
                   "pm.test('409 (already matched) or 401/403 without a donor session', function () {",
                   "  pm.expect([409, 401, 403]).to.include(pm.response.code);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as HOSPITAL STAFF (Patan — a DIFFERENT hospital to the request)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bb@patanhospital.org.np\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"hospital\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as HOSPITAL STAFF (Patan — a DIFFERENT hospital to the request)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
                 ]
               }
             }
@@ -1736,6 +2268,42 @@
                   "pm.test('404 — the public lookup only sees EM- guests', function () {",
                   "  pm.response.to.have.status(404);",
                   "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as REQUESTER (Sita)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sita.g@example.com\",\n  \"password\": \"BloodBuddy#2026\",\n  \"role\": \"requester\"\n}"
+            },
+            "description": "Establishes the session the following folder(s) need. The JSESSIONID is stored by Postman's cookie jar automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sign in so the requests below run as the role they name.",
+                  "pm.test('signed in as REQUESTER (Sita)', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json().user;",
+                  "pm.collectionVariables.set('sessionEmail', b.email);",
+                  "pm.collectionVariables.set('sessionRole', b.role);",
+                  "pm.collectionVariables.set('userId', b.id);",
+                  "pm.collectionVariables.set('donorId', b.donorId || '');",
+                  "pm.collectionVariables.set('hospitalId', b.hospitalId || '');"
                 ]
               }
             }

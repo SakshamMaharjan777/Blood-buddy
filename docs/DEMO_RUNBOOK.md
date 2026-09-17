@@ -12,6 +12,95 @@ once yourself before you rely on it in front of anyone.
 
 ---
 
+## 0. Run it yourself — the operator's checklist (no assistant needed)
+
+Everything below runs on **this machine with no help**. Verified present on
+2026-09-17: **Python 3.13**, **Java**, **Node/npm/npx**, **Chrome**, **IntelliJ IDEA
+2026.1**, **Postman desktop**. Newman is *not* installed globally, but `npx newman`
+runs the collection headlessly — and that is how §2.6 was verified to **0 failures**
+(see §14:30).
+
+### A. Boot it (two terminals)
+
+**Terminal 1 — the mail catcher.** Must be up FIRST, or every registration writes a
+`FAILED` notification instead of a real email (§2.4). Leave it running.
+```bash
+.tools/mailpit/mailpit.exe --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025
+```
+Expected: `accessible via http://127.0.0.1:8025`.
+
+**Terminal 2 — the app.** Either press **▶** on `BloodBuddyApplication` in IntelliJ
+(the `BB_DB_*` env vars are already in the run config — this is the easy path), or:
+```bash
+cd backend
+eval "$(python - <<'PY'
+import re
+s = open('.idea/workspace.xml', encoding='utf-8').read()
+def v(n):
+    m = re.search(r'<env name=\"\s*%s\s*\" value=\"([^\"]*)\"' % n, s); return m.group(1).strip()
+for k in ('BB_DB_HOST','BB_DB_PORT','BB_DB_USER','BB_DB_PASSWORD'):
+    print("export %s='%s'" % (k, v(k)))
+print('export BB_SERVER_PORT=8081')
+PY
+)"
+"/c/Program Files/JetBrains/IntelliJ IDEA 2026.1/plugins/maven/lib/maven3/bin/mvn.cmd" -DskipTests compile spring-boot:run
+```
+**Good looks like:** `Demo data ready: 21 users, 14 donors, 5 hospitals, 40 inventory rows, 4 requests, 3 notifications` then `Tomcat started on port 8081`.
+Check it answers: open `http://localhost:8081/CODE/HTML/landing.html`.
+
+### B. The three browser tabs
+| Tab | URL |
+|---|---|
+| The app | `http://localhost:8081/CODE/HTML/landing.html` |
+| The inbox | `http://127.0.0.1:8025` |
+| The frontend evidence | `http://localhost:8081/resptest/real-backend-check.html` |
+
+### C. The click script
+Run **§1** below top to bottom; **§6** is the 60-second version if you are cut short.
+
+### D. Every number, and how to reproduce it YOURSELF
+| Claim | Run this | Expect |
+|---|---|---|
+| Frontend QA (mock) | open `http://localhost:8321/resptest/qa-harness.html` — needs `python -m http.server 8321 --directory .` first | title `QA-DONE 268/268` |
+| Responsive | same server, open `.../resptest/responsive-check.html` | `92/92` |
+| Frontend vs real backend | **app must be running**, then `python tools/sync_frontend_to_backend.py` and open `.../real-backend-check.html` | title `REAL-BACKEND-DONE 39/39` |
+| REST API over HTTP | app running, then `python tools/api_check.py` | `95 passed, 0 failed` |
+| Postman collection (§2.6) | app running, then `npx --yes newman run docs/postman/BloodBuddy.postman_collection.json` | `76 requests · 107 assertions · 0 failed` (~2 min) |
+| Service layer vs TiDB | `BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false <mvn> -DskipTests compile spring-boot:run` in `backend/` | `smoke run: 31 checks, 0 failed`, then it exits itself |
+
+### E. Shut it down
+```bash
+netstat -ano | grep :8081        # find the PID in the last column
+taskkill //F //PID <pid>
+```
+(Or just stop the run in IntelliJ.) Port 8081 must be free before a fresh ▶.
+
+### F. If something looks wrong
+| Symptom | Cause | Fix |
+|---|---|---|
+| `Port 8081 was already in use` | an old run still holds it | `netstat`/`taskkill` above, then start again |
+| Emails show `FAILED` in the DB/inbox empty | Mailpit not running | start Terminal 1; the app does **not** need restarting — the next action sends |
+| `Communications link failure` | wrong DB env vars | IntelliJ ▶ uses the saved config; check `backend/.idea/workspace.xml` has clean `BB_DB_*` |
+| Harness prints the same numbers twice | Chrome cached it | fresh `--user-data-dir` and add `?v=2` to the URL |
+| `GET /api/... → 404` | app not running, or you forgot `python tools/sync_frontend_to_backend.py` after editing a page | run both |
+| Login says "suspended" | a previous run left a user suspended | restore in the DB (§5) or via the admin portal |
+
+### G. Put the demo data back afterwards
+Every click writes real rows. **§5** has the query + recipe; the known-good state is
+**21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications /
+7 timeline / 39 affiliations**, TUTH B+ = 12, `BB-5MN8VX` unrouted.
+
+> **§2.6 is verified — no caveat.** The collection runs end-to-end under Newman:
+> **76 requests, 107 assertions, 0 failures** (`npx --yes newman run
+> docs/postman/BloodBuddy.postman_collection.json`, ~2 minutes). It signs in as each
+> role where the folder needs one, so a single role can no longer poison the run, and
+> it restores whatever its suspend test touched. **It is re-runnable** — a second
+> consecutive run from the first run's leftovers was also 0 failures. After running
+> it you *do* need §5: it creates two accounts and four requests and sets a photo on
+> a seeded donor.
+
+---
+
 ## 0. Before you start (T-10 minutes)
 
 Open **two terminals** and one browser window with tabs ready.
@@ -130,7 +219,13 @@ Log out, log in as **`saksham@bloodbuddy.np`**.
   **[tool-verified]** anonymous `GET /api/donors/search` → **401**; a requester on `/api/admin/users` → **403**.
 
 ### 14:30 — The tools (60 seconds, high marks per second)
-Open the **Postman collection** (`docs/postman/BloodBuddy.postman_collection.json`) and click **Run collection**: folder `00` proves the 401 boundary while logged out, `01` logs in *and asserts the `JSESSIONID` capture in its Tests tab*, and `99` logs out then shows `/api/auth/me` answering 401. That is §2.6 in one click.
+Open the **Postman collection** (`docs/postman/BloodBuddy.postman_collection.json`) and click **Run collection**: folder `00` proves the 401 boundary while logged out, `01` logs in *and asserts the `JSESSIONID` capture in its Tests tab*, and `99` logs out then shows `/api/auth/me` answering 401. That is §2.6 in one click — **76 requests, 107 assertions, 0 failures**, and it is safe to re-run.
+
+If they would rather watch it without the GUI (and to have a number to quote), the
+same collection runs headlessly:
+```bash
+npx --yes newman run docs/postman/BloodBuddy.postman_collection.json   # 76 requests · 107 assertions · 0 failed
+```
 
 Then run these two live; they print their own verdicts:
 
@@ -152,9 +247,9 @@ BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false \
 |---|---|---|
 | Written report | `docs/BloodBuddy_Final_Report_v2.docx` / `.pdf` | present (the 39-page version with the cover logo + 4 diagrams); still needs its **9 screenshot placeholders** filled |
 | Proposal | `docs/BloodBuddy_Proposal_Revised.docx` | ready |
-| Postman collection (§2.6) | `docs/postman/BloodBuddy.postman_collection.json` | ready — 60 requests; import it and run the folders in order |
+| Postman collection (§2.6) | `docs/postman/BloodBuddy.postman_collection.json` | **verified** — 76 requests, 107 assertions, **0 failures** under Newman; import it and run the folders in order |
 | Frontend evidence | `resptest/qa-harness.html` → 268/268 · `responsive-check.html` → 92/92 | re-runnable |
-| Backend evidence | `resptest/real-backend-check.html` → 39/39 · `tools/api_check.py` → 94/94 · smoke run → 31/31 | re-runnable |
+| Backend evidence | `resptest/real-backend-check.html` → 39/39 · `tools/api_check.py` → 95/95 · smoke run → 31/31 · Postman/Newman → 107 assertions, 0 failed | re-runnable |
 | Email evidence (§2.4) | Mailpit inbox at `127.0.0.1:8025` (53 captured messages, including the welcome mail) | **screenshot it** — the inbox is not part of the repo |
 | Session log | `PROGRESS.md` — every decision, bug found and why | ready |
 
@@ -168,7 +263,8 @@ BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false \
 | Responsive check (23 pages × 4 widths) | **92 / 92** |
 | Frontend against the real backend | **39 / 39** |
 | Service-layer smoke run (BR-1 … BR-9, live TiDB) | **31 / 31** |
-| REST API over HTTP (`tools/api_check.py`) | **94 / 94** |
+| REST API over HTTP (`tools/api_check.py`) | **95 / 95** |
+| REST API through the Postman collection (§2.6, Newman) | **76 requests · 107 assertions · 0 failures** |
 | Data model | 6 entities + 9 tables — incl. the Donor ↔ Hospital **M:N** join table (`donor_hospital_affiliation`, 39 rows) |
 | Seeded demo data | 21 users · 14 donors · 5 hospitals · 40 inventory rows · 4 requests |
 
@@ -246,6 +342,27 @@ mysql_bb -e "SELECT public_code, status FROM blood_requests ORDER BY request_id;
 - **Want a request back to `Pending`?** `UPDATE blood_requests SET status='PENDING', donor_id=NULL, matched_at=NULL WHERE public_code='…';`
 - **Want the stock back?** TUTH's B+ should be **12**:
   `UPDATE blood_inventory bi JOIN hospitals h ON h.hospital_id=bi.hospital_id SET bi.units=12 WHERE h.short_name='TUTH' AND bi.blood_group='B_PLUS';`
+- **Just ran the Postman collection (§14:30)?** Then you also need this. Every run
+  creates two accounts (`postman+…@example.com`, `postman.nurse+…`), a guest request
+  and three member requests, ~30 notification rows, 7 timeline rows, one decline, and
+  it sets a photo on a seeded donor. All of those rows sit **above the IDENTITY jump**
+  (requests `≥ 210021`) and the accounts are named `postman%`, so one list undoes the
+  whole footprint — **still one statement at a time**:
+  ```sql
+  DELETE FROM request_declines    WHERE request_id >= 210021;
+  DELETE FROM email_notifications WHERE request_id >= 210021;
+  DELETE FROM request_timeline    WHERE request_id >= 210021;
+  DELETE FROM blood_requests      WHERE request_id >= 210021;
+  DELETE FROM email_notifications WHERE recipient_user_id IN (SELECT user_id FROM users WHERE email LIKE 'postman%');
+  DELETE FROM donor_hospital_affiliation WHERE donor_id IN (SELECT donor_id FROM donors WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'postman%'));
+  DELETE FROM donors WHERE user_id IN (SELECT user_id FROM users WHERE email LIKE 'postman%');
+  DELETE FROM users  WHERE email LIKE 'postman%';
+  UPDATE donors SET photo=NULL WHERE photo IS NOT NULL;
+  UPDATE blood_requests SET hospital_id=NULL, hospital_label=CONVERT(UNHEX('E28094') USING utf8mb4) WHERE public_code='BB-5MN8VX';
+  ```
+  (A `?status=Pending` list that shows four extra requests, or a donor with a photo, is
+  how you know you skipped this.) The last line is the em dash — it must be the bytes
+  `E28094`, not `CHAR(0x2014)`, which silently stores a control character in TiDB.
 - **Want the whole demo dataset from scratch?** Point the app at a fresh schema and let
   the seeder run once (`bloodbuddy.seed=true`, default).
 
@@ -261,4 +378,4 @@ mysql_bb -e "SELECT public_code, status FROM blood_requests ORDER BY request_id;
 2. **Register** → **Mailpit** shows the confirmation mail (§2.4).
 3. Log in as the **donor**, **accept** a request → the record changes (real data).
 4. Log in as the **admin** → users, moderation, and the 401/403 story.
-5. Open `real-backend-check.html` → **39/39**. Close with: *"268 frontend checks, 92 responsive combinations, 39 against the live backend, 31 service-layer checks against TiDB, 94 over raw HTTP."*
+5. Open `real-backend-check.html` → **39/39**. Close with: *"268 frontend checks, 92 responsive combinations, 39 against the live backend, 31 service-layer checks against TiDB, 95 over raw HTTP, and 107 Postman assertions with 0 failures."*

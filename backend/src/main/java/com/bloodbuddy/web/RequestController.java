@@ -64,6 +64,11 @@ public class RequestController {
             rows = requests.byRequester(requesterId);
         } else if (!isBlank(requester)) {
             rows = requests.byRequesterRef(requester);
+        } else if (!isBlank(status)) {
+            // `?status=` ALONE is a filter too: it used to fall through to the
+            // unfiltered list below, so `?status=Pending` answered every request
+            // (found by running the Postman collection for real, not by reading it).
+            rows = requests.forAdmin(status, false, false);
         } else if (actor.donorId() != null) {
             // No filter: a signed-in donor gets THEIR board (BR-1 compatible, BR-7
             // declines removed) — which is exactly what donor-dashboard.html renders

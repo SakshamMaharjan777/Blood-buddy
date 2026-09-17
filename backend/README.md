@@ -97,7 +97,7 @@ The API is **session-authenticated** since B6 — see "Security (B6)" below.
 Verify the whole surface over HTTP against a running app:
 
 ```
-python tools/api_check.py            # 94 checks, incl. the RBAC and rule refusals
+python tools/api_check.py            # 95 checks, incl. the RBAC and rule refusals
 ```
 
 (It logs in as the seeded accounts first, and prints cleanup SQL — it creates a
@@ -105,12 +105,17 @@ guest request, a member request and a couple of accounts, and nothing can undo
 those through the API.)
 
 The **Postman deliverable** (§2.6) is `docs/postman/BloodBuddy.postman_collection.json`
-— 60 requests in run order, covering every endpoint here (including the
+— **76 requests in run order, covering every endpoint here** (including the
 Appendix B hospital-scoped routes and the additive `?page=&size=` pagination)
-plus the rule refusals.
+plus the rule refusals. It is **verified end-to-end**: `npx --yes newman run
+docs/postman/BloodBuddy.postman_collection.json` reports **107 assertions, 0
+failures** (~2 minutes), and it is safe to run twice in a row.
 Import it, then Collection Runner. Its login request captures `JSESSIONID` from
 the cookie jar and stores `userId`/`donorId`/`hospitalId` as collection variables,
-so no request hardcodes a row id.
+so no request hardcodes a row id. Folders that need a different role sign in for
+themselves (`Sign in as …`), which is what makes one run cover all four roles;
+expected leftover rows and the SQL to undo them are listed in the session-#26 note
+in `PROGRESS.md`.
 
 ## Security (B6)
 

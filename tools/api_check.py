@@ -172,6 +172,16 @@ check("?unrouted=true -> the admin's not-routed bucket",
       s == 200 and all(r["hospital"] == "—" for r in unrouted), (s, unrouted))
 s, allreq = call(admin, "GET", "/api/requests")
 check("no filter as an admin -> every request", s == 200 and len(allreq) >= 4, (s, len(allreq) if isinstance(allreq, list) else allreq))
+# Regression (found by running the Postman collection in session #25): a LONE
+# ?status= used to miss every filtered branch and fall through to requests.all(), so
+# the filter was silently ignored and the endpoint answered the whole table. Assert
+# BOTH halves — only Pending rows, and strictly fewer of them than the unfiltered
+# list — because "returns some Pending rows" would also pass for the buggy version.
+s, pending_only = call(admin, "GET", "/api/requests?status=Pending")
+check("?status=Pending on its own -> ONLY Pending rows (a lone filter is not ignored)",
+      s == 200 and isinstance(pending_only, list) and len(pending_only) >= 1
+      and all(r["status"] == "Pending" for r in pending_only)
+      and len(pending_only) < len(allreq), (s, pending_only))
 s, donor_board = call(donor, "GET", "/api/requests")
 # Arun is B+: his board may only contain requests a B+ donor can serve (BR-1) —
 # B+ accepts B+/B-/O+/O- — so an A+ or AB+ request appearing here would be a bug.
