@@ -27,13 +27,45 @@ CODE_FONT = "Courier New"   # reference uses CourierNewPSMT
 CODE_BG = "F2F2F2"          # light grey behind code blocks
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
-# Figures for which we have real diagram assets (extracted from the proposal DOCX):
-# caption text -> (image file, display width)
+# Figures for which we have real image assets: caption text -> (image file, width),
+# or a LIST of (file, width) pairs when one figure shows several screens.
+# Diagrams were extracted from the proposal DOCX; the shots/ tree holds screenshots
+# captured from the running application (see PROGRESS.md session #26).
 FIG_IMAGES = {
     "Figure 3-1: N-Tier Architecture of BloodBuddy": ("fig3_1_architecture.png", Cm(14)),
     "Figure 3-3: Entity Relationship Diagram": ("fig3_3_erd.png", Cm(14)),
     "Figure 3-4: Class Diagram of Core Entities": ("fig3_2_class_diagram.png", Cm(14)),
     "Figure 6-1: Project Gantt Chart": ("fig6_1_gantt.png", Cm(16)),
+    # Drawn by build_diagrams.py (PIL-only, reproducible: they carry no placeholder)
+    "Figure 1-1: BloodBuddy Request Lifecycle": ("fig1_1_lifecycle.png", Cm(16)),
+    "Figure 3-2: Use Case Diagram": ("fig3_2_use_case.png", Cm(16)),
+    "Figure 3-5: Level-1 Data Flow Diagram": ("fig3_5_dfd.png", Cm(16)),
+    "Figure 4-1: Project File Structure": ("fig4_1_structure.png", Cm(16)),
+    # Screenshots (individual captures, or the grouped montages composed by
+    # build_montages.py where one figure number asks for more than one screen)
+    "Figure 4-2: Donor Search with Filters and Pagination": ("shots/fig4_2_donor_search.png", Cm(15)),
+    "Figure 4-3: Blood Request Form with Inline Validation": ("shots/fig4_3_request_forms.png", Cm(13.5)),
+    "Figure 4-4: Profile Photo Upload (Base64 Preview Round-Trip)": ("shots/fig4_4_donor_profile.png", Cm(14)),
+    "Figure 4-5: Administrator Dashboard with Aggregate Analytics": ("shots/fig4_5_admin_panels.png", Cm(16)),
+    "Figure 5-1: Automated Verification Reports (268/268 · 92/92 · 42/42)": ("shots/fig5_1_harness.png", Cm(13.5)),
+}
+
+# Appendix figures, keyed by appendix title: the appendix renders its prose and any
+# table first, then these images, each with its own caption.
+APPENDIX_IMAGES = {
+    "Appendix E: QA Evidence and Reproduction Steps": [
+        ("shots/fig5_1_harness.png", Cm(13.5),
+         "Figure E-1: Automated Verification Reports (reproduced from Figure 5-1)"),
+    ],
+    "Appendix F: Additional Screenshots": [
+        ("shots/appF_landing.png", Cm(13), "Figure F-1: Landing Page"),
+        ("shots/appF_auth_pair.png", Cm(15),
+         "Figure F-2: Authentication Screens (Login and Registration)"),
+        ("shots/appF_donor_dashboard.png", Cm(13), "Figure F-3: Donor Dashboard"),
+        ("shots/appF_hospital_requests.png", Cm(13), "Figure F-4: Hospital Request Queue"),
+        ("shots/appF_legal_row.png", Cm(15),
+         "Figure F-5: Terms, Privacy Policy and Branded 404"),
+    ],
 }
 
 document = Document()
@@ -195,16 +227,32 @@ def add_table(spec):
     return t
 
 
+def add_image(rel_path, width):
+    """Insert one centered image. Returns False (loudly) if the asset is missing."""
+    path = os.path.join(ASSETS, rel_path)
+    if not os.path.exists(path):
+        print("WARNING: missing image asset:", path)
+        return False
+    p = document.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.keep_with_next = True
+    p.add_run().add_picture(path, width=width)
+    return True
+
+
+def _fig_specs(entry):
+    """A FIG_IMAGES value is one (file, width) pair, or a list of them."""
+    if isinstance(entry[0], str):
+        return [entry]
+    return list(entry)
+
+
 def add_figure(caption_text, placeholder_lines):
     img = FIG_IMAGES.get(caption_text)
     if img:
-        path, width = os.path.join(ASSETS, img[0]), img[1]
-        if os.path.exists(path):
-            p = document.add_paragraph()
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_after = Pt(2)
-            p.paragraph_format.keep_with_next = True
-            p.add_run().add_picture(path, width=width)
+        for rel_path, width in _fig_specs(img):
+            add_image(rel_path, width)
     for ln in placeholder_lines:
         p = para(ln, align=WD_ALIGN_PARAGRAPH.CENTER, italic=True, size=9.5,
                  space_after=0)
@@ -406,6 +454,10 @@ for title, paras_, table in C.APPENDICES:
         para(t, align=WD_ALIGN_PARAGRAPH.JUSTIFY)
     if table:
         add_table(table)
+    for rel_path, width, cap_text in APPENDIX_IMAGES.get(title, []):
+        if add_image(rel_path, width):
+            caption(cap_text)
+            para("", space_after=6)
     para("", space_after=6)
 
 # ------------------------------------------------------------------ save

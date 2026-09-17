@@ -2,7 +2,7 @@
 
 Start the app first (see backend/README.md), then:
 
-    python tools/api_check.py                 # 94 checks over real HTTP
+    python tools/api_check.py                 # 98 checks over real HTTP
     python tools/api_check.py http://host:8081
 
 It authenticates like a browser does — POST /api/auth/login, then the JSESSIONID
@@ -363,6 +363,25 @@ if other_hospital_id:
           s == 409 and "own hospital" in cross_put.get("message", ""), (s, cross_put))
     s, admin_any = call(admin, "GET", f"/api/hospitals/{other_hospital_id}/inventory")
     check("an administrator may still address any hospital in the path (Appendix B)", s == 200, (s, admin_any))
+# ------------- BR-5 on the GENERIC queue endpoint (?hospitalId is the same data) -------------
+# The path-scoped routes above were gated from the start; this list was not, so a
+# staff account could read another hospital's queue with ?hospitalId=<other>
+# (found by walking docs/DEMO_RUNBOOK.md §9:30 against the live database, where a
+# TUTH session answered 200 with Patan's queue — the pre-fix behaviour these three
+# checks would have failed on).
+own_label = bir_me.get("hospitalLabel")
+s, own_queue = call(hospital, "GET", "/api/requests")
+check("a hospital account's unfiltered /api/requests is ITS OWN queue, not the whole table",
+      s == 200 and isinstance(own_queue, list) and len(own_queue) >= 1
+      and all(r.get("hospital") == own_label for r in own_queue), (s, own_queue))
+if other_hospital_id:
+    s, cross_list = call(hospital, "GET", f"/api/requests?hospitalId={other_hospital_id}")
+    check("...and ?hospitalId=<another hospital> -> 409 (BR-5, same rule as the path routes)",
+          s == 409 and "own hospital" in cross_list.get("message", ""), (s, cross_list))
+s, guest_list = call(hospital, "GET", "/api/requests?guest=true")
+check("...and the admin-only moderation views (?guest / ?unrouted) -> 409 for hospital staff",
+      s == 409 and "own hospital" in guest_list.get("message", ""), (s, guest_list))
+
 s, post_inv = call(hospital, "POST", "/api/hospitals/inventory?bloodGroup=B%2B", {"units": 12})
 check("POST /api/hospitals/inventory (Appendix B update shape) -> 200", s == 200 and post_inv.get("units") == 12, (s, post_inv))
 s, deactivated = call(admin, "POST", f"/api/admin/users/{admin_users[0]['id']}/deactivate")

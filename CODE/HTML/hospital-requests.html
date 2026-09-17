@@ -152,13 +152,20 @@
         });
       }
     })();
-    /* Queue fetched through the API layer (GET /api/requests?hospital=…,
-       mocked over the shared store). Mutations go through PATCH calls.
-       The store objects stay in sync so direct localStorage reads (QA)
-       see the same data. */
+    /* Queue fetched through the API layer, mocked over the shared store.
+       Mutations go through PATCH calls. The store objects stay in sync so
+       direct localStorage reads (QA) see the same data.
+
+       REAL mode asks for the queue with NO hospital filter: the server answers
+       with the signed-in staff account's own hospital and enforces BR-5 there
+       (RequestController.list). Sending the demo label instead would be asking
+       for another hospital's queue — Patan's while signed in at TUTH — which
+       the server now refuses. MOCK mode has no session, so it keeps the demo's
+       single hospital identity. */
     const API = window.BloodBuddyAPI;
+    const QUEUE_QUERY = (API.isMock && API.isMock()) ? { hospital: HOSPITAL } : {};
     let all = [];
-    API.requests.list({ hospital: HOSPITAL }).then(list => {
+    API.requests.list(QUEUE_QUERY).then(list => {
       /* keep the in-page legacy seeds flowing into the queue as before */
       all = list.filter(r => r.status !== 'Cancelled');
       render();

@@ -63,8 +63,8 @@ Run **§1** below top to bottom; **§6** is the 60-second version if you are cut
 |---|---|---|
 | Frontend QA (mock) | open `http://localhost:8321/resptest/qa-harness.html` — needs `python -m http.server 8321 --directory .` first | title `QA-DONE 268/268` |
 | Responsive | same server, open `.../resptest/responsive-check.html` | `92/92` |
-| Frontend vs real backend | **app must be running**, then `python tools/sync_frontend_to_backend.py` and open `.../real-backend-check.html` | title `REAL-BACKEND-DONE 39/39` |
-| REST API over HTTP | app running, then `python tools/api_check.py` | `95 passed, 0 failed` |
+| Frontend vs real backend | **app must be running**, then `python tools/sync_frontend_to_backend.py` and open `.../real-backend-check.html` | title `REAL-BACKEND-DONE 42/42` |
+| REST API over HTTP | app running, then `python tools/api_check.py` | `98 passed, 0 failed` |
 | Postman collection (§2.6) | app running, then `npx --yes newman run docs/postman/BloodBuddy.postman_collection.json` | `76 requests · 107 assertions · 0 failed` (~2 min) |
 | Service layer vs TiDB | `BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false <mvn> -DskipTests compile spring-boot:run` in `backend/` | `smoke run: 31 checks, 0 failed`, then it exits itself |
 
@@ -199,9 +199,10 @@ Log out, log in as **`bloodbank@tuth.edu.np`**.
 1. **Inventory** — the 8 blood groups with live stock levels.
 2. Adjust stock (it writes through the API).
 3. **Requests** — the TUTH queue. A matched request shows **Mark fulfilled**; fulfilling it **deducts the units from stock** (BR-4) and closes the request (BR-2).
-4. Mention BR-5: a hospital can only touch its own queue — enforced in the service layer, and the controller refuses a caller-supplied hospital id when the session already has one.
+4. Mention BR-5: a hospital can only touch its own queue — and say it is enforced **wherever the hospital id arrives**, the path (`/api/hospitals/{id}/…`) *and* the query parameter (`/api/requests?hospitalId=…`, `?hospital=…`, and the admin-only `?guest`/`?unrouted` views). A staff account with no filter gets its own queue, never the whole table.
 
-  **[rehearse]** fulfilling and the stock adjust write path (the reads are verified; the decrement is verified at the service layer by the smoke run).
+  **[tool-verified] 2026-09-17 walkthrough.** Stock was adjusted 12 → 13 through `PUT /api/hospitals/inventory/B+`, then a 2-unit matched request was fulfilled: the request closed with the timeline line *"Donation completed & verified — 2 units of B+ issued…"* and B+ ended at **11**, so the decrement is the API's doing, not the page's.
+  One defect came out of this walkthrough and is fixed: `GET /api/requests?hospitalId=8` while signed in at TUTH answered **200 with Patan's queue** — the path routes were gated, the generic list was not. `RequestController.list` now pins a hospital session to its own hospital, and `hospital-requests.html` asks for **no** hospital at all (the server answers with the session's own) instead of sending the demo's hardcoded `Bir Hospital, Kathmandu` label. Both halves are pinned in the suites — `api_check.py` (+3 BR-5 cases) and `real-backend-check.html` (+3: own queue, the page's rows ⊆ own queue, no foreign row on the page).
 
 ### 11:30 — Admin portal (2 min)
 Log out, log in as **`saksham@bloodbuddy.np`**.
@@ -210,7 +211,7 @@ Log out, log in as **`saksham@bloodbuddy.np`**.
 3. **Moderation** (`Moderation` in the nav): the request queue, filter by hospital, forward an unrouted request to a hospital.
 4. Note the **"Reset demo data" button is hidden** — deliberate, see Q&A.
 
-  **[rehearse]** suspend / restore / forward (the users list itself is tool-verified; the service rules are covered by the smoke run).
+  **[tool-verified] 2026-09-17 walkthrough.** Suspend answered 200 and that account's next login was refused with its reason (409, *"This account is suspended — please contact the platform administrator."*); the unrouted bucket listed the guest submission (*"—"*), forwarding it to Patan answered 200 and its timeline recorded *"Forwarded to Patan Hospital, Lalitpur by platform admin"*; the guest could then look the request up by its `EM-` code (200) while a member code answered 404 (BR-8).
 
 ### 13:30 — Role guardrails (1 min)
 1. As the admin, type `donor-dashboard.html` in the URL → bounced to your own dashboard (client-side UX guard).
@@ -231,7 +232,7 @@ Then run these two live; they print their own verdicts:
 
 ```bash
 # frontend against the real backend (app must be running)
-open  http://localhost:8081/resptest/real-backend-check.html   # REAL-BACKEND-DONE 39/39
+open  http://localhost:8081/resptest/real-backend-check.html   # REAL-BACKEND-DONE 42/42
 
 # backend service layer against the live database, then it exits itself
 cd backend
@@ -245,11 +246,11 @@ BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false \
 
 | What | Where | State |
 |---|---|---|
-| Written report | `docs/BloodBuddy_Final_Report_v2.docx` / `.pdf` | present (the 39-page version with the cover logo + 4 diagrams); still needs its **9 screenshot placeholders** filled |
+| Written report | `docs/BloodBuddy_Final_Report_v2.docx` / `.pdf` | present (51 pages, cover logo + **19 figures**, no placeholder left: the screenshots are captures from the running app and the four design figures are drawn by `tools/report/build_diagrams.py`) |
 | Proposal | `docs/BloodBuddy_Proposal_Revised.docx` | ready |
 | Postman collection (§2.6) | `docs/postman/BloodBuddy.postman_collection.json` | **verified** — 76 requests, 107 assertions, **0 failures** under Newman; import it and run the folders in order |
 | Frontend evidence | `resptest/qa-harness.html` → 268/268 · `responsive-check.html` → 92/92 | re-runnable |
-| Backend evidence | `resptest/real-backend-check.html` → 39/39 · `tools/api_check.py` → 95/95 · smoke run → 31/31 · Postman/Newman → 107 assertions, 0 failed | re-runnable |
+| Backend evidence | `resptest/real-backend-check.html` → 42/42 · `tools/api_check.py` → 98/98 · smoke run → 31/31 · Postman/Newman → 107 assertions, 0 failed | re-runnable |
 | Email evidence (§2.4) | Mailpit inbox at `127.0.0.1:8025` (53 captured messages, including the welcome mail) | **screenshot it** — the inbox is not part of the repo |
 | Session log | `PROGRESS.md` — every decision, bug found and why | ready |
 
@@ -261,9 +262,9 @@ BLOODBUDDY_SMOKE=true BLOODBUDDY_SMOKE_EXIT=true SPRING_JPA_SHOW_SQL=false \
 |---|---|
 | Frontend QA harness (22 pages + interactions) | **268 / 268** |
 | Responsive check (23 pages × 4 widths) | **92 / 92** |
-| Frontend against the real backend | **39 / 39** |
+| Frontend against the real backend | **42 / 42** |
 | Service-layer smoke run (BR-1 … BR-9, live TiDB) | **31 / 31** |
-| REST API over HTTP (`tools/api_check.py`) | **95 / 95** |
+| REST API over HTTP (`tools/api_check.py`) | **98 / 98** |
 | REST API through the Postman collection (§2.6, Newman) | **76 requests · 107 assertions · 0 failures** |
 | Data model | 6 entities + 9 tables — incl. the Donor ↔ Hospital **M:N** join table (`donor_hospital_affiliation`, 39 rows) |
 | Seeded demo data | 21 users · 14 donors · 5 hospitals · 40 inventory rows · 4 requests |
@@ -306,7 +307,7 @@ Suspending an account blocks the next login but does not kill a session that is 
 All three, and they are exercised, not just declared: **1:1** User ↔ Donor (a role-scoped extension), **1:N** User → BloodRequest, Donor → BloodRequest, Hospital → BloodInventory/BloodRequest, BloodRequest → Timeline/Notifications, and **M:N** Donor ↔ Hospital through the `donor_hospital_affiliation` join table — a donor registers with the partner hospitals in their own district, readable from both sides. The affiliation never moves a rule: BR-1 is blood group and BR-5 is the staff account's hospital, so the M:N is what a hospital counts as its donor base, not a matching input.
 
 **"Anything not finished?"**
-Every mandatory item is built. What is left is polish: pagination is client-side slicing rather than `?page=&size=`, and the report's screenshot placeholders still need the final images.
+Every mandatory item is built. What is left is polish, and it is written down: the pages still slice listings client-side even though the API accepts `?page=&size=` additively; no partner hospital is connected to a live inventory feed; and the recorded mail runs use a local catcher rather than a real mailbox.
 
 ---
 
@@ -378,4 +379,4 @@ mysql_bb -e "SELECT public_code, status FROM blood_requests ORDER BY request_id;
 2. **Register** → **Mailpit** shows the confirmation mail (§2.4).
 3. Log in as the **donor**, **accept** a request → the record changes (real data).
 4. Log in as the **admin** → users, moderation, and the 401/403 story.
-5. Open `real-backend-check.html` → **39/39**. Close with: *"268 frontend checks, 92 responsive combinations, 39 against the live backend, 31 service-layer checks against TiDB, 95 over raw HTTP, and 107 Postman assertions with 0 failures."*
+5. Open `real-backend-check.html` → **42/42**. Close with: *"268 frontend checks, 92 responsive combinations, 42 against the live backend, 31 service-layer checks against TiDB, 98 over raw HTTP, and 107 Postman assertions with 0 failures."*

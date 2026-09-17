@@ -5,7 +5,9 @@ import com.bloodbuddy.dto.RequestCreateRequest;
 import com.bloodbuddy.dto.RequestResponse;
 import com.bloodbuddy.dto.RequestUpdateRequest;
 import com.bloodbuddy.service.ActorContext;
+import com.bloodbuddy.service.BusinessException;
 import com.bloodbuddy.service.DonorService;
+import com.bloodbuddy.service.HospitalResolver;
 import com.bloodbuddy.service.RequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class RequestController {
 
     private final RequestService requests;
     private final DonorService donors;
+    private final HospitalResolver hospitalResolver;
 
     @GetMapping
     public Object list(@RequestParam(required = false) String requester,
@@ -51,13 +54,46 @@ public class RequestController {
                        @RequestParam(required = false) Integer page,
                        @RequestParam(required = false) Integer size,
                        ActorContext actor) {
+        Long scopedHospitalId = hospitalId;
+        if (actor != null && actor.isHospital()) {
+            /*
+             * BR-5 on the GENERIC queue endpoint. The path-scoped routes under
+             * /api/hospitals/{id}/... already enforce it; this list is the same
+             * data behind a query parameter, and until now it was not gated, so a
+             * TUTH session could read Patan's queue with ?hospitalId=8 (found by
+             * walking the demo runbook, not by reading the code).
+             *
+             * A staff account is therefore pinned to its own hospital here, and
+             * the admin-only views (?guest, ?unrouted, ?requester[Id]) are refused
+             * outright — a hospital has no moderation queue to read.
+             */
+            Long own = actor.hospitalId();
+            if (own == null) {
+                throw new BusinessException(BR5);
+            }
+            if (hospitalId != null && !own.equals(hospitalId)) {
+                throw new BusinessException(BR5);
+            }
+            if (!isBlank(hospital)) {
+                Long asked = hospitalResolver.idOfLabel(hospital);
+                if (asked != null && !own.equals(asked)) {
+                    throw new BusinessException(BR5);
+                }
+            }
+            if (Boolean.TRUE.equals(guest) || Boolean.TRUE.equals(unrouted)
+                    || requesterId != null || !isBlank(requester)) {
+                throw new BusinessException(BR5);
+            }
+            // No filter at all means "my queue", never the whole table.
+            scopedHospitalId = own;
+        }
         List<RequestResponse> rows;
         if (Boolean.TRUE.equals(guest)) {
             rows = requests.forAdmin(status, true, false);
         } else if (Boolean.TRUE.equals(unrouted)) {
             rows = requests.forAdmin(status, false, true);
-        } else if (hospitalId != null) {
-            rows = requests.byHospital(hospitalId, status);
+        } else if (scopedHospitalId != null) {
+            rows = requests.byHospital(scopedHospitalId, status);
         } else if (!isBlank(hospital)) {
             rows = requests.byHospitalLabel(hospital, status);
         } else if (requesterId != null) {
@@ -120,4 +156,8 @@ public class RequestController {
     private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
+
+    /** The one BR-5 wording, so the query-param gate and HospitalController agree. */
+    private static final String BR5 =
+            "Hospital staff may only access their own hospital's data (BR-5).";
 }

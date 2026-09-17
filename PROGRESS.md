@@ -2,7 +2,7 @@
 
 > Read this file first in any new session. It summarizes the proposal, what's built, and what's next.
 > **Update this file at the end of every session** (status, new files, next steps).
-> Last updated: 2026-09-17 (session #26 — **§2.6 IS PROVEN, NOT PROMISED.** The session-#25 collection finished its verification: under Newman, from a pristine database, it reports **76 requests · 107 assertions · 0 failures** (~2 min, exit 0), and **a second consecutive run on its own leftovers is ALSO 0 failures** — so the collection is re-runnable, which retires the session-#25 worry that a run poisons the next one. The run exercises the **`?status=Pending`-alone** request, so the session-#25 controller fix is now covered by a green run rather than by a diff. The DB was **not** pristine at session start (the session-#25 runs had left 23 users / 15 donors / 8 requests / 33 notifications / 14 timeline / 1 decline / a photo on a seeded donor): it was restored **before** the run and restored again **after**, verified by re-reading every count — **21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations**, TUTH B+ = 12, `BB-5MN8VX` **PENDING + unrouted** (hex `E28094`), 0 donor photos, 0 declines. The restore is mechanical because the footprint is contiguous (everything is above the TiDB IDENTITY jump: requests `≥210021`, users `210022+`, donor `210009`) and the accounts are named `postman%` — the exact statement list is in the session-#26 section. `docs/DEMO_RUNBOOK.md` loses its §2.6 caveat, gains a headless Newman command in the "every number" table, and `backend/README.md` carries the verified count. The session-#25 hand-off is also closed: **`tools/api_check.py` 94 → 95** — a `?status=Pending`-alone check that asserts only Pending rows *and* fewer of them than the unfiltered list, **negative-tested against the old, buggy payload** (it fails on it); **95 passed, 0 failed**. Counts updated in the runbook and `backend/README.md`. **Session #26 changes are uncommitted** (this file, the runbook, the README, `tools/api_check.py`). Only the walkthrough remains. Previous: session #25 — **THE POSTMAN COLLECTION WAS ACTUALLY RUN, AND IT WAS BROKEN — it is now fixed and found a REAL API BUG.** Session #21 only ever validated it statically; run under Newman it executed 60 requests but **15 of 91 assertions failed**, because one admin session ran the whole collection while its folders need different roles (its own request names say "as ADMIN / as DONOR / as HOSPITAL") and `memberCode` was used but never captured. Fixed: **14 `Sign in as …` requests** inserted where the role changes (folders 04/05/06/07/08/98), a **second member request in 04** captures `memberCode` and is kept Pending for the §98 refusals, and **02 restores** whoever its suspend test touched (a run used to leave an account suspended and break every later sign-in as it). Collection **60 → 76 requests**. The second Newman run reached **107 assertions, 1 failed — and that failure was the API's, not the collection's**: `GET /api/requests?status=Pending` answered **every** request because `RequestController.list` ignored `status` when it was the only filter. **Fixed** (a `status`-only branch now calls `requests.forAdmin(status,false,false)`), compile clean, app restarted — **but the third Newman run was NOT completed, so 0-failures is NOT yet proven** (that is step 1 next session). Also added the **operator's checklist** as §0 of `docs/DEMO_RUNBOOK.md` (boot, expected log lines, every number and how to reproduce it solo, a troubleshooting table, shutdown/restore) because the user must run the defence with no assistant. Tooling checked: Python/Java/Node/Chrome/IntelliJ/**Postman desktop** all present; Newman is not installed but runs via `npx newman`. The demo DB was restored **pristine** before the re-run (21/14/5/40/4/3/7/39, `BB-5MN8VX` **PENDING + unrouted**, TUTH B+ = 12) and a stray `STATUS_UPDATE` notification left by a Postman run that had fulfilled `BB-5MN8VX` was removed. **The app is currently RUNNING on 8081** (started for the walkthrough) — stop it before a fresh IntelliJ ▶. Session #25 changes are **uncommitted**. Previous: session #24 — **TWO OF THE THREE PROPOSAL GAPS ARE CLOSED.** Asked whether the backend was complete, a check against CPJ119 + proposal Appendix B found three conformance gaps; two are now fixed and verified. **1 · Server-side pagination** — new `dto/PageResponse`, and `GET /api/donors/search`, `/api/admin/users`, `/api/requests` accept **additive `?page=&size=`** (a paged envelope when asked; the plain array otherwise, so the closed frontend is untouched). **2 · The Appendix B hospital-scoped "local API"** — `HospitalController` gained `POST /api/hospitals/inventory`, `PUT /{hospitalId}/inventory/{bloodGroup}`, `GET /{hospitalId}/donors/nearby`, `POST /{hospitalId}/requests` and `GET /{hospitalId}/requests/{id}/status`; `AdminController` gained `POST /api/admin/users/{id}/deactivate`. All thin delegates — no logic moved — with `requireScopedAccess` keeping **BR-5** for a hospital id taken from the PATH. **3 · literal `DELETE` endpoints — deliberately NOT added** (soft-delete via cancel/suspend is the design; recorded, not hidden). Verified: compile clean · `tools/api_check.py` extended **81 → 94 checks, 0 failed** · smoke run **31/31, exit 0** · Postman collection **50 → 60 requests**, statically re-validated (no undefined `{{variables}}`, every path matches a declared controller route) · demo DB restored pristine (21/14/5/40/4/3/7/39, `BB-5MN8VX` unrouted), 8081 free. Previous: session #23 — **THE SESSION-#22 HAND-OFF LIST IS WORKED.** The mock suite was re-run (**268/268**, fresh profile) to cover the `bb-api.js`/`auth-register.html` edits that landed after #20. `resptest/real-backend-check.html` was **extended for the two new surfaces and is now 39/39** against the booted app — four checks for the Donor ↔ Hospital M:N read (Arun, Kathmandu, correctly affiliated with the **4** Kathmandu partner hospitals incl. TUTH) and three for staff registration **by hospital name** (201, `hospitalId` set, label contains "Tribhuvan"). Docs brought up to date: `backend/README.md` (39/39 · 50 Postman requests · 81 `api_check` · 31 smoke · the new `{id}/hospitals` route · the M:N in the model section), `docs/DEMO_RUNBOOK.md` (all counts, an M:N Q&A, and the now-closed "hospital not linked" limitation) and **the report's Table 3-1** (`tools/report/bb_content.py`) which gained the `Donor ↔ Hospital (affiliation)` M:N row — then **both report `.docx`/`.pdf` were regenerated**: `v1` via `build_report.py` + `finalize_word.py`, and `v2` **patched in place** (it differed only in TOC state, verified by diffing the stripped text, so nothing was lost) and re-exported. Finally **the demo database was cleaned back to the known-good state** — 3 test requests, 5 test accounts, 2 extra donors, their affiliation rows and a leftover forward-timeline row removed, `BB-5MN8VX` re-unrouted (label hex `E28094`) — verified **21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations**, TUTH B+ = 12; app stopped and 8081 freed. **What is left of the list is the last item: teach the user to operate the system for the defence.** Previous: session #22 — **THE TWO CRITERIA GAPS ARE CLOSED: the M:N relationship and the hospital-staff link** (see the session #22 section — three ways green: smoke **31/31**, real HTTP **81/81**, and **39** join rows in TiDB; it also caught two real defects, a repository method name that cannot exist and a cleanup script that was writing the wrong character). **Right after that: re-run the mock QA harness (268/268) — the `bb-api.js`/`auth-register.html` edits landed after session #20's run — then extend `real-backend-check.html`, then the docs, then TEACH THE USER TO OPERATE IT for the defence.** Note the DB currently carries the last `api_check.py` footprint (2 requests + 3 `api-check+…` accounts, and BB-5MN8VX routed to NMC) — the printed cleanup SQL in `.tools/api_check.log` restores it. Previous: session #21 — **B8 IS DONE: the Postman collection exists** (`docs/postman/BloodBuddy.postman_collection.json`) — **48 requests in 10 folders** covering every Appendix B endpoint plus B3's additions and the BR-1…BR-9 refusals, with **cookie-based login**: `01 · Session` POSTs `/api/auth/login`, asserts `pm.cookies.get('JSESSIONID')` so the capture is *visible in the Tests tab*, and captures `userId`/`donorId`/`hospitalId` into collection variables so **no request hardcodes a row id** (the lesson from B3's `id=1` bug). Folder `00` runs logged OUT on purpose (it asserts the 401 boundary), `99` logs out and re-checks that `/api/auth/me` answers 401. Validated statically — JSON parses, no undefined `{{variables}}`, and **all 48 paths match the 25 routes declared in the controllers** — plus the overlapping live checks from session #20 (401 anonymous, 403 wrong role, logout→401, register 201). It has *not* been run inside Postman/Newman, because neither is installed on this machine; that is stated rather than implied. Previous: session #20 — **B7 IS DONE: the frontend runs on the REAL backend.** `bb-api.js` ships `MOCK = false` (with a documented `localStorage.bb_force_mock = '1'` override, which is how the 266-check mock suite and the Python stub keep running), the cache is no longer the session — `nav.js` reconciles `bb_session` with `GET /api/auth/me` on every page load and Log out really ends the server session — and `auth-register.html` finally **sends `password`** (min 8, BCrypt server-side) and reports the server's own error instead of showing a success screen for a failed signup. Verified **268/268 in mock mode** (266 + 2 new §22 transport checks, so nothing regressed) and **32/32 on the new `resptest/real-backend-check.html`** against the booted app (25 read/security checks **plus the donor write path** — submit, accept, re-read from the server): real transport in every page, the demo store deliberately pinned EMPTY so rendered rows can only have come over HTTP, anonymous 401, wrong-role 403, session `/me`, logout-really-ends-it, and a registration that landed a row in TiDB **and** a `Welcome to BloodBuddy` mail in Mailpit. Demo DB verified back afterwards (21 users / 14 donors / 4 requests / 3 notifications, TUTH B+ = 12, 8081 free). Next: **B8 (Postman)**, then the demo runbook. Previous: session #19 — **B4 IS DONE: §2.4 email is DELIVERED, not just queued.** `service/NotificationMailer` composes and sends the message over SMTP, `NotificationService` records the outcome on the row it already wrote (`QUEUED` → **SENT** with `sentAt`, or **FAILED** with the server's own error), and the plain-text body is stored on the row so the audit table *is* the evidence. **A mail failure never fails the business operation** — registration and every rule still pass with the mail server down (proved by running the suite both ways). The dev catcher is **Mailpit** in a gitignored `.tools/` (no install, no Docker): SMTP 1025 + inbox/API on 8025. Verified **28/28 smoke checks, exit 0** with the catcher up and **26/28 with it stopped — exactly the 2 mail-arrival checks, everything else passing**; 52 messages captured; demo DB unchanged at 21 users / 14 donors / 4 requests / 3 notifications / 40 inventory rows. `application.properties` now drives `BB_SMTP_AUTH`/`BB_SMTP_STARTTLS` from env too, so the real-Gmail §2.4 demo is a 4-variable swap with zero code change (it is only waiting on Google's new-phone delay for the app password). Next: **B8 (Postman) then B7 (`MOCK = false`)** — B5 was already covered by B3's photo endpoints. Previous: session #18 — **B6 IS DONE: Spring Security.** Role rules on every `/api/**` group (anonymous → 401, wrong role → 403 as the same `ApiError` JSON), a real **session-backed login** (`POST /api/auth/login` verifies with BCrypt — in `AuthService`, per §2.2 — then opens a Spring Security session, so a `JSESSIONID` cookie identifies every later request; `POST /api/auth/logout` ends it), and **the dev actor header is gone**: `ActorContextArgumentResolver` now reads the session principal as `AuthenticatedAccount` (reloading the `User` per request, so a role/status change bites immediately). Verified **74/74 over real HTTP** with cookie sessions — including anonymous 401, wrong-role 403 and logout-really-ends-it — and the B2 smoke run still **25/25 with security on** (`backend/target/bb-http-b6.log`, `backend/target/bb-b6smoke.log`); the demo DB was verified back to 21 users / 14 donors / 4 requests / 3 notifications / 40 inventory rows and 8081 is free. Previous: session #17 — **B3 IS DONE: the REST layer answers — 7 controllers over every Appendix B endpoint, a `@ControllerAdvice` mapping the service exceptions to 404/409/400, and an `ActorContext` argument resolver. 56/56 checks pass over real HTTP (`tools/api_check.py`), including the negative cases for BR-1/2/3/5/8; the demo DB was restored afterwards. Next: B4/B6/B7/B8.** Appended to the same session: — **B2 IS DONE: DTOs + the whole service layer (auth, donor search + widen fallback, the request lifecycle with BR-1…BR-8, inventory, admin users, profiles, notification hooks), verified by a 25-check smoke run against live TiDB — 25/25 PASS — which found and fixed two REAL bugs (a `@OneToOne` orphanRemoval that deleted donors on profile save, and a seeder notification guard that added a duplicate welcome row every boot). Next: B3 controllers. Appended to the same session: — **BOOT GATE CLOSED: the B1 seeder fix is verified at runtime** — `Demo data ready: 21 users, 14 donors, 5 hospitals, 40 inventory rows, 4 requests, 3 notifications`, Tomcat on 8081, process stayed up, landing served 200; the session-#16 "22 users" expectation was a miscount (12 + 9 = 21 is correct, see the session), the port-8081 process was stopped again so IntelliJ's ▶ stays free, and the password-holding `workspace.xml.bak-*` is deleted. **Nothing left in front of B2.** Session #16 — **THE FIRST BOOT HAPPENED: the app runs (Tomcat on :8081, TiDB Cloud connected, all 8 tables created)** after clearing two in-flight blockers (IntelliJ stored the `BB_DB_*` env vars with invisible leading/trailing whitespace → Spring fell back to `localhost` → patched in `workspace.xml`; port 8080 is owned by the EDB PostgreSQL PEM Apache service → app moved to **8081**) and fixing a genuine B1 bug (`DemoDataSeeder.fresh` attached a transient `User` to the non-nullable `Donor.user` FK and killed the boot — fixed, compile-verified). **The fix is compiled but NOT yet started: next session is one ▶ away** (expect 22 users / 14 donors / 5 hospitals / 40 inventory rows / 4 requests), then **B2**. Session #15 — **credentials sorted, NO code changed: leaked Gmail app password deleted, dedicated Gmail created (`bloodbuddy1org@gmail.com`), TiDB Cloud Starter cluster "BloodBuddy" created and ACTIVE, `BB_DB_*` set in the IntelliJ run config. **The app has NOT been booted yet** — next is the SQL-Editor `CREATE DATABASE` + first ▶, then B2**. Session #14 — **B1 done: all 6 JPA entities + repositories + seeder, compiles clean**; next B2 service layer. Session #13 — **backend started (B0 done)**: Spring Boot 3.5.16 skeleton in `backend/` (Java 17, Web+JPA+Validation+Mail+MySQL→**TiDB Cloud**), compiles via IntelliJ's bundled Maven 3.9.11; frontend synced into `backend/src/main/resources/static/` by `tools/sync_frontend_to_backend.py` (94 files; static/ is gitignored, re-run after frontend edits). Open `backend/` in IntelliJ → run `BloodBuddyApplication` → app serves frontend at `http://localhost:8080/CODE/HTML/landing.html`. **Class reference project `SpringWebVir` copied to gitignored `reference/` — see its addendum for adopt/avoid patterns; CREDENTIAL-EXPOSURE addendum has the account setup the user must finish before first boot (new Gmail → TiDB cluster → env vars). Plan: B1 entities → B2 service layer → B3 controllers → B4 MailHog email → B5 BLOB photos → B6 security → B7 MOCK=false + harness → B8 Postman. Previous: session #12 — **CPJ119 written report generated**: `tools/report/` builds `BloodBuddy_Final_Report.docx/.pdf` from the reference template with all BloodBuddy content; v2 with cover logo + 4 diagrams is in TEMP — copy out or rebuild. Session #11 — **the FRONTEND IS CLOSED**: every CPJ119 §2.1 requirement is implemented and verified (266/266 harness checks, 92/92 responsive page×width combos, 16/16 real-HTTP). The donor accept/decline loop landed and the AJAX path is now provable, not just written. **Everything mandatory still outstanding is BACKEND / submission artifact** — audit in "Session #11", ordered list in "Next steps")
+> Last updated: 2026-09-17 (session #28 — **THE SESSION-#27 HAND-OFF IS CLOSED: THE STALE APP IS GONE, THE DEMO DATABASE IS PRISTINE AGAIN, AND THE INTERRUPTED CONFIRMATION IS FINISHED — `real-backend-check.html` READS `REAL-BACKEND-DONE 42/42` FROM THAT PRISTINE DB.** No code, test or document changed; it is a *state* session. Item 1 was already true (PID 21268 gone, 8081 and 8025 free), so there was nothing to kill. Item 2: the DB carried session #27’s confirmation run — **25 users / 16 donors / 7 requests / 30 notifications / 13 timeline**, `BB-5MN8VX` re-pointed at **NMC / 10** — so a **full `mysqldump` was taken first** (`.tools/wt/db-before-session28.sql`; TiDB needs it *without* `--single-transaction`) and the restore then ran **one statement at a time**: the three run requests (`EM-L6AVFN`, `BB-9EK9LM`, `BB-4TTYVZ`) with their notifications/timeline, the three `api-check+…` accounts **and the browser check’s own `b7check+…` account — which the printed cleanup SQL does not cover** — with their two donors, `BB-5MN8VX`’s extra timeline rows and its `hospital_id=NULL` + `E28094` label. Re-verified by re-reading every count: **21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations / 0 declines / 0 donor photos**, TUTH B+ = 12, only Bikash Tamang suspended. Item 3: Mailpit was started against the **repo-local** db (which still held session #27’s **27 messages**) and emptied via the API, the app booted from the runbook’s recipe (`Demo data ready: 21 users…` then `Tomcat started on port 8081`) and the check was run headless against the pristine DB → **42/42**, with both session-#27 pins inside it (a hospital session’s unfiltered `/api/requests` is its OWN queue, and the queue page’s rendered card ids are a subset of it). The check’s own footprint (`BB-2T877U` + `b7check+…`/`b7staff+…`) was removed with the SQL the page itself prints, and pristine was re-verified. **Left exactly as the rehearsal expects: app stopped and 8081 free, Mailpit up on 8025 with an empty inbox, DB pristine.** Everything from #26+#27 is **still uncommitted** (this session touched only `PROGRESS.md`). Previous: session #27 — **THE WALKTHROUGH WAS RUN END TO END, IT FOUND TWO REAL BR-5 DEFECTS (both fixed and pinned), AND BOTH REPORT COPIES NOW CARRY EVERY FIGURE — NO PLACEHOLDER LEFT.** The session-#26 hand-off's last two items are closed. **The walkthrough** (hand-off item 5) was driven against the live TiDB database, checkpoint by checkpoint, verified **from the outside** (HTTP + SQL, not screenshots): register → **201** + the welcome mail in Mailpit + a `SENT` notification row, donor search + widen fallback, request submit → tracker → donor alerts, donor accept → **Matched** (and the O− request correctly **not** offered to the B+ donor), hospital fulfil with the stock going **13 → 11** for a 2-unit request, admin suspend (next login refused with its reason) and forward with its timeline entry, anonymous 401 / wrong-role 403, then the tools — **Newman 76 · 107 · 0**, **qa-harness 268/268**, **responsive 92/92**, smoke **31/31**. **Two real defects came out of it, both in the hospital-scoping story and both invisible to reading:** (1) **BR-5 was not enforced on `GET /api/requests?hospitalId=…`** — `PUT /api/hospitals/8/inventory/B+` correctly answered 409 while the *same data behind a query parameter* answered **200 with Patan's queue** to a TUTH session (and the whole table with no filter); `RequestController.list` now pins a hospital actor to its own hospital, refuses the admin-only views (`?guest`/`?unrouted`/`?requester[Id]`) and treats "no filter" as "my queue"; (2) **`hospital-requests.html` hardcoded the demo's `Bir Hospital, Kathmandu` into real mode**, so a TUTH session rendered Bir's queue — the page now sends no hospital at all and lets the server answer with the session's own. Both are **pinned**: `tools/api_check.py` **95 → 98** and `resptest/real-backend-check.html` **39 → 42** (the page's rendered card ids must be a subset of the signed-in hospital's queue), and every quoted count was updated, Figure 5-1's screenshot **re-captured** (it now reads 42/42) so the picture and its caption cannot disagree. **On the report side:** the four remaining placeholders are **drawn, not waited for** — a new tracked `tools/report/build_diagrams.py` (Pillow only, self-checking for label overflow and box overlap) produces the lifecycle flow (Figure 1-1), the 5-actor/24-use-case diagram (3-2), the Level-1 DFD with 18 numbered flows (3-5) and a rendered repository tree for the file-structure figure (4-1, which also retires the human IntelliJ screenshot); **v1 was rebuilt too**, so both copies carry **identical** text, tables and captions, **20 images, 0 placeholders, 51 pages**. The DB was then put back exactly (21/14/5/40/4/3/7/39, TUTH B+ = 12, `BB-5MN8VX` unrouted), **Mailpit's inbox emptied** and the app stopped. Then both BR-5 fixes were re-tested **from the pristine database** — `tools/api_check.py` **98 passed / 0 failed**, Newman still **76 · 107 · 0** — and that confirmation run is where the session was **stopped mid-step**: the app is **still RUNNING on 8081 (PID 21268)** and the DB is **no longer pristine** (25 users / 16 donors / 7 requests / 30 notifications, TUTH B+ = 15), with the cleanup SQL printed in `.tools/wt/api_check_final.log` and the first hand-off items listing every row to remove. Everything is **uncommitted**. Previous: session #26 — the report images, and the report no longer contradicts itself. The session-#26 hand-off's live thread is closed: `build_report.py` now has its `FIG_IMAGES` screenshot entries (Figures 4-2/4-3/4-4/4-5/5-1) **and** an `APPENDIX_IMAGES` mechanism keyed by appendix title, because Appendix E and F had been left rendering prose with **no images at all** after their placeholder lines were deleted (E-1 reproduces the 5-1 montage; F-1…F-5 are the landing page, the auth pair, the donor dashboard, the hospital queue and the legal row — captions included, and all 19 figure captions match the LIST OF FIGURES exactly). The v2 hand-in copy was **backed up, rebuilt and Word-finalised**, then verified by diffing its stripped text against the backup: `[INSERT SCREENSHOT …]` **19 → 1** (only Figure 4-1, the IntelliJ project view, which a headless browser cannot capture), images **5 → 16**, PDF **48 pages · 16 image XObjects · 2.15 MB**. That rebuild also proved something worth knowing: **v2 had never received session #26's text corrections** — it still said "266 checks", "16/16 over the stub" and "VS Code", because §26.11 edited `bb_content.py` but never rebuilt. Now it says 268/268 · 92/92 · 39/39 and IntelliJ IDEA. **The one thing session #26 did not sweep was the report's backend narrative, and it was self-contradictory:** §5.5 claimed "the remaining mandatory criteria belong to the scheduled backend phase and are not claimed as complete" in the same chapter whose Table 5-1 shows TC-18/20/21 PASS against that backend, while §7.2's limitations said the backend "is the scheduled implementation phase", email was "not yet sending" and the hospital APIs were "stubbed but not live". All of it is corrected (~14 statements: disclaimer, Table 2-2, §3.9 bullets, §4.1 environment → TiDB Cloud + Mailpit + Newman, §4.3.2, §4.3.4, §4.5, §5.5, Table 5-2 FR-01/02/06, Ch6 intro, Table 6-1 rows 13/14 → Complete, §7.2's five bullets, §7.3's first two bullets, and Appendix C → the **nine real tables** instead of "to be exported from MySQL Workbench during the backend phase"). What remains in v2 is four bracketed placeholders — Figure 4-1 plus three diagrams (1-1 lifecycle, 3-2 use case, 3-5 DFD) that have no drawn asset — and the walkthrough. **`docs/BloodBuddy_Final_Report.docx` (v1) was deliberately NOT rebuilt, so v1 is now materially older than v2.** Everything is **uncommitted**, and the demo DB/app state was not touched this session. Previous: session #26 — **§2.6 IS PROVEN, NOT PROMISED.** The session-#25 collection finished its verification: under Newman, from a pristine database, it reports **76 requests · 107 assertions · 0 failures** (~2 min, exit 0), and **a second consecutive run on its own leftovers is ALSO 0 failures** — so the collection is re-runnable, which retires the session-#25 worry that a run poisons the next one. The run exercises the **`?status=Pending`-alone** request, so the session-#25 controller fix is now covered by a green run rather than by a diff. The DB was **not** pristine at session start (the session-#25 runs had left 23 users / 15 donors / 8 requests / 33 notifications / 14 timeline / 1 decline / a photo on a seeded donor): it was restored **before** the run and restored again **after**, verified by re-reading every count — **21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations**, TUTH B+ = 12, `BB-5MN8VX` **PENDING + unrouted** (hex `E28094`), 0 donor photos, 0 declines. The restore is mechanical because the footprint is contiguous (everything is above the TiDB IDENTITY jump: requests `≥210021`, users `210022+`, donor `210009`) and the accounts are named `postman%` — the exact statement list is in the session-#26 section. `docs/DEMO_RUNBOOK.md` loses its §2.6 caveat, gains a headless Newman command in the "every number" table, and `backend/README.md` carries the verified count. The session-#25 hand-off is also closed: **`tools/api_check.py` 94 → 95** — a `?status=Pending`-alone check that asserts only Pending rows *and* fewer of them than the unfiltered list, **negative-tested against the old, buggy payload** (it fails on it); **95 passed, 0 failed**. Counts updated in the runbook and `backend/README.md`. **All of it is committed and pushed as `1c4ca14`** (6 files, +894/−10, `origin/main` moved `45f8785..1c4ca14`), and the demo start was staged (Mailpit emptied, app stopped so IntelliJ's ▶ is free, DB re-verified pristine). The session then went into the **written report's screenshots**: the "9 placeholders" are really **18** — **19 pages were captured from the running app** (`tools/report/assets/shots/`, puppeteer-core in a gitignored `.tools/shots/`), 5 grouped montages composed by a new tracked `tools/report/build_montages.py`, and the report text corrected (266→268, the 16/16-stub evidence → the real-backend **39/39**, Figure 4-1 VS Code → IntelliJ, plus the TC-20/21 and FR-12/13 rows still marked "scheduled"/"Pending (backend phase)" that are long done). Two real defects surfaced on the way and are fixed: **`resptest/real-backend-check.html` was racing TiDB and reading 35/39** (a fixed 1200 ms sleep vs ~1.6 s round-trips removed the iframe mid-fetch; it now waits for the rows — **39/39**), and the **Postman collection's `memberCode` defaulted to a seeded demo code (`BB-5MN8VX`)**, so a run where the capture did not happen first silently patched the demo row's notes (now `''`, re-verified green with the demo row untouched, and the stale note restored). **The report rebuild itself is NOT done**: `build_report.py` still has no image entries, and since Appendix E/F's placeholder lines were already removed those two appendices currently render imageless — that wiring + the v2-only rebuild + the Figure 4-1 IDE screenshot are the first items next session, then the walkthrough. **Everything from this stretch is uncommitted.** Previous: session #25 — **THE POSTMAN COLLECTION WAS ACTUALLY RUN, AND IT WAS BROKEN — it is now fixed and found a REAL API BUG.** Session #21 only ever validated it statically; run under Newman it executed 60 requests but **15 of 91 assertions failed**, because one admin session ran the whole collection while its folders need different roles (its own request names say "as ADMIN / as DONOR / as HOSPITAL") and `memberCode` was used but never captured. Fixed: **14 `Sign in as …` requests** inserted where the role changes (folders 04/05/06/07/08/98), a **second member request in 04** captures `memberCode` and is kept Pending for the §98 refusals, and **02 restores** whoever its suspend test touched (a run used to leave an account suspended and break every later sign-in as it). Collection **60 → 76 requests**. The second Newman run reached **107 assertions, 1 failed — and that failure was the API's, not the collection's**: `GET /api/requests?status=Pending` answered **every** request because `RequestController.list` ignored `status` when it was the only filter. **Fixed** (a `status`-only branch now calls `requests.forAdmin(status,false,false)`), compile clean, app restarted — **but the third Newman run was NOT completed, so 0-failures is NOT yet proven** (that is step 1 next session). Also added the **operator's checklist** as §0 of `docs/DEMO_RUNBOOK.md` (boot, expected log lines, every number and how to reproduce it solo, a troubleshooting table, shutdown/restore) because the user must run the defence with no assistant. Tooling checked: Python/Java/Node/Chrome/IntelliJ/**Postman desktop** all present; Newman is not installed but runs via `npx newman`. The demo DB was restored **pristine** before the re-run (21/14/5/40/4/3/7/39, `BB-5MN8VX` **PENDING + unrouted**, TUTH B+ = 12) and a stray `STATUS_UPDATE` notification left by a Postman run that had fulfilled `BB-5MN8VX` was removed. **The app is currently RUNNING on 8081** (started for the walkthrough) — stop it before a fresh IntelliJ ▶. Session #25 changes are **uncommitted**. Previous: session #24 — **TWO OF THE THREE PROPOSAL GAPS ARE CLOSED.** Asked whether the backend was complete, a check against CPJ119 + proposal Appendix B found three conformance gaps; two are now fixed and verified. **1 · Server-side pagination** — new `dto/PageResponse`, and `GET /api/donors/search`, `/api/admin/users`, `/api/requests` accept **additive `?page=&size=`** (a paged envelope when asked; the plain array otherwise, so the closed frontend is untouched). **2 · The Appendix B hospital-scoped "local API"** — `HospitalController` gained `POST /api/hospitals/inventory`, `PUT /{hospitalId}/inventory/{bloodGroup}`, `GET /{hospitalId}/donors/nearby`, `POST /{hospitalId}/requests` and `GET /{hospitalId}/requests/{id}/status`; `AdminController` gained `POST /api/admin/users/{id}/deactivate`. All thin delegates — no logic moved — with `requireScopedAccess` keeping **BR-5** for a hospital id taken from the PATH. **3 · literal `DELETE` endpoints — deliberately NOT added** (soft-delete via cancel/suspend is the design; recorded, not hidden). Verified: compile clean · `tools/api_check.py` extended **81 → 94 checks, 0 failed** · smoke run **31/31, exit 0** · Postman collection **50 → 60 requests**, statically re-validated (no undefined `{{variables}}`, every path matches a declared controller route) · demo DB restored pristine (21/14/5/40/4/3/7/39, `BB-5MN8VX` unrouted), 8081 free. Previous: session #23 — **THE SESSION-#22 HAND-OFF LIST IS WORKED.** The mock suite was re-run (**268/268**, fresh profile) to cover the `bb-api.js`/`auth-register.html` edits that landed after #20. `resptest/real-backend-check.html` was **extended for the two new surfaces and is now 39/39** against the booted app — four checks for the Donor ↔ Hospital M:N read (Arun, Kathmandu, correctly affiliated with the **4** Kathmandu partner hospitals incl. TUTH) and three for staff registration **by hospital name** (201, `hospitalId` set, label contains "Tribhuvan"). Docs brought up to date: `backend/README.md` (39/39 · 50 Postman requests · 81 `api_check` · 31 smoke · the new `{id}/hospitals` route · the M:N in the model section), `docs/DEMO_RUNBOOK.md` (all counts, an M:N Q&A, and the now-closed "hospital not linked" limitation) and **the report's Table 3-1** (`tools/report/bb_content.py`) which gained the `Donor ↔ Hospital (affiliation)` M:N row — then **both report `.docx`/`.pdf` were regenerated**: `v1` via `build_report.py` + `finalize_word.py`, and `v2` **patched in place** (it differed only in TOC state, verified by diffing the stripped text, so nothing was lost) and re-exported. Finally **the demo database was cleaned back to the known-good state** — 3 test requests, 5 test accounts, 2 extra donors, their affiliation rows and a leftover forward-timeline row removed, `BB-5MN8VX` re-unrouted (label hex `E28094`) — verified **21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations**, TUTH B+ = 12; app stopped and 8081 freed. **What is left of the list is the last item: teach the user to operate the system for the defence.** Previous: session #22 — **THE TWO CRITERIA GAPS ARE CLOSED: the M:N relationship and the hospital-staff link** (see the session #22 section — three ways green: smoke **31/31**, real HTTP **81/81**, and **39** join rows in TiDB; it also caught two real defects, a repository method name that cannot exist and a cleanup script that was writing the wrong character). **Right after that: re-run the mock QA harness (268/268) — the `bb-api.js`/`auth-register.html` edits landed after session #20's run — then extend `real-backend-check.html`, then the docs, then TEACH THE USER TO OPERATE IT for the defence.** Note the DB currently carries the last `api_check.py` footprint (2 requests + 3 `api-check+…` accounts, and BB-5MN8VX routed to NMC) — the printed cleanup SQL in `.tools/api_check.log` restores it. Previous: session #21 — **B8 IS DONE: the Postman collection exists** (`docs/postman/BloodBuddy.postman_collection.json`) — **48 requests in 10 folders** covering every Appendix B endpoint plus B3's additions and the BR-1…BR-9 refusals, with **cookie-based login**: `01 · Session` POSTs `/api/auth/login`, asserts `pm.cookies.get('JSESSIONID')` so the capture is *visible in the Tests tab*, and captures `userId`/`donorId`/`hospitalId` into collection variables so **no request hardcodes a row id** (the lesson from B3's `id=1` bug). Folder `00` runs logged OUT on purpose (it asserts the 401 boundary), `99` logs out and re-checks that `/api/auth/me` answers 401. Validated statically — JSON parses, no undefined `{{variables}}`, and **all 48 paths match the 25 routes declared in the controllers** — plus the overlapping live checks from session #20 (401 anonymous, 403 wrong role, logout→401, register 201). It has *not* been run inside Postman/Newman, because neither is installed on this machine; that is stated rather than implied. Previous: session #20 — **B7 IS DONE: the frontend runs on the REAL backend.** `bb-api.js` ships `MOCK = false` (with a documented `localStorage.bb_force_mock = '1'` override, which is how the 266-check mock suite and the Python stub keep running), the cache is no longer the session — `nav.js` reconciles `bb_session` with `GET /api/auth/me` on every page load and Log out really ends the server session — and `auth-register.html` finally **sends `password`** (min 8, BCrypt server-side) and reports the server's own error instead of showing a success screen for a failed signup. Verified **268/268 in mock mode** (266 + 2 new §22 transport checks, so nothing regressed) and **32/32 on the new `resptest/real-backend-check.html`** against the booted app (25 read/security checks **plus the donor write path** — submit, accept, re-read from the server): real transport in every page, the demo store deliberately pinned EMPTY so rendered rows can only have come over HTTP, anonymous 401, wrong-role 403, session `/me`, logout-really-ends-it, and a registration that landed a row in TiDB **and** a `Welcome to BloodBuddy` mail in Mailpit. Demo DB verified back afterwards (21 users / 14 donors / 4 requests / 3 notifications, TUTH B+ = 12, 8081 free). Next: **B8 (Postman)**, then the demo runbook. Previous: session #19 — **B4 IS DONE: §2.4 email is DELIVERED, not just queued.** `service/NotificationMailer` composes and sends the message over SMTP, `NotificationService` records the outcome on the row it already wrote (`QUEUED` → **SENT** with `sentAt`, or **FAILED** with the server's own error), and the plain-text body is stored on the row so the audit table *is* the evidence. **A mail failure never fails the business operation** — registration and every rule still pass with the mail server down (proved by running the suite both ways). The dev catcher is **Mailpit** in a gitignored `.tools/` (no install, no Docker): SMTP 1025 + inbox/API on 8025. Verified **28/28 smoke checks, exit 0** with the catcher up and **26/28 with it stopped — exactly the 2 mail-arrival checks, everything else passing**; 52 messages captured; demo DB unchanged at 21 users / 14 donors / 4 requests / 3 notifications / 40 inventory rows. `application.properties` now drives `BB_SMTP_AUTH`/`BB_SMTP_STARTTLS` from env too, so the real-Gmail §2.4 demo is a 4-variable swap with zero code change (it is only waiting on Google's new-phone delay for the app password). Next: **B8 (Postman) then B7 (`MOCK = false`)** — B5 was already covered by B3's photo endpoints. Previous: session #18 — **B6 IS DONE: Spring Security.** Role rules on every `/api/**` group (anonymous → 401, wrong role → 403 as the same `ApiError` JSON), a real **session-backed login** (`POST /api/auth/login` verifies with BCrypt — in `AuthService`, per §2.2 — then opens a Spring Security session, so a `JSESSIONID` cookie identifies every later request; `POST /api/auth/logout` ends it), and **the dev actor header is gone**: `ActorContextArgumentResolver` now reads the session principal as `AuthenticatedAccount` (reloading the `User` per request, so a role/status change bites immediately). Verified **74/74 over real HTTP** with cookie sessions — including anonymous 401, wrong-role 403 and logout-really-ends-it — and the B2 smoke run still **25/25 with security on** (`backend/target/bb-http-b6.log`, `backend/target/bb-b6smoke.log`); the demo DB was verified back to 21 users / 14 donors / 4 requests / 3 notifications / 40 inventory rows and 8081 is free. Previous: session #17 — **B3 IS DONE: the REST layer answers — 7 controllers over every Appendix B endpoint, a `@ControllerAdvice` mapping the service exceptions to 404/409/400, and an `ActorContext` argument resolver. 56/56 checks pass over real HTTP (`tools/api_check.py`), including the negative cases for BR-1/2/3/5/8; the demo DB was restored afterwards. Next: B4/B6/B7/B8.** Appended to the same session: — **B2 IS DONE: DTOs + the whole service layer (auth, donor search + widen fallback, the request lifecycle with BR-1…BR-8, inventory, admin users, profiles, notification hooks), verified by a 25-check smoke run against live TiDB — 25/25 PASS — which found and fixed two REAL bugs (a `@OneToOne` orphanRemoval that deleted donors on profile save, and a seeder notification guard that added a duplicate welcome row every boot). Next: B3 controllers. Appended to the same session: — **BOOT GATE CLOSED: the B1 seeder fix is verified at runtime** — `Demo data ready: 21 users, 14 donors, 5 hospitals, 40 inventory rows, 4 requests, 3 notifications`, Tomcat on 8081, process stayed up, landing served 200; the session-#16 "22 users" expectation was a miscount (12 + 9 = 21 is correct, see the session), the port-8081 process was stopped again so IntelliJ's ▶ stays free, and the password-holding `workspace.xml.bak-*` is deleted. **Nothing left in front of B2.** Session #16 — **THE FIRST BOOT HAPPENED: the app runs (Tomcat on :8081, TiDB Cloud connected, all 8 tables created)** after clearing two in-flight blockers (IntelliJ stored the `BB_DB_*` env vars with invisible leading/trailing whitespace → Spring fell back to `localhost` → patched in `workspace.xml`; port 8080 is owned by the EDB PostgreSQL PEM Apache service → app moved to **8081**) and fixing a genuine B1 bug (`DemoDataSeeder.fresh` attached a transient `User` to the non-nullable `Donor.user` FK and killed the boot — fixed, compile-verified). **The fix is compiled but NOT yet started: next session is one ▶ away** (expect 22 users / 14 donors / 5 hospitals / 40 inventory rows / 4 requests), then **B2**. Session #15 — **credentials sorted, NO code changed: leaked Gmail app password deleted, dedicated Gmail created (`bloodbuddy1org@gmail.com`), TiDB Cloud Starter cluster "BloodBuddy" created and ACTIVE, `BB_DB_*` set in the IntelliJ run config. **The app has NOT been booted yet** — next is the SQL-Editor `CREATE DATABASE` + first ▶, then B2**. Session #14 — **B1 done: all 6 JPA entities + repositories + seeder, compiles clean**; next B2 service layer. Session #13 — **backend started (B0 done)**: Spring Boot 3.5.16 skeleton in `backend/` (Java 17, Web+JPA+Validation+Mail+MySQL→**TiDB Cloud**), compiles via IntelliJ's bundled Maven 3.9.11; frontend synced into `backend/src/main/resources/static/` by `tools/sync_frontend_to_backend.py` (94 files; static/ is gitignored, re-run after frontend edits). Open `backend/` in IntelliJ → run `BloodBuddyApplication` → app serves frontend at `http://localhost:8080/CODE/HTML/landing.html`. **Class reference project `SpringWebVir` copied to gitignored `reference/` — see its addendum for adopt/avoid patterns; CREDENTIAL-EXPOSURE addendum has the account setup the user must finish before first boot (new Gmail → TiDB cluster → env vars). Plan: B1 entities → B2 service layer → B3 controllers → B4 MailHog email → B5 BLOB photos → B6 security → B7 MOCK=false + harness → B8 Postman. Previous: session #12 — **CPJ119 written report generated**: `tools/report/` builds `BloodBuddy_Final_Report.docx/.pdf` from the reference template with all BloodBuddy content; v2 with cover logo + 4 diagrams is in TEMP — copy out or rebuild. Session #11 — **the FRONTEND IS CLOSED**: every CPJ119 §2.1 requirement is implemented and verified (266/266 harness checks, 92/92 responsive page×width combos, 16/16 real-HTTP). The donor accept/decline loop landed and the AJAX path is now provable, not just written. **Everything mandatory still outstanding is BACKEND / submission artifact** — audit in "Session #11", ordered list in "Next steps")
 
 ## Project
 
@@ -24,7 +24,7 @@
 - Inline `<script>` at bottom of each page + shared `CODE/js/nav.js` (session-aware nav, loaded first) + `CODE/js/main.js` (ripples/tilt) + `CODE/js/bb-store.js`
 - **Session #10 shared modules (all pure JS, no build step):**
   - `CODE/js/bb-validate.js` — shared client-side validation (email/phone/blood-format/password/future-date/units/terms + required). Inline `<small.field-error>` under the field via `.has-error` on the wrapper (works with `.field-group`/`.form-field`/`.pf-field`/`.ct-field`). Exposed as `BloodBuddyValidate` (`check`, `checkAll`, `bindLive`, `setError`, `clearError`).
-  - `CODE/js/bb-api.js` — THE only place pages touch the backend. Promise facade mirroring proposal Appendix B (`auth.register/login/forgot`, `contact`, `donors.search/get`, `requests.list/get/create/update`, `inventory.get/update`, `users.list/setStatus`, `profile.get/save`). `MOCK = true` (one flag → CPP401 flip): mock adapter over BloodBuddyStore with ~60ms latency; **store mutations are synchronous**, only resolution is delayed (QA reads localStorage directly). `MOCK = false` → real `fetch()` to `/api/...` — `BASE` is the origin prefix only and must stay `''` or an absolute origin, because **every path already carries `/api/`** (a path-prefix `BASE` doubles it to `/api/api/...` and 404s every call; verified against `tools/mock_api_server.py`, guarded by harness §22).
+  - `CODE/js/bb-api.js` — THE only place pages touch the backend. Promise facade mirroring proposal Appendix B (`auth.register/login/forgot`, `contact`, `donors.search/get`, `requests.list/get/create/update`, `inventory.get/update`, `users.list/setStatus`, `profile.get/save`). **`MOCK = false` — the shipped default since session #20 is the REAL transport**, so the mock adapter below is now reached only by forcing it (`localStorage.bb_force_mock = '1'`, which is how the QA harness, `real-mode-check.html` and the Python stub keep running): mock adapter over BloodBuddyStore with ~60ms latency; **store mutations are synchronous**, only resolution is delayed (QA reads localStorage directly). `MOCK = false` → real `fetch()` to `/api/...` — `BASE` is the origin prefix only and must stay `''` or an absolute origin, because **every path already carries `/api/`** (a path-prefix `BASE` doubles it to `/api/api/...` and 404s every call; verified against `tools/mock_api_server.py`, guarded by harness §22).
   - `CODE/js/bb-paginate.js` — reusable pager (Prev/Next, Page X of Y, per-page select 5/10/20, hides when empty). `BloodBuddyPaginate.create({mount, pageSize, onChange})` → `setTotal()` + `slice(items)`. CPP401: swap client slicing for `?page=&size=`.
   - `CODE/js/bb-compat.js` — the Appendix A blood-compatibility chart, shared (session #10 follow-up). `BloodBuddyCompat.forRecipient(g)` (recipient → compatible DONOR groups) and `donorsFor(g)`. Previously copy-pasted into `requester-request.html` and `emergency-request.html`; the donor dashboard's accept/decline list would have been a third copy, so it was extracted rather than triplicated. **Direction matters** — reading the chart backwards offers a donor a patient they must not give blood to.
   - `bb-store.js` gained a `donors` collection (`bb_db.donors`, `SEED_DONORS` = the 14 donors moved out of requester-search.html) + `Store.donors.all()/find()`; `reset()` clears it too.
@@ -68,20 +68,296 @@ CSS added: `requester-request.css`, `requester-tracking.css`, `hospital.css`, `a
 
 ## QA harness (session #5, extended in #6–#8)
 
-- `resptest/qa-harness.html` — self-driving test page: loads every page in hidden iframes with a cleared localStorage, runs **266 checks** (render smoke on 22 pages — public pages logged out, private pages under the right session AND logged out to prove the bounce — plus interactions: landing emergency CTAs + logged-out CTA guardrails, EMERGENCY guest submit → store + success ID + status lookup (by ID / not-found / member-ID privacy) + Emergency badges in hospital & admin queues, session-aware quick-search nudge, search modal donor-filter + persistence, request submit → store → tracking redirect, tracking render + cancel, hospital accept→fulfil→inventory decrement, admin forward, stock adjust, user suspend, demo reset, login redirect, register wizard + legal links, contact form, about content, 404 links, session-aware nav + CTAs + profile chip on landing/about/contact for donor + requester roles), plus §21 the donor side of the lifecycle (match direction against Appendix A, accept/decline, requester visibility) and §22 the real-mode transport contract (`BASE` never doubles `/api/`, every endpoint path is origin-relative, ships `MOCK = true`), then dumps a PASS/FAIL report into the DOM.
+- `resptest/qa-harness.html` — self-driving test page: loads every page in hidden iframes with a cleared localStorage, runs **268 checks** (render smoke on 23 pages — public pages logged out, private pages under the right session AND logged out to prove the bounce — plus interactions: landing emergency CTAs + logged-out CTA guardrails, EMERGENCY guest submit → store + success ID + status lookup (by ID / not-found / member-ID privacy) + Emergency badges in hospital & admin queues, session-aware quick-search nudge, search modal donor-filter + persistence, request submit → store → tracking redirect, tracking render + cancel, hospital accept→fulfil→inventory decrement, admin forward, stock adjust, user suspend, demo reset, login redirect, register wizard + legal links, contact form, about content, 404 links, session-aware nav + CTAs + profile chip on landing/about/contact for donor + requester roles), plus §21 the donor side of the lifecycle (match direction against Appendix A, accept/decline, requester visibility) and §22 the real-mode transport contract (`BASE` never doubles `/api/`, every endpoint path is origin-relative, ships `MOCK = false`), then dumps a PASS/FAIL report into the DOM.
 - Run it (bash, from repo root):
   1. `python -m http.server 8321 --directory . &` (skip if still running)
   2. `"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --virtual-time-budget=120000 --timeout=60000 --user-data-dir=$TMP/chrome-qa "http://localhost:8321/resptest/qa-harness.html" --dump-dom > resptest/qa-dom.txt 2> resptest/qa-stderr.txt`
   3. `grep -o "<title>[^<]*</title>" resptest/qa-dom.txt` → `QA-DONE 198/198` means done (number of checks grows as tests are added — just verify nothing failed); read the `<pre id="out">` block for per-check results. (Needs the big virtual-time-budget: 30s expired early. Chrome may linger after the dump — the results land in `qa-dom.txt` regardless. Chrome console errors are capturable via `--enable-logging=stderr`.)
-- **Last result: 266/266 passed** (session #10) — verified after the validation/fetch/pagination work, the loose-end follow-up, the donor-side lifecycle and the real-mode transport check; the checks grew 216 → 245 → 261 → 266 (see "Session #10" for what changed and which real bugs it caught). The harness's `withPage` also accepts a `seed` option that writes localStorage BEFORE the iframe loads (used to plant guest EM requests, session #9's role-flow seeds, etc.) — note a seed **replaces** the store's own seeds, because `primeStorage` clears storage first.
+- **Last result: 268/268 passed** (session #20, re-run green in #23/#26/#27) — verified after the validation/fetch/pagination work, the loose-end follow-up, the donor-side lifecycle, the real-mode transport check and the transport rewrite; the checks grew 216 → 245 → 261 → 266 → 268 (see "Session #10" for what changed and which real bugs it caught). The harness's `withPage` also accepts a `seed` option that writes localStorage BEFORE the iframe loads (used to plant guest EM requests, session #9's role-flow seeds, etc.) — note a seed **replaces** the store's own seeds, because `primeStorage` clears storage first.
 - **Run it with a FRESH `--user-data-dir` and a `?v=` cache-buster.** Reusing a profile (or the same URL) makes Chrome serve the previous run's cached pages and report identical stale numbers — that is exactly how a fixed harness appeared to still fail 33 checks.
 - **`resptest/responsive-check.html`** covers what this harness structurally cannot: responsive layout. Its iframes are a fixed 1280px, but CPJ119 2.1 makes a "fully responsive layout … across mobile, tablet and desktop" **mandatory**. The responsive check loads all 23 pages at 360/430/768/1280 (media queries resolve against the IFRAME viewport, so a 360px iframe lays out like a 360px phone) and reports any page whose `scrollWidth` exceeds the viewport, naming the widest offenders. Run it the same way; **last result 92/92**.
 - **`resptest/real-mode-check.html` + `tools/mock_api_server.py`** cover the one requirement the other two tools structurally cannot: that the AJAX/Fetch layer actually talks to an HTTP API. `qa-harness.html` runs in mock mode (no request is ever made; DevTools Network stays empty), so on its own the fetch requirement is "met" only on paper. `tools/mock_api_server.py` serves the static pages **and** an Appendix B stub on one port, so flipping `MOCK = false` produces a page whose `/api/...` calls resolve against its own origin. Run:
   1. `python tools/mock_api_server.py -p 8322`
-  2. set `MOCK = false` in `CODE/js/bb-api.js`
+  2. **nothing to flip** — `MOCK = false` is the shipped default since session #20; the mock path is only reached through the `localStorage.bb_force_mock = '1'` override
   3. `"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --user-data-dir=$TMP/chrome-real --virtual-time-budget=25000 --dump-dom "http://127.0.0.1:8322/resptest/real-mode-check.html"` → title `REAL-DONE 16/16`
-  4. **set `MOCK = true` again** — that is the shipped default, and §22 of the harness now fails if it is not.
+  4. **nothing to set back** — and §22 of the harness now fails if `MOCK` is not `false`.
   The proof does not rely on the page merely rendering: `localStorage` is cleared per page and the `bb_db.*` collections are pinned to empty sentinel arrays, so any rendered rows can only have arrived over HTTP. The stub's stdout logs each matching `GET /api/... -> 200`.
+
+## Session #28 (2026-09-17) — the session-#27 hand-off is closed: the stale app is down, the demo DB is pristine again, and the interrupted confirmation reads 42/42 ✅
+
+Started as “read PROGRESS + the proposal and continue from there”, so this session worked the
+session-#27 hand-off list in order. **No product code, test or document changed** — it is a *state*
+session, and its value is that the next reader can trust the demo environment again.
+
+### 1. Hand-off item 1 — the “running app” was already gone
+`tasklist` for **PID 21268** → *“No tasks are running which match the specified criteria”*, and
+`netstat` showed nothing listening on 8081 or 8025. So there was no second app to avoid and nothing
+to kill. (Mailpit was down too — which is why §2’s “empty the inbox” had to be done by starting it,
+see §3.)
+
+### 2. Hand-off item 2 — the demo database, restored statement by statement
+Read first, deleted second. At the stop the DB held **25 users / 16 donors / 5 hospitals / 40
+inventory / 7 requests / 30 notifications / 13 timeline / 39 affiliations / 0 declines**, TUTH B+ =
+**12** (already back), `BB-5MN8VX` **PENDING but routed to NMC (`hospital_id = 10`)**, and the run’s
+four extra accounts (`api-check+1789639954108730900`, `api-check+nurse1789639961113449400`,
+`api-check+nurse21789639962147897100`, `b7check+1789640001559`) with two donors and three requests.
+- **A full pre-cleanup dump was taken first**: `mysqldump` → **`.tools/wt/db-before-session28.sql`**
+  (39 KB, 8 tables). Use it **without `--single-transaction`** — TiDB has no `SAVEPOINT` and the
+  flag dies with `Couldn't execute 'ROLLBACK TO SAVEPOINT sp'`. This mattered because the printed
+  cleanup SQL covers the run’s own footprint but **not** the browser check’s `b7check+…` account.
+- **The restore, one statement per client invocation** (the runbook’s “a multi-statement `-e` stops
+  at the first error and silently skips the rest” trap): declines → notifications → timeline →
+  `blood_requests` for request ids **270025/270026/270027**; then `BB-5MN8VX`’s extra timeline rows
+  (`seq > 0`), the `hospital_id=NULL` + `CONVERT(UNHEX('E28094') USING utf8mb4)` re-label, `arun.s`
+  back to `ACTIVE` and a `photo=NULL` sweep; then the `api-check+%` **and `b7check+%`**
+  notifications, affiliations, donors and users.
+- **Verified by re-reading every count**, not by trusting the statements: **21 users / 14 donors /
+  5 hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39 affiliations /
+  0 declines / 0 donor photos**, TUTH B+ = **12**, `BB-5MN8VX` **PENDING + unrouted**
+  (`hospital_label` hex **`E28094`**), only **Bikash Tamang** suspended. The session-#27 “divergence
+  to settle” is settled: the em-dash label and the NULL hospital are back.
+
+### 3. Hand-off item 3 — the interrupted confirmation, finished: 42/42 from pristine
+The session-#27 tail left `.tools/wt/final-dom.html` at **0 bytes**, so the page’s 42/42 stood only
+from a pre-restore run. Finished here, in this order: Mailpit started against the **repo-local**
+`.tools/mailpit/mailpit.db` — which still held session #27’s **27 messages** — and emptied through
+the API (`DELETE /api/v1/messages` → `total: 0`); the frontend `static/` verified already in sync
+with `CODE/HTML/hospital-requests.html` and `resptest/real-backend-check.html` (`diff -q` clean, so
+the **session-#27 BR-5 page fix was really the thing under test**); the app booted from the
+runbook’s own recipe, its log carrying **`Demo data ready: 21 users, 14 donors, 5 hospitals, 40
+inventory rows, 4 requests, 3 notifications`** and then **`Tomcat started on port 8081`**; then the
+check run headless:
+```bash
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu \
+  --user-data-dir=$TMP/chrome-rb-s28 --virtual-time-budget=60000 \
+  --dump-dom http://localhost:8081/resptest/real-backend-check.html
+```
+→ **`<title>REAL-BACKEND-DONE 42/42</title>`** (`.tools/wt/rb-s28-dom.html`). Both session-#27 pins
+are inside those 42: *“a hospital session asking /api/requests with no filter gets ITS OWN queue”*
+and *“…the queue page rendered this hospital’s requests (2 card ids)”*, with `shown == own` =
+`[BB-2T877U, BB-7HD4LN]`.
+
+### 4. The run’s footprint removed again — and pristine re-verified
+The check registers accounts and submits a request, so it is not free: **23 users / 15 donors /
+5 requests / 17 notifications / 9 timeline** immediately after it. Its own page **prints the exact
+cleanup SQL** (one statement at a time, FK order timeline → declines → notifications → request),
+applied here for `BB-2T877U` and the `b7check+…`/`b7staff+…` accounts, plus the `BB-5MN8VX`
+timeline and `arun.s` lines. Re-read afterwards: **21 / 14 / 5 / 40 / 4 / 3 / 7 / 39 / 0 declines /
+0 photos**, TUTH B+ = **12**, `BB-5MN8VX` **unrouted (`E28094`) + PENDING**, only Bikash suspended.
+
+### 5. The machine was left in the rehearsal’s start state
+- **App stopped; 8081 free** (the `java` PID holding 8081 was killed; only `TIME_WAIT` client
+  sockets remain) — IntelliJ’s ▶ will bind first try.
+- **Mailpit left UP on 8025 with an EMPTY inbox** (repo-local db, `total: 0`), because that is
+exactly what hand-off item 4 expects: “once 8081 is free, Mailpit is up and empty and the DB is
+  pristine”.
+- **DB pristine**, verified twice — before the confirmation run and after its footprint came out.
+
+### State at session end
+- **Nothing is running but Mailpit** (SMTP 1025, inbox 8025, empty). **8081 is free.**
+- **DB is pristine:** 21 users / 14 donors / 5 hospitals / 40 inventory / 4 requests /
+  3 notifications / 7 timeline / 39 affiliations / 0 declines / 0 donor photos, TUTH B+ = **12**,
+  `BB-5MN8VX` **PENDING + unrouted** (`E28094`), only **Bikash Tamang** `SUSPENDED`.
+- **Evidence from this session** (all gitignored under `.tools/`): `wt/db-before-session28.sql`
+  (the pre-cleanup dump), `wt/rb-s28-dom.html` (**42/42**), `wt/app-s28.log` (the boot lines),
+  `wt/mailpit-s28b.log`.
+- **Uncommitted:** unchanged from session #27 — the combined #26 + #27 set (the backend BR-5 fix,
+  `tools/api_check.py` 98, `resptest/real-backend-check.html` 42, `CODE/HTML/hospital-requests.html`,
+  the three docs, both report copies, and the new figure assets `tools/report/build_diagrams.py`,
+  `build_montages.py`, `assets/shots/`, `fig1_1/fig3_2/fig3_5/fig4_1`). `origin/main` = `1c4ca14`.
+
+### Hand-off — next session starts here
+1. **The user’s own rehearsal is the one open item** (session #27 item 4): drive
+   `docs/DEMO_RUNBOOK.md` §0 → §1 → §6 in the **browser** with IntelliJ’s ▶, now that 8081 is free,
+   Mailpit is up and empty, and the DB is pristine. Two points to check *visually* because the
+   API-level walkthrough cannot see them: the **hospital queue page** must show TUTH’s rows for a
+   TUTH session, and **Mailpit’s inbox** should gain exactly one mail per registration.
+2. **Commit and push the combined #26 + #27 set** (this session adds only `PROGRESS.md`).
+3. Optional polish: the diagrams are dense at 6 pt (fewer flows/cases per figure), and the runbook’s
+   §0 table could print the two new check counts side by side.
+4. After the rehearsal, §0G / §5 of the runbook puts the demo data back.
+
+## Session #27 (2026-09-17) — the walkthrough run (2 real defects fixed), the report gets its images and its diagrams, and the backend narrative stops saying "scheduled" ✅
+
+Started as "read PROGRESS + the proposal and continue from there", so this session took the
+live thread of session #26 hand-off item 4 — **finish the report images** — and closed it, plus
+the accuracy problem the rebuild exposed.
+
+### 1. The wiring that was missing (`tools/report/build_report.py`)
+- **`FIG_IMAGES`** gained the five screenshot captions: Figure 4-2 →
+  `shots/fig4_2_donor_search.png`, 4-3 → `shots/fig4_3_request_forms.png` (the two-form
+  montage), 4-4 → `shots/fig4_4_donor_profile.png`, 4-5 → `shots/fig4_5_admin_panels.png`
+  (the 2×2 panel grid), 5-1 → `shots/fig5_1_harness.png` (three stacked reports).
+- **New `APPENDIX_IMAGES`, keyed by appendix title.** Appendix E and F were rendering
+  **imageless** — their `[INSERT SCREENSHOT …]` lines had already been deleted, so nothing
+  was left to render. E now carries Figure E-1 (the 5-1 montage, reproduced with a caption
+  that says so); F carries F-1 landing, F-2 the auth pair, F-3 donor dashboard, F-4 hospital
+  request queue, F-5 the legal row + 404.
+- A `FIG_IMAGES` value may be **one `(file, width)` pair or a list of them**, and the new
+  `add_image()` **prints a warning if an asset is missing** instead of silently emitting a
+  captioned gap — a skipped figure is the failure mode that started this session.
+- Widths are chosen so nothing overflows a text block (16.2 × 25.3 cm at these margins):
+  the deepest asset is `fig4_3_request_forms.png` (2160×3014) at 13.5 cm ≈ **18.8 cm tall**.
+
+### 2. Placeholders: 19 → 0 (the diagrams were drawn, not waited for)
+`bb_content.py`'s screenshot placeholder lines for 4-2/4-3/4-4/4-5 are gone (the images
+replace them), and **Figure E-1 / F-1…F-5 were added to `LIST_OF_FIGURES`** so the
+front-matter list keeps matching the captions: verified **19 captions = 19 listed**, with no
+entry in either direction unmatched.
+That first pass left four bracketed placeholders. Rather than leave them for a human, they
+are now **drawn by a new tracked tool, `tools/report/build_diagrams.py`** — Pillow only (no
+Graphviz, no matplotlib, no browser — the same dependency `build_montages.py` already uses),
+so the figures are reproducible from the repo with one command, and the script self-checks
+before it saves:
+- **Figure 1-1 (request lifecycle)** — the six-box flow (submit → PENDING → admin forwards →
+  hospital queue → donor accepts/Matched → fulfil with stock −units), the guest `EM-` entry,
+  the Cancelled/Rejected terminal branch, and a numbered legend that spells out each API call
+  and the rule it carries (BR-1…BR-5).
+- **Figure 3-2 (use case)** — five actors (Donor, Requester, Guest, Hospital Staff,
+  Administrator) against 24 use cases on a BloodBuddy boundary, plus the register/log-in note
+  and the 401/403 sentence from §3.9.
+- **Figure 3-5 (Level-1 DFD)** — processes 1–6, five data stores (the nine tables collapsed to
+  the five the flows actually touch), the SMTP server, and **18 numbered flows with a legend**
+  (badges on the lines instead of labels on them — the label-per-line version was unreadable).
+- **Figure 4-1 (project file structure)** — the last screenshot placeholder. A headless
+  browser cannot photograph IntelliJ, so the figure is a **rendered tree of the actual
+  repository** (backend packages, frontend modules, tools, resptest, docs) instead: honest
+  evidence of the structure, with no human in the loop. Caption lost its "(IntelliJ IDEA)"
+  qualifier and `LIST_OF_FIGURES` followed.
+The self-checks are the point: each figure reports its size + ink coverage and warns on a
+label that does not fit its box or **two boxes that overlap** — I cannot see the rendered PNG,
+so the geometry is asserted instead. Type sizes are chosen against the printed page (19 px on
+a 1460 px canvas at 16 cm ≈ 6 pt — the same order as the proposal's own diagrams), because the
+first draft came out at 4 pt and would have been unreadable in print.
+
+### 3. v2 rebuilt, Word-finalised, verified by diff
+- Backed the old hand-in copy up **first** to `.tools/report-backup/v2-before.{docx,pdf}`
+  (gitignored), then `python tools/report/build_report.py docs/BloodBuddy_Final_Report_v2.docx`
+  and `python tools/report/finalize_word.py "D:/APJ_PROJECT/docs/BloodBuddy_Final_Report_v2.docx"`
+  — **the absolute path matters**, a relative one fails inside Word COM.
+- **Verification** (the session-#23 method): strip text from old and new, `difflib` the two.
+  Every non-TOC difference is an intended one; the only other churn is TOC page numbers,
+  which shift because the figures added pages. Images **5 → 16**; `[INSERT SCREENSHOT …]`
+  **19 → 1**; `[INSERT DIAGRAM …]` 3 (unchanged); PDF **48 pages, 16 image XObjects,
+  2.15 MB**.
+- **The diff proved v2 had never received session #26's text corrections.** It still said
+  "266 automated functional checks", "16/16 against the REST stub" and "Figure 4-1 … (VS
+  Code)" — because §26.11 edited `bb_content.py` but the build was never re-run. Rebuilding
+  is what put 268/268 · 92/92 · 39/39 and IntelliJ IDEA into the hand-in copy.
+
+### 4. The report still described the backend as unbuilt (fixed — ~14 statements)
+Session #26 fixed the *counts* and left the *narrative*. The report was contradicting itself
+in the same breath:
+- **§5.5**: "The remaining mandatory criteria belong to the scheduled backend phase and are
+  not claimed as complete" — two pages after Table 5-1 shows TC-18 (39/39), TC-20
+  (Postman) and TC-21 (SMTP) **PASS**.
+- **§7.2 Limitations**: the backend "is the scheduled implementation phase", email "not yet
+  sending, as delivery depends on the backend phase", the hospital APIs "designed and stubbed
+  but not live", server-side guarantees "specified but not yet in force".
+- **Table 2-2 / Table 3-3 / §4.1 / §4.3.2 / §4.3.4 / §4.5 / Table 5-2 / Ch6 / Table 6-1 /
+  §7.3 / Appendix C** carried the same frontend-phase tense ("scheduled with the backend",
+  "service-side auth scheduled", "implementation scheduled; design Chapter 3", Table 6-1 row
+  13 "Scheduled (backend phase)", "Complete the Spring MVC backend" as future work, and
+  Appendix C's "To be exported from MySQL Workbench during the backend phase").
+Rewritten to what was actually built and **recorded**: Spring Security session login (BCrypt),
+MySQL-compatible **TiDB Cloud Serverless** persistence, **Mailpit** SMTP with per-row
+SENT/FAILED, **Newman** 76 requests / 107 assertions, and Appendix C now documents the
+**nine real tables** (users, donors, hospitals, blood_inventory, blood_requests,
+request_timeline, email_notifications, request_declines, donor_hospital_affiliation). §7.2's
+limitations are now real limits (browser store survives only as a forced offline path, no
+hospital integration feed, local mail catcher, in-request rather than queued sending, no DB
+exclusion for two simultaneous accepts) instead of "not built yet". **This was an editorial
+change to the user's own document; the full list is in the diff of `bb_content.py` (see #6).**
+Two judgement calls worth naming: §4.1's "VS Code" became **IntelliJ IDEA** (the direction
+§26.11 already took for Figure 4-1), and §7.3's first two "future scope" bullets were
+replaced by genuine future work rather than re-worded to-dos.
+
+### 5. Both copies rebuilt (v1 too) and proven identical
+`docs/BloodBuddy_Final_Report.docx` was rebuilt as well, so the two copies agree:
+**identical body text, identical tables (167 rows), identical captions, 20 images each, zero
+placeholders, 51 pages** — verified by diffing the stripped text (TOC page numbers excluded)
+and the table/caption sets. (The PDFs carry 19 image XObjects because the 5-1 montage is
+referenced twice — Figure 5-1 and Figure E-1 — and Word stores it once.)
+
+### 6. The walkthrough (hand-off item 5) — run end to end, from the outside
+Mailpit up, DB pristine, 8081 free, then the app booted from the runbook's own recipe; the log
+carried exactly the expected line (`Demo data ready: 21 users, 14 donors, 5 hospitals, 40
+inventory rows, 4 requests, 3 notifications`, `Tomcat started on port 8081`). Every §1
+checkpoint was then verified **over HTTP and in TiDB**, not by looking at a screenshot:
+
+| §1 checkpoint | what was actually done | result |
+|---|---|---|
+| 0:00 landing + responsive | `GET /CODE/HTML/landing.html`; `responsive-check.html`; `qa-harness.html` | **200**, **92/92**, **268/268** |
+| 1:00 register (§2.4) | `POST /api/auth/register` as a new donor | **201**; TiDB row `DONOR/ACTIVE` + donor `O_MINUS`; Mailpit went **0 → 1** with *“Welcome to BloodBuddy — confirmation for …”*; `email_notifications` row **SENT** with `sentAt` set |
+| 4:00 requester | login `sita.g`, `GET /api/donors/search?blood=B+&district=Kathmandu` | 5 real donor rows; **widen fallback** (`O-` in Dharan → `widened:true` + *“showing O- donors in all districts”*); `POST /api/requests` **201** with the timeline line *“Request submitted — 11 compatible donors notified”*; tracker showed 3 rows; inbox filled with *“Urgent B+ request in Kathmandu”* per compatible donor |
+| 7:00 donor | login `arun.s`, `GET /api/requests` (his board), `PATCH {status:Accepted}` | Board listed only requests a B+ donor may serve — **the O− request (`BB-5MN8VX`) was correctly NOT offered** (the chart read the right way); accept **200** → `Matched`, donor stamped, `donorAt` set, timeline line added; requester got *“BB-CUT9Z7 — a donor has accepted your request”* |
+| 9:30 hospital | login `bloodbank@tuth`, inventory read, `PUT /api/hospitals/inventory/B+`, `PATCH {status:Fulfilled}` | 8-group board; **12 → 13** via the API; queue held TUTH's own rows only; fulfil **200** → `Fulfilled` + *“2 units of B+ issued…”* and stock **13 → 11** (BR-4 arithmetic is the API's) |
+| 11:30 admin | login `saksham`, `GET /api/admin/users?page=0&size=4`, suspend, `?unrouted=true`, forward | paged envelope (22 users, 6 pages); suspend **200** → that account's next login **refused with its reason** (409); forward to Patan **200** + timeline *“Forwarded to Patan Hospital, Lalitpur by platform admin”* |
+| 13:30 guardrails | anonymous / wrong-role calls | `GET /api/admin/users` → **401** anonymous, **403** as the requester, both in the same `ApiError` shape |
+| 14:30 tools | Newman, real-backend-check, `api_check.py`, smoke run | **76 · 107 · 0**; **39/39** (then 42/42, see §7); **95/95** (then 98/98); **31/31** exit 0 |
+Everything else in the runbook’s §0 table reproduced too (harness 268/268, responsive 92/92).
+
+### 7. The walkthrough found TWO real defects — both fixed, both pinned
+Neither was visible from reading the code; both came out of doing the 9:30 checkpoint for real.
+1. **BR-5 was not enforced on the generic queue endpoint.** `PUT /api/hospitals/8/inventory/B+`
+   answered **409** as it should, but `GET /api/requests?hospitalId=8` — *the same data behind a
+   query parameter* — answered **200 with Patan's queue** to a TUTH session (and with no filter
+   at all it returned **the whole table**). `RequestController.list` now pins a hospital actor
+   to its own hospital: another hospital's id or label → 409, the admin-only views
+   (`?guest`, `?unrouted`, `?requester[Id]`) → 409, and **no filter means “my queue”**. Admin
+   behaviour is untouched (it may address any hospital) and requesters/donors are untouched.
+2. **`hospital-requests.html` carried the demo's single hospital identity into real mode.**
+   It hardcoded `HOSPITAL = 'Bir Hospital, Kathmandu'` and asked the API for *that* queue — so a
+   TUTH session rendered **Bir's** rows, which is the opposite of what the runbook tells the
+   user to say, and after fix (1) the same call is refused. The page now asks with **no hospital
+   at all** and lets the server answer with the session's own (mock mode keeps the demo label).
+**Pinned so neither can come back:** `tools/api_check.py` **95 → 98** (own queue with no filter,
+`?hospitalId=<other>` → 409, the admin-only views → 409; the pre-fix server fails the first
+and answers 200 to the second — that is the negative test) and `resptest/real-backend-check.html`
+**39 → 42** (the API's own-queue rule, the **page's rendered card ids ⊆ the signed-in hospital's
+queue**, and “no other hospital's request appears on it” — the pre-fix page showed Bir's).
+Re-verified after the fixes: **42/42**, **98/98**, **Newman 76 · 107 · 0**, **qa-harness 268/268**
+— no regression anywhere, including the Postman collection’s own hospital folder.
+
+### 8. Numbers rippled, then the demo state was put back
+Every quoted count updated where it is claimed (`tools/api_check.py`’s header, the runbook’s §0
+/ §3 / §6 and its Q&A, `backend/README.md`, and the report’s TC-18 / Table 4-1 row 12 /
+Appendix E / Figure 5-1 caption / LIST_OF_FIGURES / Chapter 7). The Figure 5-1 **screenshot was
+re-captured** (`node .tools/shots/capture.js fig5_1c` → the page now reads 42/42) and the montage
+re-composed, so the picture and the caption cannot disagree. Both reports were rebuilt again.
+Finally the walkthrough’s own footprint was removed with the §5 recipe, one statement at a time,
+and verified by re-reading every count: **21 users / 14 donors / 5 hospitals / 40 inventory /
+4 requests / 3 notifications / 7 timeline / 39 affiliations / 0 declines / 0 donor photos**,
+TUTH B+ = **12**, `BB-5MN8VX` **PENDING + unrouted** (`E28094`, notes NULL), the seeded four
+requests back to their seeded statuses, the only `SUSPENDED` account still the seeded Bikash
+Tamang. Mailpit’s inbox was **emptied** (it held the walkthrough’s ~100 mails) and the app was
+**stopped** — 8081 was free again.
+
+### 9. The confirmation run from pristine — and the state the session was stopped in
+Both BR-5 fixes were then re-tested **from a pristine database**, not just from the walkthrough’s
+own leftovers: the app was restarted against the restored DB and the checks re-run. `tools/api_check.py`
+came back **98 passed, 0 failed** (`.tools/wt/api_check_final.log`), the three new BR-5 checks
+included, and the Newman collection was green earlier in the session (**76 requests · 107
+assertions · 0 failures**). The *browser* half of that confirmation — `resptest/real-backend-check.html`
+run against the pristine DB — is the step that **was still in flight when the session was stopped**:
+`.tools/wt/final-dom.html` is 0 bytes, so the page’s **42/42** stands only from the pre-restore run
+(`.tools/wt/rb3-dom.html` reads 42/42).
+Consequently the stop left **the app RUNNING and the DB holding that run’s footprint**, not pristine
+— the exact counts and the accounts to remove are in the block below, and the cleanup
+SQL for the three `api-check+…` accounts is printed at the tail of `.tools/wt/api_check_final.log`.
+**All of it was done in session #28** (and the one row that list missed — the browser check’s
+`b7check+…` account — was removed with it).
+
+### State at the stop — superseded, and now closed
+**Session #28 stopped the stale app, restored the database and finished the interrupted
+confirmation; the live state is in “Session #28 — State at session end”.** What the stop left was:
+Spring Boot running on **8081 (PID 21268)**, the DB carrying the confirmation run (**25 users / 16
+donors / 7 requests / 30 notifications / 13 timeline**, TUTH B+ = **15**, `BB-5MN8VX` re-pointed at
+**NMC / 10**), Mailpit holding **27 messages**, and the rows to remove listed as accounts
+**270026–270029** (`api-check+…`, `b7check+…`), donors **270012/270013** and requests
+**`EM-L6AVFN` / `BB-9EK9LM` / `BB-4TTYVZ`** — with the note that the printed cleanup SQL did not
+match the browser check’s `b7check+…` account and that §8’s em-dash label had been re-pointed. Every
+one of those items was done in session #28, and the em-dash label (**`E28094`**) re-applied.
 
 ## Session #26 (2026-09-17) — the Postman collection is GREEN under Newman, twice, and the DB is back ✅
 
@@ -167,21 +443,157 @@ The run's own footprint (guest `EM-X8SHQR`, member `BB-VK9Z5S`, 2 `api-check+…
 accounts, its photo, and `BB-5MN8VX` forwarded to NMC) was cleaned with the SQL the
 script prints, and the pristine counts were re-verified afterwards.
 
-### Hand-off — what is left of the session-#25 list
+### 6. Committed and pushed
+**`1c4ca14`** — *"Prove the Postman deliverable by running it, and guard the bug it
+found"* — 6 files, +894/−10, pushed to `origin/main` (`45f8785..1c4ca14`). It carries
+session #25's four files (`RequestController`'s `?status=` branch, the 76-request
+collection, runbook §0, the uncommitted state PROGRESS had been warning about) **and**
+this session's docs plus the new check. Nothing in `backend/.idea/` or `.tools/` is
+tracked, so no credentials moved.
+
+### 7. The demo was staged for the user, then deferred
+Per the user's request the start line was set up and left there: **Mailpit's inbox
+emptied** (it held 398 mails from every test run — at the defence, "the welcome mail
+arrived" is far stronger when it is the *only* mail there), **the app process on 8081
+stopped** (java PID 21708) so IntelliJ's ▶ is free, and the DB re-verified pristine one
+last time so the boot is the only unknown.
+- The hand-over was written out as **checkpoint → what good looks like → what it
+  proves** for all nine click-script steps, plus the two traps: don't press ▶ while
+  8081 is held (Tomcat fails *after* Hibernate has run, which looks like a bug), and
+  Mailpit must be up **first** or the registration writes `FAILED` instead of sending.
+- **The user then chose not to rehearse it today**, so the dry run did **not** happen:
+  the script is written and the start is staged, but nobody has walked it end to end
+  in the browser against live TiDB. It is still outstanding (hand-off item 5) and the
+  honest label is still `[rehearse]`.
+
+### 8. The report's screenshots — there are 18 placeholders, not 9 (half done)
+Asked to "fill the report's 9 screenshot placeholders", the first check was the claim
+itself: **both DOCX files carry 18** (`[INSERT SCREENSHOT…]`, across 11 figures), and
+the "9" in the runbook was stale. They split three ways — 8 public pages, 7
+role-restricted pages, 3 self-driving harness pages.
+
+- **Captured from the running app, all 19 pages**, into
+  `tools/report/assets/shots/` (tracked). Tooling is gitignored in `.tools/shots/`:
+  `puppeteer-core` 25.11.0 driving the installed Chrome, plus `capture.js` (the 19
+  targets), `probe.js` (which page a role actually lands on), `fails.js` (the failing
+  lines from a check), `netprobe.js` (every `/api/` response with its frame) and
+  `iframeprobe.js` (one page in one iframe).
+- **The session's key trap, learned the hard way:** a screenshot of a role page needs
+  **both** halves of the session — the `JSESSIONID` cookie **and** a seeded
+  `localStorage.bb_session`. `nav.js`'s `RBAC_GUARD` bounces on the *cached* session at
+  load time, so a fresh browser context with only the cookie lands on `auth-login.html`.
+  The first pass produced **byte-identical images per role** (three requester pages =
+  one file) which is what exposed it; `node probe.js` then showed `-> auth-login.html
+  <-- BOUNCED` for all nine. Seeding via `evaluateOnNewDocument` fixed it.
+- Harness pages are waited on by their own `document.title` (`QA-DONE n/n` etc.) and
+  then scrolled to the verdict line, so the picture shows a number rather than a log.
+- **`tools/report/build_montages.py` (new, tracked)** composes the grouped figures —
+  Figure 4-3 (both request forms), Figure 4-5 (four admin panels, 2×2), Figure 5-1
+  (three reports), Appendix F's auth pair and legal row — and prints **size + "ink"
+  coverage for every capture**, so a blank or error page cannot slip in silently.
+  All 19 measure 2.4 %–29.7 % ink: real pages, none blank.
+- **One placeholder cannot be filled by a browser:** Figure 4-1 asks for an IDE
+  project view. It is left as a (now correctly worded) placeholder for the user —
+  see the hand-off.
+
+### 9. Two real defects found on the way (both fixed)
+Neither was the point of the session; both came out of *running* things rather than
+reading them, again.
+1. **`resptest/real-backend-check.html` was flaky and read 35/39.** Every API call
+   made *inside* its iframes was `net::ERR_ABORTED` (proved with `netprobe.js`),
+   because the page slept a fixed **1200 ms** and then removed the iframe while its
+   fetch was still in flight — TiDB Cloud is answering in **~1.6 s per call** here.
+   The API was correct all along; the *check* was racing it. Now it **waits for the
+   rows** (20 s poll) and polls the login notice instead of guessing: **39/39**.
+2. **The Postman collection's `memberCode` variable defaulted to `BB-5MN8VX`** — a
+   *seeded demo request*. `requestCode` was left empty (correct) but this one was not,
+   so any run where the capture did not happen first silently **PATCHed the demo row's
+   notes**. Session #25 hit exactly that and its restore never checked the column.
+   Default changed to `''`; re-ran Newman — **76 requests / 107 assertions / 0 failed**,
+   and this time the patch landed on the run's own request (`BB-PTPE9D`) while
+   `BB-5MN8VX` kept `notes IS NULL`. The demo row's stale note is restored to NULL.
+
+### 10. A gotcha worth keeping (it cost real time here)
+`tools/sync_frontend_to_backend.py` writes **`src/main/resources/static/`**, but a
+**running** app serves **`target/classes/static/`** — `spring-boot:run` copied the
+resources into `target/` when it started. Editing a page and re-syncing changes
+nothing until the resources are recopied or the app restarts; a fixed check kept
+failing here because the browser was still being served the old file. (Copied the
+tree across by hand to avoid a restart mid-capture.)
+
+### 11. Report text: a numbers-accuracy pass (`tools/report/bb_content.py`)
+The user asked for three corrections — and the honest radius of them turned out wider,
+because the surrounding claims were still from the frontend-only phase:
+`266/266 → 268/268` (and TC-19's `266→264 → 268→266`); the real-mode/`16/16`-stub
+evidence replaced by the **real-backend check, 39/39**; **Figure 4-1 "VS Code" →
+IntelliJ IDEA** (caption, placeholder and LIST OF FIGURES). Beyond those: **TC-20
+(Postman) and TC-21 (SMTP) were "Pending (backend phase)" → PASS**, **FR-12/FR-13
+("Spring Mail scheduled", "BLOB storage scheduled") → implemented**, the Chapter 7
+conclusion and Appendix E's tool list now carry the real figures (95 HTTP checks,
+31 service-layer, 76 Postman requests), and Figure 5-1's caption became "Automated
+Verification Reports (268/268 · 92/92 · 39/39)". Leaving "scheduled" next to a
+39/39 screenshot would have contradicted itself.
+
+### Hand-off — next session starts here
 1. ~~Finish the Postman verification + clean its footprint.~~ **DONE here.**
 2. ~~Add the `?status=`-alone check to `tools/api_check.py`~~ **DONE here (94 → 95).**
-3. **Commit + push** — the tree now carries session #25's 4 files plus this session's
-   `PROGRESS.md`, `docs/DEMO_RUNBOOK.md`, `backend/README.md` and `tools/api_check.py`
-   (`45f8785` was what was on `origin/main` before this push).
-4. **Then the walkthrough** — §0 of the runbook is the script, and it is now honest
-   about §2.6 as well.
+3. ~~Commit + push.~~ **DONE here — `1c4ca14` is on `origin/main`.**
+4. ~~**FINISH THE REPORT IMAGES.**~~ **DONE in session #27 (§1–§4 there)**: wiring, appendix
+   mechanism, rebuild and verification all landed. What is *left* of this item is 4d only
+   (Figure 4-1 needs a human). Original text:
+   The captures exist and the text is fixed; what is missing is the wiring and the rebuild:
+   a. *(DONE #27 — `FIG_IMAGES` + `APPENDIX_IMAGES`)* **`tools/report/build_report.py` had no
+      entry for any screenshot.** It needs
+      `FIG_IMAGES` entries for the screenshot captions (Figure 4-2 →
+      `shots/fig4_2_donor_search.png`, 4-3 → `shots/fig4_3_request_forms.png`, 4-4,
+      4-5 → `shots/fig4_5_admin_panels.png`, 5-1 → `shots/fig5_1_harness.png`) **plus
+      an appendix mechanism**: `bb_content.py`'s Appendix E and F placeholder lines
+      have already been **removed**, so until that lands both appendices render their
+      prose with **no images at all** (E wants `fig5_1_harness.png`; F wants landing,
+      the auth pair, donor-dashboard, hospital-requests, the legal row — captions
+      included).
+   b. *(DONE #27 — rebuilt and finalised; v1 deliberately left older)* **Rebuild v2 ONLY** (the hand-in copy):
+      `python tools/report/build_report.py docs/BloodBuddy_Final_Report_v2.docx` then
+      `python tools/report/finalize_word.py <ABSOLUTE path to that docx>` (Word COM
+      fills the TOC and writes the PDF; a *relative* path fails there). **Back the
+      current v2 up first**, then compare the stripped text to prove only the intended
+      changes happened (session #23's method).
+   c. *(DONE #27 — 19→1 screenshot placeholders, 16 images, 48-page PDF, 19 captions = 19 listed)*
+      **Verify:** no `[INSERT SCREENSHOT` left in the built docx, the images present,
+      page count sane, LIST OF FIGURES matching the captions.
+   d. **Figure 4-1 needs a human** — an IntelliJ project-view screenshot, or drop the
+      figure. A headless browser has no IDE, so this one is not automatable.
+   e. Re-capturing later is one command: `node .tools/shots/capture.js [name-filter]`
+      with the app up on 8081 (and remember §10 before blaming the page).
+5. ~~**Then the walkthrough.**~~ **DONE in session #27 (§6–§8 there)**: run end to end
+   against live TiDB, every checkpoint verified over HTTP + SQL, **two real defects found and
+   fixed**, the suites extended to pin them, the DB restored and Mailpit emptied afterwards.
+   What is *left* of this item is the user’s own rehearsal — driving it in the **browser**
+   (§0 → §1 → §6) rather than the API, which is what the `[rehearse]` labels used to mean and
+   is now marked `[tool-verified]` at both checkpoints it covered. Start the app in IntelliJ
+   (**8081 is free**), Mailpit is running with an empty inbox, the DB is pristine.
+6. **Commit** the four modified files and the two new report assets (see the state
+   below) — nothing from this stretch is committed yet.
 
 ### State at session end
-- **App still RUNNING on 8081** (it was already up when this session started and was
-  used for the runs) — stop it before a fresh IntelliJ ▶.
-- Mailpit up on 8025. DB pristine (counts above). Logs kept in
-  `.tools/newman-run1.log`, `.tools/newman-run2.log`, `.tools/api_check-run.log`; the
-  one-statement SQL helper is `.tools/dbq.sh` (gitignored, credentials never printed).
+- **App STOPPED, 8081 free** — stopped on purpose so a fresh IntelliJ ▶ is one click.
+- **Mailpit up on 8025 with an EMPTY inbox** (0 messages, cleared deliberately).
+- **DB pristine**, re-read after every run this session: 21 users / 14 donors / 5
+  hospitals / 40 inventory / 4 requests / 3 notifications / 7 timeline / 39
+  affiliations / 0 declines, TUTH B+ = 12, `BB-5MN8VX` `PENDING / —` (`E28094`), 0
+  donor photos. The one `SUSPENDED` account is Bikash Tamang (seeded that way).
+- `origin/main` = **`1c4ca14`**. **Uncommitted** (all of it from the report-screenshot
+  stretch): `PROGRESS.md`, `docs/postman/BloodBuddy.postman_collection.json` (the
+  `memberCode` default fix §9.2), `resptest/real-backend-check.html` (the wait-for-rows
+  fix §9.1), `tools/report/bb_content.py` (§11); **untracked**:
+  `tools/report/assets/shots/` (24 PNGs — 19 captures + 5 montages) and
+  `tools/report/build_montages.py`.
+- `.tools/shots/` holds the gitignored capture tooling **and its `node_modules`**
+  (puppeteer-core); `.tools/dbq.sh` is the one-statement SQL helper. Logs:
+  `.tools/newman-run{1,2,3}.log`, `.tools/api_check-run.log`,
+  `.tools/shots/{capture,harness}.log`. Credentials are never printed by any of them.
+- **`backend/target/classes/static/` was refreshed by hand** (a build artifact,
+  gitignored) so the captures saw the fixed check page — see §10.
 
 ## Session #25 (2026-09-17) — the Postman collection was run for real (and found an API bug) 🔶
 

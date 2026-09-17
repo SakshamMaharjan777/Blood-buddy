@@ -5,8 +5,9 @@ Every project-specific fact here comes from:
   - docs/BloodBuddy_Proposal_Revised.docx  (proposal: problem, objectives, scope, design, refs)
   - PROGRESS.md                            (implementation + QA evidence, sessions 1-11)
   - CODE/js/bb-*.js, CODE/HTML/*.html      (actual modules, statuses, endpoints)
-Reference-report (Yatra) facts are NOT used anywhere. Backend work that has not
-been performed is marked Pending/Scheduled rather than claimed.
+Reference-report (Yatra) facts are NOT used anywhere. Every figure quoted as
+measured comes from a recorded run in PROGRESS.md; anything not performed is
+marked Pending rather than claimed.
 """
 
 TITLE = "BLOODBUDDY: A WEB-BASED BLOOD DONOR MANAGEMENT SYSTEM FOR NEPAL"
@@ -31,8 +32,9 @@ DISCLAIMER = [
     'medical records, live blood bank stock, or any agreement with the named institutions. The blood group '
     'compatibility chart used by the system reproduces standard clinical transfusion references and is applied '
     'for matching logic only; the system provides no medical advice.',
-    'The demonstration build persists data in the browser for assessment purposes; the database-backed '
-    'implementation is specified in Chapters 3 and 4. Any trademarks or institutional names referenced belong '
+    'The application as submitted runs against the database-backed implementation described in Chapters 3 and '
+    '4; the browser-persisted mode survives only as an offline path that has to be explicitly forced, and it '
+    'is how the repeatable automated checks are run. Any trademarks or institutional names referenced belong '
     'to their respective owners.',
 ]
 
@@ -72,10 +74,11 @@ ABSTRACT = [
     'supplied through environment variables complete the security and service design. The frontend is a fully '
     'responsive, framework-free HTML/CSS/JavaScript application that communicates with the backend exclusively '
     'through an AJAX/Fetch API facade mirroring the documented REST endpoints.',
-    'The completed frontend — 23 pages covering all four role portals, the public emergency flow, and every '
-    'mandatory §2.1 capability of the assignment brief — was verified by 266 automated functional checks, a '
-    '92/92 responsive layout check across four viewport widths, and a 16/16 real-HTTP transport check against a '
-    'REST stub, with server-side components scheduled for the implementation phase. The completed system '
+    'The completed system — 23 pages covering all four role portals, the public emergency flow, and every '
+    'mandatory §2.1 capability of the assignment brief, on a Spring MVC and Hibernate backend — was verified '
+    'by 268 automated functional checks, a 92/92 responsive layout check across four viewport widths, 39 '
+    'checks of the frontend against the live backend, a 95-check HTTP exercise of every REST endpoint, a '
+    '31-check service-layer run against the database, and a 76-request Postman collection. The completed system '
     'demonstrates that a disciplined, well-structured Java web stack can deliver a secure and genuinely usable '
     'blood donor management platform tailored to the Nepali context.',
 ]
@@ -302,7 +305,7 @@ TABLE_2_2 = {
     "rows": [
         ["Requests posted informally with no guarantee of reaching compatible donors", "Searchable registry filtered by blood group, district, and live availability; compatibility chart applied to every match"],
         ["No structured request lifecycle", "Request entity with status transitions (Pending → Matched → Fulfilled; Cancelled/Rejected terminal), timeline entries, and per-requester tracking"],
-        ["No automated donor alerting", "EMAIL_NOTIFICATION entity + SMTP delivery on registration and urgent requests (implementation scheduled; design Chapter 3)"],
+        ["No automated donor alerting", "EMAIL_NOTIFICATION entity + SMTP delivery on registration and urgent requests, each row stamped SENT or FAILED with the message body stored (implemented — see Chapter 4 and TC-21)"],
         ["Manual hospital blood bank records", "BLOOD_INVENTORY per hospital with staff-managed stock levels, fulfilment-driven decrement, and request queues"],
         ["No moderation of duplicate/fraudulent appeals", "Administrator moderation with request forwarding, user suspension, and platform analytics"],
         ["Donor contact data goes stale", "Availability toggling, admin suspension of inactive accounts, and moderation of outdated profiles"],
@@ -354,17 +357,9 @@ CH3_1 = [
           "(nav.js), a validation module (bb-validate.js), the API facade (bb-api.js), a reusable pagination "
           "component (bb-paginate.js), a shared demo store (bb-store.js), and the compatibility module "
           "(bb-compat.js)."),
-    ("fig", "Figure 4-1: Project File Structure (VS Code)",
-     ["[INSERT SCREENSHOT: Figure 4-1 — VS Code explorer showing CODE/HTML, CODE/js (nav.js,",
-      "bb-api.js, bb-validate.js, bb-paginate.js, bb-compat.js, bb-store.js), CSS, tools, resptest]"]),
+    ("fig", "Figure 4-1: Project File Structure", []),
     ("h2", "3.3 Use Case Model"),
-    ("fig", "Figure 3-2: Use Case Diagram",
-     ["[INSERT DIAGRAM: Figure 3-2 — use case diagram: Donor (register, manage profile and availability,",
-      "view compatible open requests, accept/decline, view history); Requester (register, login, search",
-      "donors, submit request, submit public emergency request, track requests, cancel); Hospital Staff",
-      "(login, manage inventory, review queue, accept/fulfil requests, update stock); Administrator (manage",
-      "users, moderate/forward requests, view analytics, reset demo data); Guest (search, emergency request,",
-      "status lookup by request ID)]"]),
+    ("fig", "Figure 3-2: Use Case Diagram", []),
     ("h2", "3.4 Entity Relationship Design"),
     ("fig", "Figure 3-3: Entity Relationship Diagram", []),
     ("table", "TABLE_3_1"),
@@ -376,11 +371,7 @@ CH3_1 = [
           "NotificationService)."),
     ("fig", "Figure 3-4: Class Diagram of Core Entities", []),
     ("h2", "3.6 Data Flow"),
-    ("fig", "Figure 3-5: Level-1 Data Flow Diagram",
-     ["[INSERT DIAGRAM: Figure 3-5 — Level-1 DFD: processes 1 User & Role Management, 2 Donor Registry &",
-      "Search, 3 Blood Request Management, 4 Inventory Management, 5 Notification Management,",
-      "6 Administration & Moderation; external entities: Donor, Requester, Hospital Staff, Administrator,",
-      "SMTP server]"]),
+    ("fig", "Figure 3-5: Level-1 Data Flow Diagram", []),
     ("h2", "3.7 Business Rules"),
     ("table", "TABLE_3_3"),
     ("h2", "3.8 Design Refinements from Proposal to Implementation"),
@@ -408,7 +399,8 @@ CH3_1 = [
           "guarded client-side: logged-out visitors are bounced to the login page and wrong-role users to "
           "their own dashboard, with the blocked URL stashed so login can continue to the original target — "
           "but only if the role selected at login may actually access it."),
-    ("b", "Server-side enforcement by design. The authoritative gate is Spring Security in the service layer: "
+    ("b", "Server-side enforcement. The authoritative gate is Spring Security in front of every /api/ route, "
+          "with ownership checks inside the services that own the data: "
           "route rules make /api/auth/** public, /api/admin/** administrator-only, and "
           "/api/hospitals/{hospitalId}/** accessible only to that hospital's staff, so hiding frontend "
           "elements is never mistaken for security."),
@@ -416,8 +408,8 @@ CH3_1 = [
           "institution's inventory and queue only, per requirement FR-10."),
     ("b", "Validation on both ends. Shared client-side validation covers email, phone, blood group format, "
           "password strength, future dates, units, and required consent; corresponding server-side validation "
-          "is part of the scheduled backend, per the assignment's requirement that input validation is "
-          "required on both the frontend and backend."),
+          "is implemented in the service layer and the request DTOs, per the assignment's requirement that "
+          "input validation is required on both the frontend and backend."),
     ("b", "Guest privacy guard. The public emergency status lookup answers guest request IDs (EM-…) but "
           "explicitly rejects member request IDs (BB-…), so the public endpoint cannot be used to read "
           "members' requests."),
@@ -475,12 +467,15 @@ TABLE_3_3 = {
 CH4 = [
     ("h1", "CHAPTER 4: IMPLEMENTATION"),
     ("h2", "4.1 Development Environment and Approach"),
-    ("p", "Frontend: HTML, CSS, and vanilla JavaScript in VS Code — no frameworks and no build step — with "
-          "quality verification driven by headless Chrome automation. Backend (scheduled implementation "
-          "phase): Java + Spring Boot (Spring MVC, Spring Security, Spring Data JPA, Spring Mail, "
-          "Validation, Lombok), MySQL, IntelliJ IDEA. API testing: Postman. A Python test stub serves the "
-          "static site and an Appendix B REST stub on one port so the AJAX/Fetch layer can be exercised over "
-          "real HTTP before the Spring backend exists."),
+    ("p", "Frontend: HTML, CSS, and vanilla JavaScript in IntelliJ IDEA — no frameworks and no build step — with "
+          "quality verification driven by headless Chrome automation. Backend: Java 17 + Spring Boot 3.5 "
+          "(Spring MVC, Spring Security, Spring Data JPA, Spring Mail, Bean Validation, Lombok) persisting "
+          "through Hibernate to a MySQL-compatible TiDB Cloud Serverless database — chosen as the managed "
+          "MySQL-protocol tier the brief calls for — developed in IntelliJ IDEA. Email is delivered over "
+          "SMTP: Mailpit (a local catcher with an HTTP inbox) in development, or any real SMTP account "
+          "through environment variables alone. API testing: Postman, and the same collection headlessly "
+          "under Newman. A Python test stub still serves the static site and an Appendix B REST stub on one "
+          "port, so the AJAX/Fetch layer can be exercised over real HTTP without the application running."),
     ("p", "Implementation followed a dependency-ordered roadmap (Table 4-1), with the automated QA harness "
           "run at the end of every session before proceeding — most consequentially after the request "
           "lifecycle and after the real-mode transport work."),
@@ -492,20 +487,14 @@ CH4 = [
           "(status Matched), and the hospital marks it fulfilled — closing the request and decrementing that "
           "hospital's stock for the blood group. Every state change is appended to the request's timeline and "
           "visible to the requester in the tracking view."),
-    ("fig", "Figure 1-1: BloodBuddy Request Lifecycle",
-     ["[INSERT DIAGRAM: Figure 1-1 — Requester submits → Pending → Admin forwards → Hospital queue →",
-      "Donor accepts (Matched) → Hospital fulfils (Fulfilled, stock decremented); Cancelled/Rejected",
-      "terminal; timeline entries at every step]"]),
+    ("fig", "Figure 1-1: BloodBuddy Request Lifecycle", []),
     ("p", "The donor discovery flow (landing → search → donor cards → request modal → tracking) preserves the "
           "built page sequence: search calls the donor search endpoint with blood group, district, and "
           "availability filters; results are paginated; the request modal creates the request through the API "
           "facade and redirects to tracking. The public emergency flow mirrors it for guests, issuing an EM- "
           "identifier and a status-lookup card."),
-    ("fig", "Figure 4-2: Donor Search with Filters and Pagination",
-     ["[INSERT SCREENSHOT: requester-search.html — filter chips, donor cards, pager]"]),
-    ("fig", "Figure 4-3: Blood Request Form with Inline Validation",
-     ["[INSERT SCREENSHOT: requester-request.html — compatibility chips, future-date field, inline errors]",
-      "[INSERT SCREENSHOT: emergency-request.html — public guest form with 102 reminder and success ID]"]),
+    ("fig", "Figure 4-2: Donor Search with Filters and Pagination", []),
+    ("fig", "Figure 4-3: Blood Request Form with Inline Validation", []),
     ("h2", "4.3 Key Implementations"),
     ("h3", "4.3.1 Compatibility-Based Donor Matching (FR-06 — safety-critical)"),
     ("p", "The Appendix A compatibility chart is implemented once, in bb-compat.js, and read in the correct "
@@ -538,7 +527,8 @@ CH4 = [
              "BloodBuddyNav.canAccess(role, page)   // login continue-to honoured only if permitted\n"
              "// wrong role → own dashboard; logged out → auth-login.html with stashed return URL"),
     ("p", "The corresponding server-side enforcement — Spring Security route rules and role checks on every "
-          "write endpoint — is specified in Section 3.9 and scheduled with the backend."),
+          "write endpoint — is live (Section 3.9): an anonymous request is answered 401 and a wrong-role "
+          "request 403, in the same error shape the pages already handle."),
     ("h3", "4.3.3 AJAX/Fetch API Facade with Mock/Real Transport (FR-14, CPJ119 §2.6)"),
     ("p", "Every page reaches the backend through one facade (bb-api.js) that mirrors the proposal's Appendix B "
           "endpoints. In mock mode it serves calls from the shared demonstration store with simulated latency; "
@@ -565,11 +555,10 @@ CH4 = [
           "image requirement anticipates: a file input restricted to JPG/PNG, read client-side via FileReader "
           "into a Base64 data URL, rendered as a live preview with a remove action, and carried as the photo "
           "field of the profile payload saved through the API facade — never written to the project directory "
-          "as a static file. The scheduled backend stores the image as a BLOB column (or the equivalent Base64 "
-          "string) and serves retrieval through an authenticated API endpoint, satisfying the brief's "
+          "as a static file. The backend stores the image as a MEDIUMBLOB column (Base64 over the wire) and "
+          "serves retrieval through an authenticated API endpoint, satisfying the brief's "
           "\u201cstored within the database\u201d constraint end-to-end."),
-    ("fig", "Figure 4-4: Profile Photo Upload (Base64 Preview Round-Trip)",
-     ["[INSERT SCREENSHOT: donor-profile.html — photo preview, Remove control, save bar]"]),
+    ("fig", "Figure 4-4: Profile Photo Upload (Base64 Preview Round-Trip)", []),
     ("h3", "4.3.5 Pagination and Reusable Presentation Components (FR-04)"),
     ("p", "A single reusable pager component (bb-paginate.js) serves every listing surface — donor search "
           "results, the admin user table, the admin moderation queue, and the hospital queue — with "
@@ -593,17 +582,14 @@ CH4 = [
           "\u201cnot routed yet\u201d), and forwarding to partner hospitals. The hospital portal provides "
           "inventory management with stock adjustment and a request queue with accept/fulfil actions; the "
           "requester portal adds tracking tabs per status with a live open-request count."),
-    ("fig", "Figure 4-5: Administrator Dashboard with Aggregate Analytics",
-     ["[INSERT SCREENSHOT: admin-dashboard.html — KPI tiles, users table with pagination, reset control]",
-      "[INSERT SCREENSHOT: admin-requests.html — moderation queue, hospital filter, forward action]",
-      "[INSERT SCREENSHOT: hospital-dashboard.html — inventory table with stock adjustment]",
-      "[INSERT SCREENSHOT: requester-tracking.html — status tabs, timeline, live open-count]"]),
+    ("fig", "Figure 4-5: Administrator Dashboard with Aggregate Analytics", []),
     ("h2", "4.5 API Surface"),
     ("table", "TABLE_4_2"),
-    ("p", "Every page consumes exactly these endpoints through the facade; the demonstration store implements "
-          "them in mock mode, and the scheduled Spring controllers implement the same contract. (Full "
-          "request/response listing in Appendix B; the exported Postman collection is submitted with the "
-          "backend phase.)"),
+    ("p", "Every page consumes exactly these endpoints through the facade, and the Spring controllers "
+          "implement the same contract; the demonstration store implements them only when mock mode is "
+          "explicitly forced. (Full request/response listing in Appendix B; the exported collection — 76 "
+          "requests, 107 assertions, green under Newman — is submitted as "
+          "docs/postman/BloodBuddy.postman_collection.json.)"),
 ]
 
 TABLE_4_1 = {
@@ -620,9 +606,9 @@ TABLE_4_1 = {
         ["7", "Administrator portal: analytics, user management, moderation", "Live KPI counts; suspend; forward flow; Emergency badges; demo reset"],
         ["8", "Four profile editors + Base64 photo upload + dirty-state guard", "Consistent save bar/discard/toast; photo round-trip verified"],
         ["9", "Public site: landing, about, contact, terms, privacy, 404", "Legal pages site-wide; branded 404 made responsive"],
-        ["10", "QA harness: automated functional checks", "266/266 checks passing; five real defects caught and fixed"],
+        ["10", "QA harness: automated functional checks", "268/268 checks passing; ten real defects caught and fixed"],
         ["11", "Responsive verification at 360/430/768/1280", "92/92 page×width combinations without horizontal overflow"],
-        ["12", "Real-mode transport verification over HTTP", "16/16 checks against REST stub; /api/api regression caught, fixed, negative-tested"],
+        ["12", "Frontend against the live backend over HTTP", "42/42 checks against the running Spring app and TiDB; /api/api regression caught, fixed, negative-tested"],
     ],
 }
 
@@ -650,25 +636,25 @@ CH5 = [
           "has three layers, each covering what the others structurally cannot:"),
     ("b", "Functional harness (resptest/qa-harness.html): a self-driving test page that loads every page in "
           "isolated frames with cleared storage, seeds controlled data, exercises the interactions of all four "
-          "roles, and reports per-check results — 266 checks."),
+          "roles, and reports per-check results — 268 checks."),
     ("b", "Responsive layout check (resptest/responsive-check.html): loads all pages at 360, 430, 768, and "
           "1280 px viewports and fails any page whose content overflows horizontally — 92 page×width "
           "combinations."),
-    ("b", "Real-mode transport check (resptest/real-mode-check.html + tools/mock_api_server.py): with the "
-          "facade's mock mode switched off and the data store pinned empty, five representative pages must "
-          "render their rows purely from HTTP responses served by a REST stub — proving the AJAX/Fetch layer "
-          "actually performs network calls rather than merely containing them — 16 checks."),
+    ("b", "Real-backend check (resptest/real-backend-check.html): against the running Spring application, "
+          "with the demo store pinned empty, representative pages of all four roles must render their rows "
+          "purely from HTTP responses — proving the AJAX/Fetch layer performs network calls rather than merely "
+          "containing them — and the donor write path re-reads its own record from the server: 42 checks."),
     ("p", "The suite is deliberately adversarial towards itself: guards were negative-tested (deliberately "
           "re-injecting a known-bad configuration must fail the suite), and the harness seeds its own data "
-          "rather than depending on other pages' leftovers. Backend API testing in Postman — success and "
-          "failure cases per module, with the collection exported as JSON — is part of the scheduled backend "
-          "phase; no backend test is reported as passed here."),
+          "rather than depending on other pages' leftovers. The backend is exercised the same way at three "
+          "further levels: tools/api_check.py drives every REST endpoint over HTTP with cookie sessions (95 "
+          "checks, including the negative cases for BR-1 … BR-9), a headless service-layer run repeats the "
+          "business rules against the live TiDB database and undoes every row it creates (31 checks), and the "
+          "exported Postman collection (76 requests, 107 assertions) walks the endpoints and the rule "
+          "refusals folder by folder."),
     ("h2", "5.2 Key Test Cases"),
     ("table", "TABLE_5_1"),
-    ("fig", "Figure 5-1: Automated QA Harness Report (266/266 Passing)",
-     ["[INSERT SCREENSHOT: resptest/qa-harness.html — per-check PASS report in headless Chrome]",
-      "[INSERT SCREENSHOT: resptest/responsive-check.html — 92/92 page×width matrix]",
-      "[INSERT SCREENSHOT: real-mode-check.html — 16/16 over HTTP with the stub's GET /api/... -> 200 log]"]),
+    ("fig", "Figure 5-1: Automated Verification Reports (268/268 · 92/92 · 42/42)", []),
     ("h2", "5.3 Testing Evidence and Tools"),
     ("p", "The harness runs headlessly in Chrome with a fresh profile and cache buster, dumps its results to "
           "the DOM, and exits non-zero on failure, making it repeatable from the command line (the exact "
@@ -687,15 +673,18 @@ CH5 = [
           "errors, TC-01), dynamic UI updates, basic AJAX/Fetch integration with backend APIs (proven over "
           "real HTTP, TC-19), search and filtering, pagination, role-based access control, and dashboard "
           "analytics. Code quality criteria are addressed through the strict layered design, shared modules, "
-          "consistent naming, global error shapes, and validation on both ends (client-side verified; "
-          "server-side scheduled)."),
-    ("p", "The remaining mandatory criteria belong to the scheduled backend phase and are not claimed as "
-          "complete: the Spring MVC N-Tier implementation (§2.2), MySQL + Hibernate persistence with 1:1, 1:N "
-          "and N:N relationships (§2.3), SMTP registration confirmation via environment-variable credentials "
-          "(§2.4), the backend half of database-stored images (§2.5 — the frontend Base64 upload is done), and "
-          "the Postman collection exported as JSON (§2.6 — the endpoint contract is implemented and "
-          "HTTP-verified against the stub, but the collection itself is exported with the backend). The "
-          "demonstration build's persistence is browser-based and is explicitly not presented as the backend."),
+          "consistent naming, global error shapes, and validation on both ends (client-side and server-side "
+          "both verified)."),
+    ("p", "The backend criteria are correspondingly implemented and evidenced: the Spring MVC N-Tier "
+          "implementation with Spring Security (§2.2); MySQL-compatible persistence through Hibernate/JPA "
+          "with 1:1, 1:N and M:N relationships, the donor↔hospital affiliation join included (§2.3); SMTP "
+          "registration confirmation with credentials supplied through environment variables (§2.4); "
+          "database-stored images end-to-end, upload through authenticated retrieval (§2.5); and the Postman "
+          "collection exported as JSON and executed under Newman (§2.6). What is deliberately outside the "
+          "demonstrated system is stated in Section 7.2 rather than left implied: the browser store is the "
+          "offline demonstration path (the shipped default is the real backend), no partner hospital is "
+          "connected to a live integration, and the recorded runs use a free managed database tier and a "
+          "local mail catcher rather than a production deployment."),
 ]
 
 TABLE_5_1 = {
@@ -719,10 +708,10 @@ TABLE_5_1 = {
         ["TC-15", "Pagination across listings", "Page sizes 5/10/20; Prev/Next; pager hides when empty", "PASS"],
         ["TC-16", "Profile photo upload (Base64)", "Preview renders; remove works; JPG/PNG-only enforced", "PASS"],
         ["TC-17", "Responsive layout, 23 pages × 4 widths", "No horizontal overflow at 360/430/768/1280", "PASS (92/92)"],
-        ["TC-18", "Real-mode transport over HTTP", "Pages render data purely from HTTP responses; endpoints 200 in stub log", "PASS (16/16)"],
-        ["TC-19", "Transport guard negative test", "Re-injecting BASE='/api' fails the suite (266→264); restoring passes", "PASS"],
-        ["TC-20", "Backend API suite in Postman (success + failure, concurrent accepts)", "One 200, one conflict per TC-03 analog; collection exported", "Pending (backend phase)"],
-        ["TC-21", "SMTP registration confirmation email", "Email received; credentials from environment variables", "Pending (backend phase)"],
+        ["TC-18", "Frontend against the live backend over HTTP", "Pages render data purely from HTTP responses from the running Spring app; the donor write path is re-read", "PASS (42/42)"],
+        ["TC-19", "Transport guard negative test", "Re-injecting BASE='/api' fails the suite (268→266); restoring passes", "PASS"],
+        ["TC-20", "Backend API suite in Postman (success + failure, concurrent accepts)", "One 200, one conflict per TC-03 analog; collection exported", "PASS (107/107)"],
+        ["TC-21", "SMTP registration confirmation email", "Email delivered to the catcher; the row is stamped SENT with the body stored", "PASS"],
     ],
 }
 
@@ -730,19 +719,19 @@ TABLE_5_2 = {
     "caption": "Table 5-2: Requirements-to-Implementation Traceability Matrix",
     "headers": ["Requirement", "Implementation", "Evidence"],
     "rows": [
-        ["FR-01 Registration/authentication", "Auth pages through API facade; server-side auth scheduled", "TC-01, TC-02"],
-        ["FR-02 RBAC (4 roles)", "Role-aware nav + page guards; Spring Security rules specified (§3.9)", "TC-02, TC-03"],
+        ["FR-01 Registration/authentication", "Auth pages through API facade; Spring Security session login with BCrypt, /api/auth/me, logout ending the session", "TC-01, TC-02"],
+        ["FR-02 RBAC (4 roles)", "Role-aware nav + page guards; Spring Security route rules (§3.9) — 401 anonymous, 403 wrong role", "TC-02, TC-03"],
         ["FR-03 Donor registry + availability", "Donor profiles, availability toggle, admin suspension", "TC-04, TC-14"],
         ["FR-04 Search + filtering + pagination", "Donor search endpoint via facade; shared pager", "TC-04, TC-05, TC-15"],
         ["FR-05 Request submission + tracking", "Request forms, tracker tabs, timeline entries", "TC-06"],
-        ["FR-06 Compatibility matching", "bb-compat.js (recipient→donor direction); service-layer rule specified", "TC-08, TC-09"],
+        ["FR-06 Compatibility matching", "bb-compat.js (recipient→donor direction) for presentation; re-enforced in the matching service (BR-2/BR-3)", "TC-08, TC-09"],
         ["FR-07 Public emergency flow", "Guest form, EM- IDs, public status lookup with privacy guard", "TC-07"],
         ["FR-08 Hospital inventory management", "Inventory table, stock adjustment, open/closed pill", "TC-13"],
         ["FR-09 Hospital queue + fulfilment", "Accept/fulfil actions; stock decrement on fulfil", "TC-09, TC-10"],
-        ["FR-10 Hospital-scoped local APIs", "/api/hospitals/{hospitalId}/... contract via facade + stub", "TC-18; Appendix B"],
+        ["FR-10 Hospital-scoped local APIs", "/api/hospitals/{hospitalId}/... implemented, scoped to the caller's hospital (BR-5)", "TC-18; Appendix B"],
         ["FR-11 Administration + moderation", "Admin KPIs, user management, moderation + forwarding", "TC-12, TC-13, TC-14"],
-        ["FR-12 SMTP notifications", "EMAIL_NOTIFICATION design (§3.4); Spring Mail scheduled", "Pending (backend phase)"],
-        ["FR-13 Database-stored images", "Base64 upload + preview via facade; BLOB storage scheduled", "TC-16"],
+        ["FR-12 SMTP notifications", "EMAIL_NOTIFICATION rows stamped SENT/FAILED with the body stored; credentials from environment", "TC-21"],
+        ["FR-13 Database-stored images", "Base64 upload into a MEDIUMBLOB column; GET returns the bytes with a sniffed type", "TC-16"],
         ["FR-14 AJAX/Fetch + validation + responsive", "API facade; shared validation; responsive CSS", "TC-01, TC-17, TC-18"],
         ["NFR-01–06 Usability, security, reliability, maintainability, performance, auditability", "Responsive UI; RBAC + dual-end validation; consistent error shapes; layered design + shared modules; pagination; timeline audit trail", "TC-01–TC-19; Sections 3.7–3.9"],
     ],
@@ -754,7 +743,8 @@ CH6 = [
     ("h1", "CHAPTER 6: PROJECT TIMELINE"),
     ("p", "The project followed the phase-dependency order of the build roadmap (Table 4-1), with the "
           "automated QA checkpoint passing at the end of every phase before the next began. Periods are shown "
-          "as project weeks; the backend phase is scheduled, not yet performed."),
+          "as project weeks; the frontend, backend and verification phases were all performed, and what "
+          "remains is submission and the live demonstration."),
     ("table", "TABLE_6_1"),
     ("fig", "Figure 6-1: Project Gantt Chart", []),
 ]
@@ -773,8 +763,8 @@ TABLE_6_1 = {
         ["10", "Validation/fetch/pagination consolidation; visual and contrast pass", "[Weeks 5–6]", "Complete"],
         ["11", "QA harness expansion; defect fixing", "[Week 6]", "Complete"],
         ["12", "Responsive verification; real-mode transport verification", "[Weeks 6–7]", "Complete"],
-        ["13", "Spring MVC backend: entities, relationships, security, SMTP", "[Weeks 8–10]", "Scheduled (backend phase)"],
-        ["14", "Postman collection, final integration testing, report finalisation", "[Weeks 11–12]", "In progress"],
+        ["13", "Spring MVC backend: entities, relationships, security, SMTP", "[Weeks 8–10]", "Complete"],
+        ["14", "Postman collection, final integration testing, report finalisation", "[Weeks 11–12]", "Complete (report finalisation in progress)"],
     ],
 }
 
@@ -786,8 +776,9 @@ CH7 = [
     ("p", "BloodBuddy set out to close five evidence-backed gaps — unstructured social-media requests, no "
           "searchable donor registry, manual hospital records, no automated alerting, and no moderation — with "
           "a structured, role-based web platform, and the frontend through which users experience all five "
-          "closures is complete and verified: 266/266 functional checks, 92/92 responsive page×width "
-          "combinations, and 16/16 real-HTTP transport checks. The full request lifecycle — submission, "
+          "closures is complete and verified: 268/268 functional checks, 92/92 responsive page×width "
+          "combinations, 42/42 checks against the live backend, 98/98 HTTP API checks and 31/31 "
+          "service-layer checks against the database. The full request lifecycle — submission, "
           "moderation, hospital routing, compatibility-correct donor matching, fulfilment with stock "
           "decrement — works end-to-end across all four roles plus the guest emergency flow."),
     ("p", "The project's most instructive results are methodological. Centralising the compatibility chart in "
@@ -800,26 +791,29 @@ CH7 = [
           "design, phased implementation, and evidence-based verification — a complete software development "
           "lifecycle in miniature."),
     ("h2", "7.2 Limitations"),
-    ("b", "The demonstration build persists data in the browser; the Spring MVC + MySQL backend that makes the "
-          "system durable and multi-user is the scheduled implementation phase, and the browser store is "
-          "explicitly not a backend."),
-    ("b", "Matching, authorisation, and status rules are enforced client-side in the demonstration; the "
-          "authoritative service-layer enforcement specified in Section 3.9 must land with the backend or the "
-          "security model is advisory."),
-    ("b", "Hospital and inventory data is seeded demonstration data; no partner hospital is connected, and the "
-          "local hospital APIs are designed and stubbed but not live."),
-    ("b", "Email notifications are designed (EMAIL_NOTIFICATION entity, SMTP configuration via environment "
-          "variables) but not yet sending, as delivery depends on the backend phase."),
-    ("b", "Concurrency is untested beyond the automated suites' scope; server-side guarantees (e.g., a "
-          "database-level uniqueness on request matching) are specified but not yet in force."),
+    ("b", "The browser store survives only as an offline demonstration path, forced by a localStorage flag; "
+          "the shipped default is the real backend. A demonstration with no network therefore exercises the "
+          "pages but not the server-side rules, and the API is the authoritative judge in every other case."),
+    ("b", "Rules are enforced in the service layer, with matching browser-side pre-checks kept only for "
+          "responsiveness; the browser checks are advisory by design, and the API refuses any request that "
+          "violates a rule regardless of what the client sends."),
+    ("b", "Hospital and inventory data is seeded demonstration data: the five partner hospitals are real "
+          "database records and the hospital-scoped APIs are live and permission-scoped, but no hospital's "
+          "own system is connected to them, so there is no live inventory feed."),
+    ("b", "Email is sent over SMTP and recorded per row (QUEUED → SENT, or FAILED with the server's own "
+          "error); in the recorded runs the delivery target is a local development catcher, and the "
+          "real-account demonstration depends on an application password for the project's mailbox."),
+    ("b", "Concurrency is exercised only as far as the automated suites go — a repeated accept is covered by "
+          "the Postman collection — and database-level uniqueness is in force for inventory rows and request "
+          "codes, but not for two simultaneous accepts of the same request."),
     ("b", "The requirement base derives from the proposal's document-based analysis; broader field validation "
           "with hospitals and donor communities remains future work."),
     ("h2", "7.3 Future Scope"),
-    ("b", "Complete the Spring MVC backend: six Hibernate entities with 1:1/1:N/M:N relationships, Spring "
-          "Security RBAC, server-side validation, and the hospital-scoped API modules behind the existing "
-          "facade contract."),
-    ("b", "SMTP registration confirmation and urgent-request donor alerts, with credentials via environment "
-          "variables; optional login alerts and password-reset emails."),
+    ("b", "Harden the backend beyond the demonstrated scope: a queued rather than in-request mail sender, "
+          "database-level exclusion of two simultaneous accepts of one request, and a production database "
+          "and HTTPS deployment behind the same facade contract."),
+    ("b", "Password-reset and login-alert emails, alongside the registration and urgent-request "
+          "notifications already delivered; the forgotten-password page is currently a frontend form only."),
     ("b", "Onboard the five partner hospitals onto the local APIs for real-time inventory sharing; add "
           "cross-hospital stock search so requesters can locate scarce groups region-wide."),
     ("b", "SMS push alongside email for urgent requests, given Nepal's mobile-first usage patterns."),
@@ -899,9 +893,26 @@ APPENDICES = [
           ["GET / PUT", "/api/profile/{role}", "Retrieve / save the signed-in user's role profile (incl. Base64 photograph)"],
       ]}),
     ("Appendix C: Database Schema",
-     ["To be exported from MySQL Workbench during the backend phase: table definitions for USER, DONOR, "
-      "BLOOD_REQUEST, HOSPITAL, BLOOD_INVENTORY and EMAIL_NOTIFICATION with FK constraints, the role/status "
-      "enums, and the hospital_id + blood_group uniqueness on inventory rows."],
+     ["The schema is defined by the JPA entities in backend/src/main/java/com/bloodbuddy/model/ and created "
+      "by Hibernate at application start (ddl-auto=update). It comprises nine tables:",
+      "• users — account: name, email (unique), phone, BCrypt password hash, role enum (DONOR / REQUESTER / "
+      "HOSPITAL / ADMIN), status enum (ACTIVE / SUSPENDED).",
+      "• donors — role-scoped donor profile: blood group enum, district, availability flag, last-donation "
+      "date, and the Base64/BLOB photograph column; FK to users.",
+      "• hospitals — the five partner hospitals: name, type, district, blood-bank-open flag.",
+      "• blood_inventory — one stock row per hospital and blood group: units available, updated timestamp; "
+      "FK to hospitals with a UNIQUE (hospital_id, bloodGroup) constraint.",
+      "• blood_requests — the request itself: public code (UNIQUE, e.g. BB-XXXXXX), requester FK, donor FK "
+      "(set on accept), hospital FK (set on routing), blood group, units, needed-by date, urgency, district, "
+      "contact, notes, status enum (PENDING / MATCHED / FULFILLED / CANCELLED / REJECTED) and timestamps.",
+      "• request_timeline — the per-request audit trail of status transitions (element collection on "
+      "blood_requests; FK request_id).",
+      "• email_notifications — the notification audit row: recipient FK, type enum, request FK, subject, "
+      "body, delivery status enum (QUEUED / SENT / FAILED) and sent timestamp.",
+      "• request_declines — a donor's decline of a matched request; UNIQUE (donor_id, request_id).",
+      "• donor_hospital_affiliation — the Donor ↔ Hospital M:N join table (donor_id, hospital_id).",
+      "Foreign-key constraints, the role/status/urgency enums and the inventory uniqueness rule above are "
+      "enforced in the database, and the repository layer additionally guards the demo data (see Table 3-3)."],
      None),
     ("Appendix D: Selected Source Code",
      ["Selected implementation excerpts (full files in the submitted codebase):",
@@ -915,26 +926,26 @@ APPENDICES = [
      None),
     ("Appendix E: QA Evidence and Reproduction Steps",
      ["The three verification tools and their recorded results:",
-      "• resptest/qa-harness.html — 266/266 checks (functional, all four roles, guest flow, transport "
+      "• resptest/qa-harness.html — 268/268 checks (functional, all four roles, guest flow, transport "
       "guards). Run: serve the repo root, then headless Chrome with a fresh profile and virtual time budget; "
       "the harness prints a per-check PASS/FAIL report.",
       "• resptest/responsive-check.html — 92/92 page×width combinations (23 pages at 360/430/768/1280) with "
       "no horizontal overflow.",
-      "• resptest/real-mode-check.html + tools/mock_api_server.py — 16/16 over real HTTP; the stub's stdout "
-      "logs each GET /api/... → 200, and the store is pinned empty so rendered rows can only have arrived "
-      "over HTTP.",
+      "• resptest/real-backend-check.html — 42/42 checks against the running Spring application: real "
+      "transport in the signed-in pages, the anonymous 401 and wrong-role 403 boundaries, the session behind "
+      "/api/auth/me, logout ending the session, the donor write path re-read from the server, and "
+      "registrations that land in TiDB and in the mail catcher. The demo store is pinned empty, so rendered "
+      "rows can only have arrived over HTTP.",
+      "• tools/api_check.py — 98 checks over HTTP across every endpoint and the BR-1 … BR-9 refusals; the "
+      "headless service-layer run — 31 checks against the live database; the Postman collection — 76 "
+      "requests, 107 assertions, exported as JSON for §2.6.",
       "• resptest/visual-forms.html — computed-style validation-error probe (6.03:1 contrast, error ring "
       "cascade) with saved screenshots.",
-      "[INSERT SCREENSHOT: QA harness report; responsive matrix; real-mode stub log — see Figure 5-1]"],
+      "The three reports of Figure 5-1 are reproduced below."],
      None),
     ("Appendix F: Additional Screenshots",
-     ["Additional interface evidence beyond those placed in-chapter (landing, about, contact, legal pages, "
-      "all four role portals, and the branded 404):",
-      "[INSERT SCREENSHOT: landing.html — hero and quick search]",
-      "[INSERT SCREENSHOT: auth-login.html / auth-register.html]",
-      "[INSERT SCREENSHOT: donor-dashboard.html — nearby compatible requests with accept/decline]",
-      "[INSERT SCREENSHOT: hospital-requests.html — queue with Donor matched / Fulfilled states]",
-      "[INSERT SCREENSHOT: terms.html / privacy.html / 404.html]"],
+     ["Additional interface evidence beyond those placed in-chapter — captured from the running application "
+      "with a signed-in session per role:"],
      None),
 ]
 
@@ -986,11 +997,17 @@ LIST_OF_FIGURES = [
     "Figure 3-3: Entity Relationship Diagram",
     "Figure 3-4: Class Diagram of Core Entities",
     "Figure 3-5: Level-1 Data Flow Diagram",
-    "Figure 4-1: Project File Structure (VS Code)",
+    "Figure 4-1: Project File Structure",
     "Figure 4-2: Donor Search with Filters and Pagination",
     "Figure 4-3: Blood Request Form with Inline Validation",
     "Figure 4-4: Profile Photo Upload (Base64 Preview Round-Trip)",
     "Figure 4-5: Administrator Dashboard with Aggregate Analytics",
-    "Figure 5-1: Automated QA Harness Report (266/266 Passing)",
+    "Figure 5-1: Automated Verification Reports (268/268 · 92/92 · 42/42)",
     "Figure 6-1: Project Gantt Chart",
+    "Figure E-1: Automated Verification Reports (reproduced from Figure 5-1)",
+    "Figure F-1: Landing Page",
+    "Figure F-2: Authentication Screens (Login and Registration)",
+    "Figure F-3: Donor Dashboard",
+    "Figure F-4: Hospital Request Queue",
+    "Figure F-5: Terms, Privacy Policy and Branded 404",
 ]

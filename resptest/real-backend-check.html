@@ -76,7 +76,7 @@
 
   /* Load a page the way a signed-in browser has it: the cached session the
      login would have written, and the demo store pinned empty. */
-  async function loadPage(page, role, account) {
+  async function loadPage(page, role, account, sel, min) {
     ['bb_db.donors', 'bb_db.requests', 'bb_db.users', 'bb_db.inventory'].forEach(k => localStorage.setItem(k, '[]'));
     localStorage.setItem('bb_session', JSON.stringify({
       role: role, name: account.name, id: account.id, email: account.email,
@@ -89,7 +89,19 @@
       setTimeout(() => resolve(el), 5000);
       document.getElementById('w').appendChild(el);
     });
-    await sleep(1200);   /* let the real round-trips land */
+    /* Wait for the ROWS, not for a fixed delay. TiDB Cloud round-trips are not
+       instant (measured ~1.5 s per call); a hard 1.2 s sleep raced the page's
+       own fetch, and removing the iframe then aborted the request that was
+       still in flight (net::ERR_ABORTED) — which read as "0 rows rendered" and
+       failed three checks that the API was answering correctly all along. */
+    const deadline = Date.now() + 20000;
+    while (min > 0 && Date.now() < deadline) {
+      try {
+        if (f.contentDocument.querySelectorAll(sel).length >= min) break;
+      } catch (e) { /* not ready yet */ }
+      await sleep(250);
+    }
+    await sleep(600);   /* let any trailing round-trip land before we measure */
     return f;
   }
 
@@ -134,12 +146,17 @@
     setTimeout(() => resolve(f), 5000);
     document.getElementById('w').appendChild(f);
   });
-  await sleep(1200);
+  /* Same rule as loadPage: wait for the notice to arrive rather than guessing —
+     the page can only say "already signed in" once its /api/auth/me answers. */
   let notice = '';
-  try {
-    const box = loginPage.contentDocument.getElementById('login-alert');
-    notice = box && !box.hidden ? box.textContent : '';
-  } catch (e) {}
+  const noticeDeadline = Date.now() + 15000;
+  while (Date.now() < noticeDeadline && !notice) {
+    await sleep(250);
+    try {
+      const box = loginPage.contentDocument.getElementById('login-alert');
+      notice = box && !box.hidden ? box.textContent : '';
+    } catch (e) { /* not ready yet */ }
+  }
   loginPage.remove();
   check('with the cookie alive and no cached session, the login page offers the way on',
     /already signed in/i.test(notice), notice ? notice.trim() : 'no notice shown');
@@ -157,7 +174,7 @@
     const account = signed.body && signed.body.user;
     if (!account) { check(page + ': signed in as ' + role, false, 'login failed'); continue; }
 
-    const f = await loadPage(page, role, account);
+    const f = await loadPage(page, role, account, sel, min);
     let n = 0, isMock = null, wrote = [];
     try {
       n = f.contentDocument.querySelectorAll(sel).length;
@@ -273,6 +290,46 @@
   check('the link resolves to TUTH (label contains "Tribhuvan")',
     !!(staffReg.body && /Tribhuvan/i.test(staffReg.body.hospitalLabel || '')),
     'hospitalLabel=' + (staffReg.body && staffReg.body.hospitalLabel));
+
+  /* ---------- 7e. the QUEUE page belongs to the SESSION's hospital (BR-5) ----------
+     hospital-requests.html carried the demo's single hospital identity
+     ("Bir Hospital, Kathmandu") into real mode, so a TUTH session rendered BIR's
+     queue — and once the server started gating the generic list for a hospital
+     actor (BR-5), the same call is refused. The page now sends no hospital at
+     all and the server answers with the session's own. Both halves are pinned
+     here: the API's own-queue rule, and that the PAGE shows exactly those rows. */
+  const hospSigned = await signIn('hospital');
+  const hospAccount = hospSigned.body && hospSigned.body.user;
+  const hospMe = await api('GET', '/api/auth/me');
+  const ownLabel = (hospMe.body && hospMe.body.hospitalLabel) || '';
+  const ownQueue = await api('GET', '/api/requests');
+  const ownIds = Array.isArray(ownQueue.body) ? ownQueue.body.map(r => r.id) : [];
+  check('a hospital session asking /api/requests with no filter gets ITS OWN queue',
+    ownQueue.status === 200 && ownIds.length > 0
+    && ownQueue.body.every(r => r.hospital === ownLabel),
+    'rows=' + ownIds.length + ' label=' + ownLabel);
+
+  const adminForList = await signIn('admin');
+  const every = adminForList.ok ? await api('GET', '/api/requests') : { body: null };
+  const everyRow = Array.isArray(every.body) ? every.body : [];
+  const foreignIds = everyRow.filter(r => r.hospital !== ownLabel).map(r => r.id);
+
+  await signIn('hospital');
+  const queueFrame = await loadPage('hospital-requests.html', 'hospital', hospAccount, '.req-card', 1);
+  let queueShown = [], queueCards = 0;
+  try {
+    queueCards = queueFrame.contentDocument.querySelectorAll('.req-card').length;
+    queueShown = [...queueFrame.contentDocument.querySelectorAll('.rc-id')]
+      .map(el => (el.textContent || '').replace(/[^A-Za-z0-9-]/g, ''));
+  } catch (e) { /* reported below */ }
+  queueFrame.remove();
+  check('the queue page rendered this hospital\'s requests (' + queueShown.length + ' card ids)',
+    queueCards >= 1 && queueShown.length === queueCards
+    && queueShown.every(id => ownIds.indexOf(id) !== -1),
+    'shown=[' + queueShown.join(',') + '] own=[' + ownIds.join(',') + ']');
+  check('no OTHER hospital\'s request appears on it (the pre-fix page showed Bir\'s)',
+    queueShown.every(id => foreignIds.indexOf(id) === -1),
+    'foreign on page: [' + queueShown.filter(id => foreignIds.indexOf(id) !== -1).join(',') + ']');
 
   /* ---------- 8. logout really ends it ---------- */
   const out = await api('POST', '/api/auth/logout');

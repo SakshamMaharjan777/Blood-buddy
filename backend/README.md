@@ -67,7 +67,7 @@ With the app running, the end-to-end frontend contract is checkable in one page:
 
 ```
 python tools/sync_frontend_to_backend.py
-open  http://localhost:8081/resptest/real-backend-check.html   → 39/39
+open  http://localhost:8081/resptest/real-backend-check.html   → 42/42
 ```
 
 It loads the real pages with the demo store **pinned empty**, so any rendered row
@@ -97,7 +97,7 @@ The API is **session-authenticated** since B6 — see "Security (B6)" below.
 Verify the whole surface over HTTP against a running app:
 
 ```
-python tools/api_check.py            # 95 checks, incl. the RBAC and rule refusals
+python tools/api_check.py            # 98 checks, incl. the RBAC and rule refusals
 ```
 
 (It logs in as the seeded accounts first, and prints cleanup SQL — it creates a
